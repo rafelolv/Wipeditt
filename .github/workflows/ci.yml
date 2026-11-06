@@ -1,0 +1,24 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright-core install --with-deps chromium
+      - name: Resolve browser
+        run: node --input-type=module -e "import { chromium } from 'playwright-core'; console.log('WIPEDITT_CHROME=' + chromium.executablePath()); console.log('WIPEDITT_EXTENSION_CHROME=' + chromium.executablePath())" >> "$GITHUB_ENV"
+      - run: npm run check
+      - run: npm run test:ui
+      - name: Validate committed runtime
+        run: git diff --exit-code -- wipeditt.user.js

@@ -1,0 +1,20 @@
+{
+  "name": "wipeditt",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local Reddit history review and anonymization utility — live integration pending approval",
+  "author": "Rafael (rafaelolv)",
+  "license": "SEE LICENSE IN LICENSE",
+  "repository": { "type": "git", "url": "git+https://github.com/rafelolv/Wipeditt.git" },
+  "homepage": "https://github.com/rafelolv/Wipeditt",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "build": "node build/userscript.mjs",
+    "build:extensions": "npm run build && node build/extensions.mjs",
+    "test": "node --test --test-isolation=none test/*.test.mjs",
+    "test:ui": "node test/ui/browser.mjs",
+    "check": "node build/check-source.mjs && npm test && npm run build:extensions && node build/check-artifacts.mjs"
+  },
+  "devDependencies": { "esbuild": "0.25.12", "playwright-core": "1.58.2" }
+}

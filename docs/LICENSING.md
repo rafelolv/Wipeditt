@@ -1,0 +1,9 @@
+# Licensing and authorship
+
+Wipeditt is created by **Rafael (rafaelolv)**, at https://github.com/rafelolv/Wipeditt. Starting with 0.1.0, original code, documentation and artwork are covered by the [Wipeditt Proprietary License 1.0](../LICENSE). The maintainer explicitly selected proprietary terms: personal, non-commercial use of official unmodified packages is permitted; modification, redistribution, commercial use and derivatives require prior written permission. This is not an open-source license.
+
+These terms protect the original material and attribution. They do not establish a patent, claim ownership of abstract functionality or prohibit an independently written competing tool. Hosting-platform rights and mandatory legal exceptions remain applicable. In particular, public GitHub source visibility is subject to GitHub's viewing/forking terms. See [GitHub's licensing guidance](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/licensing-a-repository). Custom license wording is not a guarantee of enforceability; obtain qualified legal review for enforcement or patent/trademark questions.
+
+npm metadata uses `SEE LICENSE IN LICENSE`; userscript metadata uses `LicenseRef-Wipeditt-Proprietary`. The full license is embedded in the userscript and packaged in both extensions. The initial repository contained only a README; no previous Wipeditt open-source grant was found. Wipegram's licensing documentation was reviewed as requested, but its version-specific history and Telegram scope are not imported.
+
+Runtime code has no third-party dependencies. Development tools retain their independent licenses: esbuild (MIT), Playwright (Apache-2.0). They are not bundled into the application. Their npm metadata/license files and transitive notices are not replaced by this license. This project does not copy Redact, Telegram or Discord implementations.

@@ -1,0 +1,63 @@
+Wipeditt Proprietary License 1.0
+SPDX-License-Identifier: LicenseRef-Wipeditt-Proprietary
+
+Copyright (c) 2026 Rafael (rafaelolv). All rights reserved.
+
+1. Ownership and scope
+
+Rafael (rafaelolv) owns the original Wipeditt code, documentation and artwork
+(the "Software") distributed under these terms, beginning with version 0.1.0.
+All rights not expressly granted are reserved. Public source visibility does
+not make the Software open source. No patent or trademark license is granted.
+
+2. Personal use
+
+You may download official, unmodified packages, install them on your own
+devices and run them for personal, non-commercial management of Reddit
+accounts you control. You may make local copies necessary for installation,
+execution and personal backup. This permission is non-exclusive and
+non-transferable. Preserve all copyright, attribution and license notices.
+
+3. Prior written permission required
+
+Except for section 2, mandatory legal rights or applicable hosting-platform
+terms, you must obtain Rafael's prior written permission to:
+
+- Copy, redistribute, publish, mirror, sublicense, sell, rent or transfer
+  the Software or any substantial part of its original material.
+- Modify, translate, adapt or create derivative software from the Software.
+- Use the Software commercially, provide it as a service or bundle it
+  into another product or distribution.
+- Remove ownership notices or claim the Software or its original material
+  as your own creation.
+- Use Wipeditt's name or artwork to suggest authorization or endorsement.
+
+Inspection of publicly visible source grants no additional reuse rights.
+These terms do not claim ownership of Reddit, third-party material, abstract
+ideas, functionality or independently created implementations.
+
+4. Independent rights
+
+Third-party components retain their own licenses. Nothing here removes
+mandatory legal exceptions, rights independently held by recipients or
+rights granted by a hosting platform's applicable terms, including any
+permitted viewing and forking on that platform.
+
+5. Termination
+
+Permission terminates upon breach. Stop use and delete copies covered only
+by this license, except copies you are legally entitled or required to keep.
+
+6. Warranty and liability
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE SOFTWARE IS PROVIDED
+"AS IS", WITHOUT WARRANTIES OF ANY KIND, INCLUDING MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. THE COPYRIGHT HOLDER IS NOT
+LIABLE FOR CLAIMS OR DAMAGES ARISING FROM THE SOFTWARE OR ITS USE. CONTENT
+CHANGES AND DELETION MAY BE PERMANENT. NOTHING EXCLUDES LIABILITY THAT CANNOT
+LAWFULLY BE EXCLUDED. EDITING DOES NOT GUARANTEE REMOVAL OF EXTERNAL COPIES.
+
+7. Additional permissions
+
+Request explicit written permission from Rafael (rafaelolv) through:
+https://github.com/rafelolv/Wipeditt
