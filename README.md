@@ -100,7 +100,7 @@ npm run test:ui
 npm run check
 ```
 
-Set `WIPEDITT_CHROME=/path/to/chrome` for icon generation/userscript checks and `WIPEDITT_EXTENSION_CHROME=/path/to/chromium` for extension-loading support. CI installs matching browsers on Ubuntu 24.04. Packages and SHA256SUMS appear in `dist/`.
+Set `WIPEDITT_CHROME=/path/to/chrome` for icon generation/userscript checks and `WIPEDITT_EXTENSION_CHROME=/path/to/chromium` for extension-loading support. CI uses the preinstalled Chrome/Chromium browsers on Ubuntu 24.04. Packages and SHA256SUMS appear in `dist/`.
 
 The browser suite drives the **real OAuth/API code**, intercepting every HTTP response: consent redirect, code exchange, identity, listings, guarded edits and verification. It also loads the actual Chromium content script/background broker. This does **not** prove live Reddit, Firefox or userscript-manager compatibility. [Validation record](docs/VALIDATION.md), [architecture](docs/MAINTENANCE.md), [user guide](docs/USER-GUIDE.md), [release process](docs/RELEASING.md), [changelog](CHANGELOG.md).
 

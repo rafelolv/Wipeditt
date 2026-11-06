@@ -23,7 +23,7 @@ No runtime libraries, backend or framework. esbuild and Playwright are developme
 
 Node 24+, Python 3 and Chromium are required. Run `npm ci`, `npm run check` and `npm run test:ui`. Browser executable overrides are documented in README. Source checking validates syntax and rejects prohibited DOM/network APIs; it is a guardrail, not a complete security audit. Artifact checks verify package/lock versions, userscript metadata, embedded license, identical extension runtimes, ZIP contents and SHA256SUMS.
 
-Unit tests use synthetic adapters and virtual time; browser tests use isolated profiles and intercepted HTTP responses through the real OAuth/API paths. Do not claim live Reddit, Firefox or userscript-manager verification from Chromium results. Browser artifacts are actual screenshots of synthetic data. CI uses Ubuntu 24.04 with the locked Playwright browser dependencies and runs static/unit/build/artifact and browser checks, then rejects committed userscript drift.
+Unit tests use synthetic adapters and virtual time; browser tests use isolated profiles and intercepted HTTP responses through the real OAuth/API paths. Do not claim live Reddit, Firefox or userscript-manager verification from Chromium results. Browser artifacts are actual screenshots of synthetic data. CI uses Ubuntu 24.04 with its preinstalled Chrome/Chromium binaries and the locked Playwright driver and runs static/unit/build/artifact and browser checks, then rejects committed userscript drift.
 
 Live integration must satisfy [integration release gates](REDDIT-INTEGRATION.md). Review guard behavior after cooldown/retry, server rejection vs uncertain dispatch, partial completion and cancel semantics. Never loosen a guard to pass a test.
 
@@ -36,3 +36,5 @@ Preserve unrelated working-tree changes. Commit/push/tag/publish only when autho
 ## Known remaining work
 
 Registered installed-app Client ID and applicable approval; current-server/redirect acceptance; live anonymization validation; subsequent live deletion validation; official export importer; Firefox and userscript-manager runtime testing; signed store distribution; broader browser accessibility audit. Recovery deliberately warns and requires a fresh scan rather than offering automatic replay. Live UI is restricted to www.reddit.com and requires a non-queued origin Web Lock. Preserve that restriction until any cross-origin locking design is validated.
+
+CI intentionally avoids reinstalling system/browser packages already supplied by the [Ubuntu 24.04 runner image](https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Readme.md). Browser paths and versions are resolved/printed before the unchanged build and browser checks; missing binaries fail the job. Jobs have a ten-minute upper bound.

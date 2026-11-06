@@ -8,6 +8,7 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -15,9 +16,17 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npx playwright-core install --with-deps chromium
-      - name: Resolve browser
-        run: node --input-type=module -e "import { chromium } from 'playwright-core'; console.log('WIPEDITT_CHROME=' + chromium.executablePath()); console.log('WIPEDITT_EXTENSION_CHROME=' + chromium.executablePath())" >> "$GITHUB_ENV"
+      - name: Use runner browsers
+        shell: bash
+        run: |
+          WIPEDITT_CHROME=$(command -v google-chrome)
+          WIPEDITT_EXTENSION_CHROME=$(command -v chromium || command -v chromium-browser)
+          test -n "$WIPEDITT_CHROME"
+          test -n "$WIPEDITT_EXTENSION_CHROME"
+          echo "WIPEDITT_CHROME=$WIPEDITT_CHROME" >> "$GITHUB_ENV"
+          echo "WIPEDITT_EXTENSION_CHROME=$WIPEDITT_EXTENSION_CHROME" >> "$GITHUB_ENV"
+          "$WIPEDITT_CHROME" --version
+          "$WIPEDITT_EXTENSION_CHROME" --version
       - run: npm run check
       - run: npm run test:ui
       - name: Validate committed runtime
