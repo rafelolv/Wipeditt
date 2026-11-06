@@ -5,6 +5,13 @@ import { join } from 'node:path';
 import assert from 'node:assert/strict';
 import { fixtureServer } from './fixtures.mjs';
 
+// Surface the decisive browser failure in public Actions annotations without hiding its exit status.
+process.on('uncaughtExceptionMonitor', error => {
+  if (process.env.GITHUB_ACTIONS !== 'true') return;
+  const message = String(error.stack || error.message).replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A');
+  console.error(`::error title=Browser validation failed::${message}`);
+});
+
 await mkdir('artifacts', { recursive: true });
 const source = await readFile('wipeditt.user.js', 'utf8');
 const browser = await chromium.launch({ executablePath: process.env.WIPEDITT_CHROME || '/usr/bin/google-chrome', headless: true, args: ['--no-sandbox'] });
