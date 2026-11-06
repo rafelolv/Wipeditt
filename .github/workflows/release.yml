@@ -39,6 +39,6 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
           gh release create "$RELEASE_TAG" --verify-tag --prerelease \
-            --title "Wipeditt ${RELEASE_TAG} — Technical preview" \
+            --title "Wipeditt ${RELEASE_TAG} — Preview" \
             --notes-file "docs/releases/${RELEASE_TAG}.md" \
             dist/wipeditt.user.js dist/wipeditt-chromium-*.zip dist/wipeditt-firefox-*.zip dist/wipeditt-source-*.zip dist/SHA256SUMS

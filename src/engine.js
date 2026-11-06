@@ -10,9 +10,9 @@ export class Engine {
     this.confirmation = null;
   }
   invalidate() { this.revision++; this.confirmation = null; this.preview = null; }
-  async read(task, signal) { return this.scheduler.request(task, { signal }); }
+  async read(task, signal) { checkAbort(signal); return this.adapter.handlesScheduling ? task() : this.scheduler.request(task, { signal }); }
   async account(expected, signal) {
-    const current = await this.read(() => this.adapter.account(), signal);
+    const current = await this.read(() => this.adapter.account({ signal }), signal);
     if (typeof current?.id !== 'string' || !current.id || typeof current?.name !== 'string' || !current.name) fail('AUTH', 'Account identity unavailable.');
     if (expected && (expected.id !== current.id || expected.name !== current.name)) fail('ACCOUNT_CHANGED', 'Account changed. Scan again.');
     return current;
@@ -31,7 +31,7 @@ export class Engine {
       let after = null, inspected = 0, pages = 0, reason = 'Listing exhausted; older history may still be missing';
       outer: do {
         checkAbort(signal);
-        const page = await this.read(() => this.adapter.page({ account, after, type: options.type }), signal);
+        const page = await this.read(() => this.adapter.page({ account, after, type: options.type, signal }), signal);
         if (!Array.isArray(page?.items)) fail('RESPONSE', 'Invalid listing response.');
         pages++;
         for (const item of page.items) {
@@ -55,6 +55,26 @@ export class Engine {
       this.preview = { account, options, key: fingerprint(options), created: this.now(), revision, items, reason, completeHistory: false, stats: { inspected, unique: ids.size, matched: items.length, eligible: items.filter(i => !i.skip).length } };
       return this.preview;
     } finally { this.running = false; }
+  }
+  updateOperation(raw) {
+    if (this.running) fail('BUSY', 'Operation is running.');
+    const preview = this.preview;
+    if (!preview) return null;
+    const options = normalizeOptions(raw);
+    const discovery = value => Object.fromEntries(Object.entries(value).filter(([key]) => !['mode', 'replacement', 'interval', 'deleteDelay'].includes(key)));
+    if (fingerprint(discovery(options)) !== fingerprint(discovery(preview.options))) { this.invalidate(); fail('STALE', 'Filters changed. Scan again.'); }
+    this.confirmation = null;
+    this.revision++;
+    preview.revision = this.revision;
+    preview.options = options;
+    preview.key = fingerprint(options);
+    this.scheduler.interval = options.interval;
+    for (const item of preview.items) {
+      item.skip = eligibility(item, preview.account, options.mode);
+      if (item.skip) item.selected = false;
+    }
+    preview.stats.eligible = preview.items.filter(item => !item.skip).length;
+    return preview;
   }
   select(id, selected) {
     if (this.running) fail('BUSY', 'Selection is locked during an operation.');
@@ -98,27 +118,28 @@ export class Engine {
         let writeSubmitted = false;
         try {
           await this.account(preview.account, signal);
-          let current = await this.read(() => this.adapter.get(item.id), signal);
+          let current = await this.read(() => this.adapter.get(item.id, { signal }), signal);
           const skip = current && eligibility(current, preview.account, run.mode);
           if (!current || skip) { state('skipped', 'INELIGIBLE'); continue; }
           // Identity and ownership reads are scheduled separately; no adapter networking in UI.
           const write = async task => {
             await this.account(preview.account, signal);
-            current = await this.read(() => this.adapter.get(item.id), signal);
+            current = await this.read(() => this.adapter.get(item.id, { signal }), signal);
             if (!current || eligibility(current, preview.account, run.mode)) fail('OWNERSHIP', 'Ownership or capability changed.');
-            return this.scheduler.request(async () => {
+            const beforeDispatch = () => {
               checkAbort(signal);
               if (this.preview !== preview || this.revision !== preview.revision) fail('STALE', 'Preview invalidated.');
               writeSubmitted = true;
-              return task(preview.account);
-            }, { signal, write: true });
+            };
+            if (this.adapter.handlesScheduling) return task(preview.account, { signal, beforeDispatch });
+            return this.scheduler.request(async () => { beforeDispatch(); return task(preview.account); }, { signal, write: true });
           };
           if (run.mode !== 'delete') {
             if (current.text !== preview.options.replacement) {
               state('editing');
-              await write(expected => this.adapter.edit(item.id, preview.options.replacement, expected));
+              await write((expected, settings) => this.adapter.edit(item.id, preview.options.replacement, expected, settings));
             }
-            const verified = await this.read(() => this.adapter.get(item.id), signal);
+            const verified = await this.read(() => this.adapter.get(item.id, { signal }), signal);
             if (!verified || verified.text !== preview.options.replacement) { state('uncertain', 'EDIT_UNVERIFIED'); continue; }
             state('anonymized');
             item.text = preview.options.replacement;
@@ -129,13 +150,13 @@ export class Engine {
                 await this.scheduler.gate(signal);
                 await this.sleeper(Math.min(250, until - this.now()), signal);
               }
-              const again = await this.read(() => this.adapter.get(item.id), signal);
+              const again = await this.read(() => this.adapter.get(item.id, { signal }), signal);
               if (!again || again.text !== preview.options.replacement) { state('uncertain', 'EDIT_CHANGED'); continue; }
             }
           }
           if (run.mode !== 'anonymize') {
-            await write(expected => this.adapter.delete(item.id, expected, run.mode === 'combined' ? preview.options.replacement : undefined));
-            const verified = await this.read(() => this.adapter.get(item.id), signal);
+            await write((expected, settings) => this.adapter.delete(item.id, expected, run.mode === 'combined' ? preview.options.replacement : undefined, settings));
+            const verified = await this.read(() => this.adapter.get(item.id, { signal }), signal);
             if (!verified?.deleted) { state('uncertain', 'DELETE_UNVERIFIED'); continue; }
             state('deleted');
             item.text = '';

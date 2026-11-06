@@ -1,3 +1,4 @@
+import { build } from 'esbuild';
 import { chromium } from 'playwright-core';
 import { readFile, writeFile, mkdir, copyFile, rm } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
@@ -20,12 +21,15 @@ for (const target of ['chromium', 'firefox']) {
   await mkdir(dir, { recursive: true });
   for (const file of ['wipeditt.user.js', 'LICENSE']) await copyFile(file, `${dir}/${file}`);
   for (const size of [48, 128]) await copyFile(`dist/icon-${size}.png`, `${dir}/icon-${size}.png`);
+  await build({ entryPoints: ['src/extension/background.js'], outfile: `${dir}/background.js`, bundle: true, format: 'iife', target: ['chrome110', 'firefox140'], legalComments: 'none' });
   const manifest = {
     manifest_version: 3, name: 'Wipeditt', version: pkg.version,
-    description: 'Local Reddit history review. Live integration unavailable; synthetic simulation included.',
+    description: 'Review and anonymize your own Reddit history with local OAuth authentication.',
+    host_permissions: ['https://oauth.reddit.com/*', 'https://www.reddit.com/*'],
+    background: target === 'firefox' ? { scripts: ['background.js'] } : { service_worker: 'background.js' },
     author: pkg.author, homepage_url: 'https://github.com/rafelolv/Wipeditt',
     icons: { 48: 'icon-48.png', 128: 'icon-128.png' },
-    content_scripts: [{ matches: ['https://www.reddit.com/*', 'https://old.reddit.com/*'], js: ['wipeditt.user.js'], run_at: 'document_idle', all_frames: false }]
+    content_scripts: [{ matches: ['https://www.reddit.com/*', 'https://old.reddit.com/*'], js: ['wipeditt.user.js'], run_at: 'document_start', all_frames: false }]
   };
   if (target === 'firefox') manifest.browser_specific_settings = { gecko: { id: 'wipeditt@rafelolv', strict_min_version: '140.0', data_collection_permissions: { required: ['none'] } } };
   await writeFile(`${dir}/manifest.json`, JSON.stringify(manifest, null, 2) + '\n');

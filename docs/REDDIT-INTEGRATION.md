@@ -1,56 +1,45 @@
-# Reddit integration decision
+# Reddit integration — 0.2.0
 
-Research date: **2026-11-06**. Status: **blocked live integration**, synthetic engine tested. No real Reddit account was accessed and no real content was modified.
+Research date: 2026-11-06. A real installed-app OAuth code flow and API adapter are implemented. End-to-end validation uses intercepted HTTP fixtures, not a real registered app/account. There is no shared approved Wipeditt Client ID; registration and use-case approval remain Reddit-controlled prerequisites.
 
-## Decision
+## Authentication
 
-Ship one local browser runtime in a userscript and two extension packages, with a fail-closed adapter. The production adapter (`src/adapters/blocked.js`) refuses account, listing, read, edit and delete calls. The independently selected synthetic adapter is functional and never performs network requests. There is no authentication implementation or hidden developer switch that enables real operations.
+The user configures the public Client ID of an installed app whose registered redirect URI is exactly `https://www.reddit.com/`. No confidential secret is requested or embedded. OAuth uses `response_type=code`, temporary duration, the scopes `identity history read edit`, and a 256-bit random state bound to the initiating window/origin. Tokens expire after at most an hour and stay in private memory fields; no refresh token is stored.
 
-Browser packaging is practical for local UI and business logic. It does not establish Reddit approval, permitted use of session cookies or cross-origin OAuth feasibility. Website-private endpoints, cookie extraction and password collection are not acceptable substitutes for approval. No Devvit API has been demonstrated here to support a user's account-wide cleanup; availability of Devvit does not establish this product's feasibility.
+The official [OAuth2 reference](https://github.com/reddit-archive/reddit/wiki/OAuth2) documents code exchange with Basic authentication using the installed Client ID and an empty password. It also documents implicit flow, which this project does not use. This reference is archived; actual current server acceptance is not established by reading it. PKCE support is not assumed or invented. Revalidate registration, redirect acceptance and the public-client flow with the maintainer's approved app before declaring live integration verified.
 
-## Official sources reviewed
+The consent window returns an authorization code to Reddit's root page. The callback removes code/state/error parameters from browser history before forwarding the code. The receiver checks the exact popup source/origin and matching state. A same-origin BroadcastChannel provides a state-matched fallback when browser isolation severs window.opener; duplicate responses cannot redeem a code twice. Neither channel broadcasts an access token. Closing the panel/canceling sign-in aborts exchange; late responses cannot restore a disconnected token. Sign-in can be explicitly canceled and times out after ten minutes.
 
-- [Responsible Builder Policy](https://support.reddithelp.com/hc/en-us/articles/42728983564564-Responsible-Builder-Policy): explicit approval is required before accessing Reddit data through the API. Do not circumvent limits. Developers are directed toward Devvit.
-- [Developer FAQ](https://developers.reddit.com/docs/guides/faq): external Data API integrations have a separate approval process; unsupported Devvit use cases should follow Reddit Help guidance.
-- [Developer Platform & Accessing Reddit Data](https://support.reddithelp.com/hc/en-us/articles/14945211791892-Developer-Platform-Accessing-Reddit-Data): access requirements and application guidance.
-- [Data API Wiki](https://support.reddithelp.com/hc/en-us/articles/16160319875092-Reddit-Data-API-Wiki): OAuth identification, response quota headers, eligible-client quota guidance and data retention obligations. Legacy technical guidance can be out of date.
-- [API reference](https://www.reddit.com/dev/api/): own identity, listings, content information and edit/delete methods.
-- [Archived official OAuth2 guidance](https://github.com/reddit-archive/reddit/wiki/OAuth2): historical installed/public-client and implicit flows. This is not proof that a new client registration or that flow is currently approved.
-- [Developer terms](https://redditinc.com/policies/developer-terms) and [Data API terms](https://redditinc.com/policies/data-api-terms): must be reviewed against the approved use case before activating live integration.
-- [Developer registration](https://developers.reddit.com/app-registration): currently describes migration/registration and a January 12, 2027 enforcement milestone. Recheck before release of any live client.
+Only the public Client ID is saved to localStorage. API identity comes from `/api/v1/me`, never a username input or website cookie. Passwords stay on Reddit. OAuth account identity is independent of whichever account happens to be open in a separate website tab; writes use only the explicit authorization and recheck its account.
 
-The absence of an approval artifact/configuration in this new repository is not a claim that approval is universally impossible. Approval and authentication are separate prerequisites.
+## Transport and scheduling
 
-## Endpoint research; not shipped networking
+`src/network.js` restricts HTTPS hosts, paths, methods, credential placement and headers. The userscript uses `GM_xmlhttpRequest` in anonymous mode with Reddit-only @connect permissions. The extension content script sends requests to its packaged broker; only this extension's Reddit-origin content scripts are accepted. The broker uses cookie-free fetch, refuses redirects and supports cancellation/timeouts. There is no credential proxy, cookie extraction, private website endpoint or off-platform destination. Browser/user-agent restrictions and manager redirect behavior require real-platform verification; only truthful application identification is attempted.
 
-| Intended operation | Documented REST route | Expected scope |
+Authentication, API reads, ownership preflights and writes share a serial scheduler. The scheduler's `before` guards run as paced internal reads before every write attempt, including throttled retries; they do not recursively queue work and deadlock. Account, ownership and preview/cancellation guards are rechecked before dispatch. Header/body cooldowns cannot be overridden by custom intervals.
+
+## Documented API routes
+
+| Purpose | Route | Scope |
 | --- | --- | --- |
-| Verify account | `GET /api/v1/me` | `identity` |
-| Discover own comments | `GET /user/{username}/comments` | `history` |
-| Discover own posts | `GET /user/{username}/submitted` | `history` |
-| Re-read content | `GET /api/info?id={fullname}` | `read` |
-| Replace comment/self-post body | `POST /api/editusertext` | `edit` |
-| Delete own content | `POST /api/del` | `edit` |
+| Authorize / exchange code | `www.reddit.com/api/v1/authorize`, `/api/v1/access_token` | User consent |
+| Verify identity | `oauth.reddit.com/api/v1/me` | `identity` |
+| Discover comments/posts/both | `/user/{name}/comments`, `/submitted`, `/overview` | `history` |
+| Verify current content | `/api/info?id={fullname}` | `read` |
+| Replace body | `POST /api/editusertext` | `edit` |
 
-Use registered OAuth against `https://oauth.reddit.com`, documented fullnames, pagination cursors and `raw_json=1` where appropriate. Post titles are not editable. Non-self media/link content must not be passed off as an editable body. Server capability and permission decisions remain authoritative, including restrictions on archived/locked/removed content. A successful HTTP response alone does not verify the final state. Recheck scope requirements in the current official reference during implementation.
+The API adapter normalizes fullnames, author identity, text bodies, dates, score and edited/capability metadata. Unknown author identity fails closed. Non-self media/link bodies, archived/locked/removed items and unsupported targets are ineligible for editing. Server rejections remain authoritative. A separate read must verify exact replacement after a write. Missing or unreadable content is not proof of success. No live deletion endpoint is called: deletion/combined mode remain demo-only until independently validated on an authorized real account.
 
-## Authentication release gates
+Live UI is restricted to www.reddit.com. A non-queued origin Web Lock prevents simultaneous runs in multiple tabs. old.reddit.com offers a link to www instead of creating a second origin for live operations. No timer or background mutation resumes after closing the panel/tab.
 
-1. Obtain explicit Reddit approval for this exact account-history cleanup use case and register the application through the current process.
-2. Confirm a permitted public-client flow for both userscript and extension distributions. Never embed a confidential client secret. The archived installed-app implicit flow is historical research, not a production recommendation.
-3. Verify redirect registration, anti-CSRF state, token expiry/revocation, required scopes, browser CORS, extension origin behavior and truthful application identification. Tokens must remain in memory, never in URLs after callback handling, logs, checkpoints or reports. Browser-controlled User-Agent limitations need an approved solution.
-4. Implement an official transport adapter with request timeouts and normalized HTTP/API errors; all reads, guards and writes must pass through the scheduler. Do not use a backend proxy or extract website tokens/cookies.
-5. Recheck account and ownership at every write dispatch/retry, including after cooldowns. Stop on account/auth/permission changes. Verify edits before deletion and final outcomes after writes.
-6. With separate explicit authorization, test a tiny disposable own-account selection on real Reddit. Document actual evidence and limitations before removing blocked labels. Deletion must remain unavailable until approved anonymization works and deletion itself is verified.
+## Approval and alternatives evaluated
 
-## Adapter contract
+The [Responsible Builder Policy](https://support.reddithelp.com/hc/en-us/articles/42728983564564-Responsible-Builder-Policy) requires explicit approval for API access. The [Developer FAQ](https://developers.reddit.com/docs/guides/faq) distinguishes external OAuth clients from Devvit. Registering/signing into Devvit does not yield external OAuth credentials. [Devvit user actions](https://developers.reddit.com/docs/capabilities/server/userActions) document posting/commenting/subscribing on behalf of a user, not an account-wide editing capability suitable for this tool.
 
-`account()` returns `{ id, name }`; `page({ account, after, type })` returns `{ items, after }`; `get(id)` returns normalized current content. Items have a validated fullname, `authorId`, `author`, `subreddit`, `type`, `created` (epoch ms), `score`, `edited`, `editable`, `deleted`, `text` and safe `permalink`. Unknown ownership/capabilities must fail closed.
+Classic website/session tools were investigated as alternatives. Availability of legacy session endpoints or native forms does not establish approval or permission to bypass the API process. Wipeditt does not extract session tokens/cookies, borrow another product's Client ID, automate CAPTCHA or switch endpoints after a denial.
 
-`edit(id, replacement, expectedAccount)` and `delete(id, expectedAccount, verifiedReplacement?)` must enforce the supplied identity and ownership at dispatch, not merely trust preview objects. The synthetic adapter checks both synchronously with its mutation. No real transport exists yet; network guards will require scheduler-aware implementation and race analysis. Combined deletion must additionally enforce the verified replacement at dispatch. Both operations must distinguish explicit rejection from ambiguous dispatch. `get()` must prove a final state; missing/unreadable content alone is not proof of deletion.
+Relevant primary sources: [API reference](https://www.reddit.com/dev/api/), [Data API Wiki](https://support.reddithelp.com/hc/en-us/articles/16160319875092-Reddit-Data-API-Wiki), [Developer access guidance](https://support.reddithelp.com/hc/en-us/articles/14945211791892-Developer-Platform-Accessing-Reddit-Data), [Developer terms](https://redditinc.com/policies/developer-terms), [Data API terms](https://redditinc.com/policies/data-api-terms), [app registration](https://developers.reddit.com/app-registration). The registration page currently describes a January 12, 2027 enforcement milestone; recheck before future releases.
 
-Scheduler tasks may return `{ data, headers }` and throw structured errors containing `status`, `headers`, `code` and optional `retryAfterMs`. API body cooldowns must be normalized to `RATELIMIT`; errors must never contain credentials or original text.
+## Remaining verification
 
-## Future import boundary
-
-An official data-export importer can normalize records into the same item schema, but must label offline data and never infer current identity, ownership or edit permission solely from an export. Validate archive paths, size, format and IDs; verify each selected item through the approved adapter before any live write. Import is planned, not implemented.
+Obtain an installed-app registration and the applicable Reddit approval. Verify redirect acceptance, actual browser/manager behavior, identity/listing retrieval and a separately authorized tiny own-account anonymization. No real content modifications are authorized by automated test execution. Document live evidence before claiming success or enabling deletion. Official-export import remains planned; imported records must never alone authorize a write.

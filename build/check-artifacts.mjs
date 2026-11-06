@@ -15,6 +15,8 @@ for (const target of ['chromium', 'firefox']) {
   const manifest = JSON.parse(await readFile(`${dir}/manifest.json`, 'utf8'));
   assert.equal(manifest.version, pkg.version);
   assert.equal(manifest.permissions, undefined);
+  assert.deepEqual(manifest.host_permissions, ['https://oauth.reddit.com/*', 'https://www.reddit.com/*']);
+  await readFile(`${dir}/background.js`);
   assert.deepEqual(await readFile(`${dir}/LICENSE`), await readFile('LICENSE'));
   execFileSync('python3', ['-c', 'import sys,zipfile; z=zipfile.ZipFile(sys.argv[1]); assert z.testzip() is None; assert z.read("wipeditt.user.js")==open("wipeditt.user.js","rb").read()', `dist/wipeditt-${target}-${pkg.version}.zip`]);
 }

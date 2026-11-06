@@ -2,12 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, item, run } from './helpers.mjs';
 import { AppError } from '../src/errors.js';
-import { BlockedAdapter } from '../src/adapters/blocked.js';
 
-test('release adapter blocks live reads and writes', async () => {
-  const adapter = new BlockedAdapter();
-  for (const method of ['account', 'page', 'get', 'edit', 'delete']) await assert.rejects(adapter[method](), { code: 'LIVE_UNAVAILABLE' });
-});
 test('scan deduplicates and distinguishes inspected, unique, matching and eligible', async () => {
   const { engine, adapter } = setup();
   let calls = 0;
@@ -162,4 +157,25 @@ test('combined-mode dispatch refuses deletion if text changes during its final c
   assert.equal(adapter.items[0].deleted, false);
   assert.equal(result.records[0].code, 'EDIT_CHANGED');
   assert.equal(result.records[0].state, 'uncertain');
+});
+test('replacement changes reuse scanned data but invalidate the previous confirmation', async () => {
+  const { engine, adapter } = setup();
+  await engine.scan({}); engine.confirmationFor({});
+  let pages = 0;
+  adapter.page = async () => { pages++; throw new Error('Unexpected scan'); };
+  const preview = engine.updateOperation({ replacement: 'Fresh replacement' });
+  assert.equal(preview.items.length, 1);
+  await assert.rejects(engine.execute({ replacement: 'Fresh replacement' }, { confirmed: true }), { code: 'CONFIRM' });
+  engine.confirmationFor({ replacement: 'Fresh replacement' });
+  const result = await engine.execute({ replacement: 'Fresh replacement' }, { confirmed: true });
+  assert.equal(result.records[0].state, 'anonymized');
+  assert.equal(pages, 0);
+});
+test('operation-only updates cannot extend preview lifetime or reuse changed filters', async () => {
+  const { engine, advance } = setup();
+  await engine.scan({}); advance(300001);
+  engine.updateOperation({ replacement: 'Fresh replacement' });
+  assert.throws(() => engine.confirmationFor({ replacement: 'Fresh replacement' }), { code: 'STALE' });
+  await engine.scan({});
+  assert.throws(() => engine.updateOperation({ contains: 'different' }), { code: 'STALE' });
 });

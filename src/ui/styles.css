@@ -1,61 +1,10 @@
-:host{all:initial;color-scheme:dark;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:13px;color:#dce5df}
-*{box-sizing:border-box}
-button,input,select,textarea{font:inherit}
-button,a,input,select,textarea,summary{outline-offset:3px}
- :focus-visible{outline:2px solid #8edbb0}
-button{cursor:pointer;border:1px solid var(--border,#39413d);border-radius:6px;padding:7px 11px;background:var(--input,#252d28);color:inherit}
-button:hover:not(:disabled){border-color:#8edbb0}
-button:disabled{opacity:.45;cursor:default}
-.primary{background:#a0dcb4;color:#102419;border-color:#a0dcb4;font-weight:650}
-.launcher{position:fixed;bottom:22px;right:22px;background:#a0dcb4;color:#102419;font-weight:700;box-shadow:0 4px 20px #0004}
-.panel{--border:#343e37;--input:#202923;position:fixed;right:22px;bottom:68px;width:min(660px,calc(100vw - 32px));max-height:calc(100dvh - 100px);overflow:auto;background:#171e1a;color:#dce5df;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:0 16px 60px #0006;line-height:1.5}
-.panel.light{--border:#c7d4ca;--input:#fff;background:#f5f8f5;color:#223629;color-scheme:light}
-.panel[hidden]{display:none}
-h1{font-size:23px;letter-spacing:-.8px;margin:0}
-header{display:flex;justify-content:space-between;gap:16px;align-items:start}
-header p{margin:2px 0;color:#8caa96}
-h2{font-size:18px}
-.notice{border-left:3px solid #a0dcb4;background:#80bc9820;padding:10px 12px;margin:20px 0 12px}
-.connection,.actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.connection{justify-content:space-between}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px}
-.field{display:flex;flex-direction:column;gap:4px;margin:8px 0}
-.field>span{font-weight:550}
-input:not([type=checkbox]),select,textarea{width:100%;color:inherit;background:var(--input,#202923);border:1px solid var(--border,#343e37);padding:8px;border-radius:5px;min-width:0}
-textarea{resize:vertical}
-input[type=checkbox]{accent-color:#83c69c;width:16px;height:16px}
-fieldset{border:0;border-top:1px solid var(--border);padding:12px 0 6px;margin:20px 0 8px;min-width:0}
-legend{font-weight:650;padding-right:12px}
-small,.muted{font-size:11px;opacity:.75}
-.counts{font-size:11px;color:#83c69c}
-.status{min-height:20px;font-size:12px}
-.results{margin:12px 0}
-.item{padding:12px 0;border-bottom:1px solid var(--border)}
-.item-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:11px}
-.item-head a{margin-left:auto;color:#83c69c}
-.original,.replacement{white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0;font-size:12px}
-.replacement{color:#83c69c}
-.warning{color:#e5b37d}
-.eligible{color:#83c69c}
-.groups{display:flex;gap:5px;flex-wrap:wrap}
-.groups button{font-size:11px;padding:4px 7px}
-details{border-top:1px solid var(--border);padding:12px 0}
-summary{cursor:pointer}
-.activity{padding-left:20px;font:11px ui-monospace,monospace;max-height:150px;overflow:auto}
-footer{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:16px}
-footer small{margin-left:auto}
-progress{width:100%;height:5px;accent-color:#a0dcb4}
-dialog{color:#dce5df;background:#171e1a;border:1px solid #46594c;border-radius:10px;max-width:min(500px,90vw);padding:24px;font:13px/1.5 system-ui}
-dialog::backdrop{background:#000a}
-dialog pre{white-space:pre-wrap;overflow-wrap:anywhere}
-.private .sensitive{filter:blur(6px);user-select:none}
-.private dialog .sensitive{filter:blur(6px)}
-@media(max-width:480px){.panel{right:16px;padding:16px}
-.grid{grid-template-columns:1fr}
-header{flex-wrap:wrap}
-}
-
-.light .counts,.light .replacement,.light .eligible,.light .item-head a{color:#285b3b}
-.light .warning{color:#855019}
-.light header p{color:#466451}
-.scope{margin-top:16px}
+:host{all:initial;color-scheme:dark;font:13px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#e0e9e3}
+*{box-sizing:border-box}button,input,select,textarea{font:inherit}button,a,input,select,textarea,summary{outline-offset:3px}:focus-visible{outline:2px solid #9cddb4}[hidden]{display:none!important}
+button,.button-link{cursor:pointer;border:1px solid var(--border,#39483f);border-radius:6px;padding:7px 11px;background:var(--input,#242f28);color:inherit;text-decoration:none}button:hover:not(:disabled){border-color:#a0dcb4}button:disabled{opacity:.45;cursor:default}.primary{background:#a0dcb4;color:#102419;border-color:#a0dcb4;font-weight:650}.launcher{position:fixed;bottom:22px;right:22px;background:#a0dcb4;color:#102419;font-weight:700;box-shadow:0 4px 20px #0004}
+.panel{--border:#344239;--input:#202a23;position:fixed;right:22px;bottom:68px;width:min(580px,calc(100vw - 32px));max-height:calc(100dvh - 100px);overflow:auto;background:#161f19;color:#e0e9e3;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:0 16px 60px #0006;font:13px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.panel.light{--border:#c7d4ca;--input:#fff;background:#f7faf7;color:#223629;color-scheme:light}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}.brand{display:flex;align-items:center;gap:10px}h1{font-size:20px;letter-spacing:-.5px;margin:0}header p{margin:0;color:#9eb5a6;font-size:11px}h2{font-size:14px;margin:16px 0 10px}.connection{display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border);padding:12px 0}.connection-name{color:#a9b7ae;font-size:12px}.connection-name.connected{color:#a0dcb4}.connection button{padding:3px 7px;font-size:11px}.mode-notice{font-size:11px;color:#e3c08b;margin:0 0 12px}.connect-action:has(button:not([hidden])){padding:12px 0 4px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px}.field{display:flex;flex-direction:column;gap:5px;margin:10px 0}.field>span{font-size:12px;font-weight:550}input:not([type=checkbox]),select,textarea{width:100%;color:inherit;background:var(--input,#202a23);border:1px solid var(--border,#344239);padding:8px;border-radius:5px;min-width:0}textarea{resize:vertical;min-height:65px}input[type=checkbox]{accent-color:#9ed9b0;width:15px;height:15px;vertical-align:middle}
+small,.muted{font-size:11px;color:#a9b7ae}.counts{font-size:12px;font-weight:600;margin:0}.status{font-size:12px;min-height:18px;color:#b7c9bf;margin:12px 0 0;overflow-wrap:anywhere}.actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.end{justify-content:flex-end}.operation-actions{margin-top:12px}.scope>summary{font-size:14px;font-weight:650}.scope{padding-bottom:12px}.operation{border-top:1px solid var(--border);margin-top:16px}.results{margin-bottom:14px}.selection-tools{display:flex;align-items:center;justify-content:space-between;gap:8px}.selection-tools button,.groups button{font-size:11px;padding:3px 7px}.item-list{max-height:245px;overflow:auto;scrollbar-width:thin}.item{padding:10px 0;border-bottom:1px solid var(--border)}.item-head{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:10px}.item-head span{color:#a9b7ae}.item-head a{margin-left:auto;color:#a0dcb4}.original{font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere;margin:6px 0}.warning,.error{color:#e8b982;font-size:11px}.groups{display:flex;gap:5px;flex-wrap:wrap;padding-top:8px}
+details{padding:9px 0}summary{cursor:pointer;font-size:12px;color:inherit}.settings{border-top:1px solid var(--border);margin-top:16px;padding-top:12px}.settings>.actions{margin:12px 0}.activity{padding-left:20px;font:11px ui-monospace,monospace;max-height:150px;overflow:auto}progress{width:100%;height:5px;accent-color:#a0dcb4;margin-top:14px}.private .sensitive{filter:blur(6px);user-select:none}
+dialog{--border:#344239;--input:#202a23;max-height:85dvh;overflow:auto;color:#e0e9e3;background:#161f19;border:1px solid #46594c;border-radius:12px;max-width:min(480px,90vw);padding:24px;font:13px/1.5 system-ui}dialog h2{font-size:18px;margin-top:0}dialog::backdrop{background:#000a}dialog pre{padding:12px;background:#24342a;white-space:pre-wrap;overflow-wrap:anywhere;border-radius:6px}.setup-steps{padding-left:20px}.setup-steps li{margin:10px 0}a{color:#a0dcb4}code{font:12px ui-monospace,monospace;overflow-wrap:anywhere}
+.light .status,.light .muted,.light small,.light .item-head span,.light .connection-name{color:#4d6656}.light .connection-name.connected,.light .item-head a{color:#285b3b}.light .warning{color:#855019}.light header p{color:#466451}@media(max-width:480px){.panel{right:16px;padding:16px}.grid{grid-template-columns:1fr 1fr}.selection-tools{align-items:start;flex-direction:column}header p{font-size:10px}header button{padding:5px 8px}}

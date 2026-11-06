@@ -10,4 +10,4 @@ Pause takes effect at request boundaries; Stop aborts waits and prevents dispatc
 
 Listings may omit older, removed or inaccessible content. Pagination deduplication, cursor-loop detection, a 1000-page guard and custom item limits prevent runaway scans. Every preview records its stopping reason and sets `completeHistory: false`. Unknown score/edited values do not match filters requiring those values.
 
-Editing a comment or self-post body cannot change its title or ensure archive/cache removal. An edit capability is provisional until the server accepts and a read verifies it. Do not infer deletability after editing fails. Current release: all of these behaviors are tested with synthetic adapters; real access is blocked.
+Editing a comment or self-post body cannot change its title or ensure archive/cache removal. An edit capability is provisional until the server accepts and a read verifies it. Do not infer deletability after editing fails. Current release implements real OAuth reads/anonymization and tests them through HTTP fixtures. Real-account approval/authentication/editing are not verified. Live deletion/combined mode remain unavailable.

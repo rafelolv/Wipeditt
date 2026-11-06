@@ -1,27 +1,35 @@
-# User guide
+# User guide — 0.2.0
 
-Version 0.1.0 cannot connect to Reddit. **Try synthetic data** explicitly loads twelve made-up records; every execution in that mode changes only those records in memory. **Leave simulation** returns to the blocked live adapter. Reloading resets synthetic content.
+## Connect
 
-## Review
+Open www.reddit.com, then Wipeditt. Choose **Connect Reddit**. First-time instructions open inside the connection dialog: create a Reddit **installed app**, set its redirect URI to `https://www.reddit.com/`, then paste its public Client ID. Reddit may require approval before registering/enabling that app. Use the linked official guidance if registration is denied; signing into an account does not create API approval.
 
-Open Wipeditt on www.reddit.com or old.reddit.com. Choose content type and filters. Subreddit lists accept commas/spaces and optional `r/`; exclusion wins. Dates are inclusive local date/time values; start must precede end. Contains and regex are case-insensitive. Regex takes a JavaScript pattern without slash delimiters. Score bounds are inclusive. Unknown score/edited state does not satisfy a filter that needs it.
+Click **Sign in with Reddit**, complete Reddit's sign-in and permission screen, and return to Wipeditt. The connected username appears only after API identity verification. No password/client secret/pasted token is needed. Tokens stay in memory, expire after at most one hour and clear on disconnect, panel close or reload. The public Client ID may be remembered. **Cancel sign-in** stops a pending connection; blocked popups need browser permission.
 
-Use 50, 100, 500, All available or a custom whole-number limit (0 means no item cap, maximum 100000). The cap counts matched preview entries, including ineligible ones. All available describes the accessible listing, never the complete account archive.
+On old.reddit.com, choose **Open Reddit** to continue on www. Live mutations share a non-queued origin lock, so multiple tabs cannot run together.
 
-Press **Scan content**. Inspected counts raw rows, unique counts valid distinct IDs, matching counts filter matches, eligible counts own supported records, and selected counts your current eligible selection. Read the partial-history notice. Deselect individual items or toggle a subreddit. Ineligible rows show why they are skipped and cannot be selected.
+## Choose content
 
-## Operation
+Comments are the default. Choose text posts or both if needed, plus a maximum matching item count. Zero means all available, up to a 1000-page safety cap; no listing is guaranteed to include complete historical content. The item cap includes ineligible matches.
 
-**Anonymize** replaces editable bodies with the exact previewed text. The default is `This content has been removed for privacy reasons.` Choose a preset or type your own 1–10000-character nonblank replacement. Existing matching text avoids a redundant edit. Titles/media are not anonymizable.
+**Add filters** contains subreddit include/exclude (comma/space lists, optional r/ prefix, exclusion wins), case-insensitive contains/JavaScript regex (no slash delimiters), inclusive local date/time bounds, min/max score and edited status. Unknown metadata does not satisfy a filter requiring it. Invalid expressions, dates and ranges fail before network access.
 
-**Delete** and **Anonymize & Delete** are available only in simulation. Combined mode edits, verifies replacement, waits the configured active-tab delay and then deletes. Failed or uncertain editing never falls back to deletion. Non-editable items are ineligible in combined mode; this release offers no delete fallback switch.
+Choose **Scan history**. No content changes during scanning. The summary distinguishes found/eligible/selected; **Settings & help → Scan details & activity** includes inspected/unique/matching counts. Read the stopping reason and partial-history limitation.
 
-Choose **Review operation**, inspect the action/count/replacement, then explicitly accept. Above 100 items type the exact displayed ANONYMIZE or DELETE phrase. Cancel, Escape or Close cancels confirmation. Settings/selection changes invalidate it. Preview expires after five minutes; an opened confirmation expires after one minute. Scan again when stale.
+## Review and replace
 
-## Progress and interruptions
+The content list shows original text previews, subreddit/type/date/score, original links and ineligible reasons. Select all/none, individual items, or expand **Select by subreddit**. Only eligible own content can be selected.
 
-Pause/Resume control request boundaries. Stop prevents new requests; submitted requests may finish. Counts distinguish anonymized, deleted, skipped, failed and uncertain. No reliable ETA is calculated; elapsed time and cooldown reason are shown. The app must remain active for delayed deletion; no background work is promised.
+Enter the exact replacement under **Replace selected text with**. The default is `This content has been removed for privacy reasons.` Any nonblank 1–10000-character replacement is accepted. Changing replacement updates the existing scan without a new request; it cancels any previous confirmation and does not extend preview lifetime. Filter changes require a new scan.
 
-Closing the panel stops work and cancels confirmation. A minimal session checkpoint can warn about an interruption after a reload, but never resumes writes automatically. **Clear checkpoint** deletes it. A fresh scan and review are always required; pending interrupted writes are treated as uncertain. Simulated content resets on reload, independently of checkpoint states.
+Choose **Review N selected**. The dialog repeats account/count/action and exact replacement. Above 100 items, type ANONYMIZE. Accept explicitly. Cancel/Escape/Close does not authorize any write. A preview expires after five minutes; confirmation after one minute.
 
-Export report saves local JSON without original/replacement text, names or sensitive filter values. Issue IDs can still identify content. Review before sharing. Privacy mode visually masks sensitive fields/previews; it does not encrypt data or change ownership checks. Light mode and responsive layout are available. Tab through controls; focus indicators remain visible.
+The API rechecks account and ownership before writes/retries, interprets responses, then reads current content to verify exact replacement. A request being sent is not success. Ambiguous outcomes become uncertain and are not auto-replayed. Titles/media cannot be anonymized; external archives/caches/moderation copies may remain.
+
+## Progress and settings
+
+Pause/Resume work at request boundaries. Stop aborts waits and prevents new dispatch; submitted writes may finish. Closing the panel stops work and clears real-account authorization. Use **Settings & help** for visual privacy masking, theme, activity, report export and checkpoint clearing. Reports exclude original/replacement text, usernames/subreddits and sensitive filter values, but issue IDs may be sensitive.
+
+**Operation settings** contains minimum request interval; stricter server limits always win. Live mode supports anonymization only. Delete, combined mode and deletion delay are demo-only pending separate real-account validation.
+
+**Try demo data** is under Settings & help. It disconnects real authorization and loads synthetic content; the demo notice remains visible. Use Disconnect, then Connect Reddit to return to an account. Demo content resets on reload. An interrupted checkpoint never auto-resumes writes; fresh scan/review are required.

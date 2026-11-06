@@ -39,36 +39,37 @@ export class Scheduler {
       this.stats.waitedMs += ms;
     }
   }
-  request(task, { signal, write = false } = {}) {
-    const run = async () => {
-      for (let attempt = 0; ; attempt++) {
-        await this.gate(signal);
-        checkAbort(signal);
-        this.stats.requests++;
-        try {
-          const result = await task();
-          this.observe(result?.headers);
-          return result?.data ?? result;
-        } catch (error) {
-          this.observe(error.headers);
-          if (Number.isFinite(error.retryAfterMs) && error.retryAfterMs > 0) this.next = Math.max(this.next, this.now() + error.retryAfterMs);
-          const status = error.status;
-          if (error.code && !['NETWORK', 'TIMEOUT', 'RATELIMIT'].includes(error.code) && !status) throw error;
-          if (status === 401 || status === 403) throw new AppError(status === 401 ? 'AUTH' : 'PERMISSION', 'Authorization or permission refused.', { fatal: true });
-          const throttle = status === 429 || error.code === 'RATELIMIT';
-          if (throttle) this.stats.throttles++;
-          const transient = !status || status >= 500;
-          // Retrying a submitted write after transport failure could duplicate an operation.
-          if (write && !throttle && transient) throw new AppError('UNCERTAIN', 'Write outcome unknown. Verify current state before trying again.');
-          if (attempt >= 3 || (!throttle && !transient)) throw error;
-          this.stats.retries++;
-          this.next = Math.max(this.next, this.now() + (throttle ? 60000 : 1000 * 2 ** attempt));
-        } finally {
-          this.next = Math.max(this.next, this.now() + this.interval);
-        }
+  async perform(task, { signal, write = false, before = [] } = {}) {
+    for (let attempt = 0; ; attempt++) {
+      for (const guard of before) await this.perform(guard, { signal });
+      await this.gate(signal);
+      checkAbort(signal);
+      this.stats.requests++;
+      try {
+        const result = await task();
+        this.observe(result?.headers);
+        return result && typeof result === 'object' && Object.hasOwn(result, 'data') ? result.data : result;
+      } catch (error) {
+        this.observe(error.headers);
+        if (Number.isFinite(error.retryAfterMs) && error.retryAfterMs > 0) this.next = Math.max(this.next, this.now() + error.retryAfterMs);
+        const status = error.status;
+        if (error.code && !['NETWORK', 'TIMEOUT', 'RATELIMIT'].includes(error.code) && !status) throw error;
+        if (status === 401 || status === 403) throw new AppError(status === 401 ? 'AUTH' : 'PERMISSION', status === 401 ? 'Reddit authorization expired or was refused. Reconnect your account.' : 'Reddit denied permission. Check your app access and account permissions.', { fatal: true });
+        const throttle = status === 429 || error.code === 'RATELIMIT';
+        if (throttle) this.stats.throttles++;
+        const transient = !status || status >= 500;
+        // Retrying a submitted write after transport failure could duplicate an operation.
+        if (write && !throttle && transient) throw new AppError('UNCERTAIN', 'Write outcome unknown. Verify current state before trying again.');
+        if (attempt >= 3 || (!throttle && !transient)) throw error;
+        this.stats.retries++;
+        this.next = Math.max(this.next, this.now() + (throttle ? 60000 : 1000 * 2 ** attempt));
+      } finally {
+        this.next = Math.max(this.next, this.now() + this.interval);
       }
-    };
-    const result = this.tail.then(run);
+    }
+  }
+  request(task, options = {}) {
+    const result = this.tail.then(() => this.perform(task, options));
     this.tail = result.catch(() => {});
     return result;
   }

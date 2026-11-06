@@ -18,10 +18,12 @@ const metadata = `// ==UserScript==
 // @icon         data:image/svg+xml;base64,${Buffer.from(icon).toString('base64')}
 // @match        https://www.reddit.com/*
 // @match        https://old.reddit.com/*
-// @run-at       document-idle
-// @grant        none
+// @run-at       document-start
+// @grant        GM_xmlhttpRequest
+// @connect      oauth.reddit.com
+// @connect      www.reddit.com
 // @noframes
 // ==/UserScript==`;
 await mkdir('dist', { recursive: true });
-await build({ entryPoints: ['src/index.js'], outfile: 'wipeditt.user.js', bundle: true, format: 'iife', target: ['chrome110', 'firefox115'], legalComments: 'none', loader: { '.css': 'text' }, banner: { js: `${metadata}\n/*!\n${license.trim()}\n*/` }, define: { __VERSION__: JSON.stringify(pkg.version) } });
-console.log(`Built Wipeditt ${pkg.version} (live integration blocked).`);
+await build({ entryPoints: ['src/index.js'], outfile: 'wipeditt.user.js', bundle: true, format: 'iife', target: ['chrome110', 'firefox115'], legalComments: 'none', loader: { '.css': 'text', '.svg': 'text' }, banner: { js: `${metadata}\n/*!\n${license.trim()}\n*/` }, define: { __VERSION__: JSON.stringify(pkg.version) } });
+console.log(`Built Wipeditt ${pkg.version} (Reddit OAuth).`);
