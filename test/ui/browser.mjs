@@ -113,6 +113,7 @@ try {
   const page = await context.newPage();
   await page.route('**/*', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Extension fixture</title>' }));
   await page.goto('http://127.0.0.1/wipeditt-fixture');
+  await page.getByRole('button', { name: 'Open Wipeditt' }).waitFor();
   await page.evaluate(await readFile('wipeditt.user.js', 'utf8'));
   assert.equal(await page.locator('#wipeditt-runtime-v1').count(), 1, 'extension and userscript must share the document claim');
   await page.getByRole('button', { name: 'Open Wipeditt' }).click();

@@ -21,7 +21,7 @@ No runtime libraries, backend or framework. esbuild and Playwright are developme
 
 Node 24+, Python 3 and Chromium are required. Run `npm ci`, `npm run check` and `npm run test:ui`. Browser executable overrides are documented in README. Source checking validates syntax and rejects prohibited DOM/network APIs; it is a guardrail, not a complete security audit. Artifact checks verify package/lock versions, userscript metadata, embedded license, identical extension runtimes, ZIP contents and SHA256SUMS.
 
-Unit tests use synthetic adapters and virtual time; browser tests use isolated profiles and intercepted pages. Do not claim live Reddit, Firefox or userscript-manager verification from Chromium results. Browser artifacts are actual screenshots of synthetic data. CI runs static/unit/build/artifact and browser checks, then rejects committed userscript drift.
+Unit tests use synthetic adapters and virtual time; browser tests use isolated profiles and intercepted pages. Do not claim live Reddit, Firefox or userscript-manager verification from Chromium results. Browser artifacts are actual screenshots of synthetic data. CI uses Ubuntu 24.04 with the locked Playwright browser dependencies and runs static/unit/build/artifact and browser checks, then rejects committed userscript drift.
 
 Future live adapters must satisfy [integration release gates](REDDIT-INTEGRATION.md). Review guard behavior after cooldown/retry, server rejection vs uncertain dispatch, partial completion and cancel semantics. Never loosen a guard to pass a test.
 
