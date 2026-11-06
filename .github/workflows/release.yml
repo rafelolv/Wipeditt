@@ -21,11 +21,14 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
         run: node --input-type=module -e "import p from './package.json' with {type:'json'}; if (process.env.RELEASE_TAG !== 'v' + p.version) process.exit(1)"
       - run: npm ci
-      - name: Use runner browsers
+      - name: Install matching extension test browser
+        timeout-minutes: 5
+        run: npx playwright-core install chromium
+      - name: Resolve test browsers
         shell: bash
         run: |
           WIPEDITT_CHROME=$(command -v google-chrome)
-          WIPEDITT_EXTENSION_CHROME=$(command -v chromium || command -v chromium-browser)
+          WIPEDITT_EXTENSION_CHROME=$(node --input-type=module -e "import { chromium } from 'playwright-core'; process.stdout.write(chromium.executablePath())")
           test -n "$WIPEDITT_CHROME"
           test -n "$WIPEDITT_EXTENSION_CHROME"
           echo "WIPEDITT_CHROME=$WIPEDITT_CHROME" >> "$GITHUB_ENV"
