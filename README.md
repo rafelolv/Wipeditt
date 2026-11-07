@@ -6,7 +6,7 @@ A local desktop app for reviewing and anonymizing your own Reddit comments and t
 
 ## Desktop preview
 
-Download installers from [Releases](https://github.com/rafelolv/Wipeditt/releases). Version 0.3.0 replaces the userscript/extension with an Electron desktop app. Linux AppImage and Debian packages, Windows installer and macOS disk images are built on native CI runners. Packages are unsigned; macOS builds are not notarized. Verify downloaded files against the release's `SHA256SUMS`.
+Download installers from [Releases](https://github.com/rafelolv/Wipeditt/releases). The 0.3 desktop series replaces the userscript/extension with an Electron desktop app. Linux AppImage and Debian packages, Windows installer and macOS disk images are built on native CI runners. Packages are unsigned; macOS builds are not notarized. Verify downloaded files against the release's `SHA256SUMS`.
 
 1. Open Wipeditt and choose **Connect Reddit**.
 2. Sign in directly on Reddit inside the app, then choose **Verify account**. No registered API application or Client ID is needed for this website connector.

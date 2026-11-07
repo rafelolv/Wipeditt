@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.1 — 2026-11-06
+
+- Validate native installers in branch CI and expose actionable packaging failures.
+- Publish the desktop preview after a four-target packaging run passed. The v0.3.0 release attempt failed on macOS Intel and was not published; its tag remains unchanged.
+
 ## 0.3.0 — 2026-11-06
 
 - Replace userscript/extensions with an isolated Electron desktop app and native Reddit website sign-in.
