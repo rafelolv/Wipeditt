@@ -7,6 +7,7 @@ import { RedditBrowser } from './reddit-browser.js';
 import { DesktopController } from './controller.js';
 import { CheckpointStorage } from './storage.js';
 import { REDDIT_CLASSIC, REMOTE_PREFERENCES, redditURL, trustedSender, loginNavigation } from './policy.js';
+import { NativeWriteTracker } from './write-tracker.js';
 import { deletionCapability, DELETION_VALIDATED } from './capabilities.js';
 import { UpdateChecker } from './updates.js';
 import { parseCommentsCSV } from './import.js';
@@ -98,8 +99,13 @@ const browser = {
     });
     redditView = new WebContentsView({ webPreferences: { ...REMOTE_PREFERENCES, session: activeSession } });
     safeRemote(redditView.webContents);
+    const writeTracker = new NativeWriteTracker({ contentsId: redditView.webContents.id });
+    const nativeRequests = { urls: ['https://*.reddit.com/*'] };
+    activeSession.webRequest.onBeforeRequest(nativeRequests, (details, callback) => { writeTracker.before(details); callback({}); });
+    activeSession.webRequest.onCompleted(nativeRequests, details => writeTracker.complete(details));
+    activeSession.webRequest.onErrorOccurred(nativeRequests, details => writeTracker.error(details));
     window.contentView.addChildView(redditView);
-    browser.adapter = new RedditBrowser({ contents: redditView.webContents, scheduler, deletionEnabled: deletionCapability({ packaged: app.isPackaged, developmentFlag: process.env.WIPEDITT_ENABLE_DELETION }) });
+    browser.adapter = new RedditBrowser({ contents: redditView.webContents, scheduler, writeTracker, deletionEnabled: deletionCapability({ packaged: app.isPackaged, developmentFlag: process.env.WIPEDITT_ENABLE_DELETION }) });
     browserVisible = true; layout();
     // Ask Reddit to return to the classic overview after sign-in. If the login
     // flow ignores the destination, the watcher below still verifies once the

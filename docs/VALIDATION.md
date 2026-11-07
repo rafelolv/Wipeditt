@@ -2,7 +2,7 @@
 
 ## Automated checks
 
-Local Linux x64 validation passed: 64 unit tests, source/build/license checks, the baseline Electron suite and the separate native deletion Electron suite. Native Windows CI is required before publication.
+Local Linux x64 validation passed: 67 unit tests, source/build/license checks, the baseline Electron suite and the separate native deletion Electron suite. Native Windows CI is required before publication.
 
 Run `npm run check` for source restrictions, unit tests, desktop build, license/version alignment and sandbox/CSP checks. Run `npm run test:ui` for the existing Electron fixture suite plus the native deletion suite. Both use isolated temporary profiles and local intercepted HTTPS pages, never real Reddit mutations.
 
@@ -17,3 +17,7 @@ Official CI now runs only Linux x64 and Windows x64. Packaging validates GPLv3/N
 The maintainer previously confirmed real login, history reading and working anonymization. No independent live deletion or combined-operation validation has been recorded for this candidate. The validation record in DELETION-VALIDATION.md is **incomplete**. Production deletion therefore remains gated; only the explicit unpackaged testing command enables it.
 
 Synthetic successes are not substituted for real observations. A stable v1 tag is blocked automatically until the manual record is completed and the capability flag is reviewed. Do not describe this candidate as a fully live-validated three-mode stable release.
+
+## First independent deletion attempt
+
+On November 7, 2026 the maintainer reported successful-looking native deletion and combined behavior, but the candidate correctly reported uncertain verification: one anonymization was verified while deletion was not. This is not counted as a validation pass. Investigation of Reddit's classic templates identified anonymous deleted roots without data-fullname/ID, `<em>` deleted-author labels and optimistic native button updates before request completion. RC2 waits for the owned browser's POST completion metadata and verifies a unique server-deleted root at the exact focused original (context=0). It never reads upload data or response bodies. Missing/ambiguous original pages remain uncertain. The revised connector still requires live revalidation.

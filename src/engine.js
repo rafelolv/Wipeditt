@@ -206,6 +206,7 @@ export class Engine {
         } catch (error) {
           const ambiguous = writeSubmitted && !(error.status >= 400 && error.status < 500) && !['ACCOUNT_CHANGED', 'OWNERSHIP', 'PERMISSION'].includes(error.code);
           if (stage === 'anonymize' && run.mode === 'combined') record.steps.delete = 'skipped';
+          if (typeof error.reason === 'string' && /^[A-Z_]{1,80}$/.test(error.reason)) record.reason = error.reason;
           const uncertain = error.code === 'UNCERTAIN' || ambiguous;
           record.steps[stage] = uncertain ? 'uncertain' : error.code === 'STOPPED' ? 'skipped' : 'failed';
           state(uncertain ? 'uncertain' : record.steps.anonymize === 'verified' && stage === 'delete' ? 'partial' : error.code === 'STOPPED' ? 'skipped' : 'failed', error.code || 'API');

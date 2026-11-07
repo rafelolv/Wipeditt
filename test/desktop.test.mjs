@@ -27,6 +27,7 @@ test('desktop navigation refuses foreign origins, cross-account history and inva
   for (const value of ['file:///etc/passwd', 'javascript:alert(1)', 'http://old.reddit.com/', 'https://old.reddit.com.evil.test/', 'https://user@old.reddit.com/']) assert.throws(() => redditURL(value));
   assert.throws(() => historyURL('https://old.reddit.com/user/other/comments/', { name: 'owner' }));
   assert.equal(contentURL('https://www.reddit.com/r/privacy/comments/abc/test/xyz/?context=3', 't1_xyz'), 'https://old.reddit.com/r/privacy/comments/abc/test/xyz/');
+  assert.equal(contentURL('https://www.reddit.com/user/owner/comments/abc/test/xyz/', 't1_xyz'), 'https://old.reddit.com/user/owner/comments/abc/test/xyz/');
 });
 test('normalized desktop options keep inclusive date boundaries through engine normalization', () => {
   const options = normalizeOptions({ after: '2024-01-01T00:00:00Z', before: '2025-01-01T00:00:00Z' });

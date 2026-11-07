@@ -9,7 +9,7 @@ export function redditURL(value) {
 }
 export function contentURL(value, id) {
   const url = redditURL(value);
-  if (!/^t[13]_[a-z0-9]+$/.test(id) || !/^\/r\/[^/]+\/comments\/[a-z0-9]+(?:\/|$)/.test(url.pathname)) fail('URL', 'Original content link could not be verified.');
+  if (!/^t[13]_[a-z0-9]+$/.test(id) || !/^\/(?:r\/[^/]+|user\/[A-Za-z0-9_-]+)\/comments\/[a-z0-9]+(?:\/|$)/.test(url.pathname)) fail('URL', 'Original content link could not be verified.');
   url.hostname = 'old.reddit.com';
   url.search = '';
   url.hash = '';

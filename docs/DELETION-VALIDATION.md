@@ -4,7 +4,7 @@ Status: **not completed**. Packaged deletion is disabled. Automated fixtures do 
 
 ## Open the controlled testing app
 
-On Linux x64 or Windows x64 run `npm run validate:deletion`. This builds an unpackaged app, explicitly enables deletion testing and uses a separate temporary app profile (`wipeditt-manual-deletion-validation` under the OS temporary directory). It does not read your normal browser/app profile and does not execute any write on launch. Sign in directly on Reddit. Do not send credentials, cookies or tokens to anyone.
+On Linux x64 or Windows x64 run `npm run validate:deletion`. This builds an unpackaged app, explicitly enables deletion testing and uses a separate temporary app profile (`wipeditt-manual-deletion-validation-VERSION` under the OS temporary directory). It does not read your normal browser/app profile and does not execute any write on launch. Sign in directly on Reddit. Do not send credentials, cookies or tokens to anyone.
 
 Create disposable content you own in a place where testing is allowed. Use distinct short labels so filters isolate each item. Before confirming, select exactly one intended item and check the account, mode and original link. Changes are irreversible.
 

@@ -6,8 +6,8 @@ export class RedditBrowser {
   simulation = false;
   handlesScheduling = true;
   label = 'Reddit browser session';
-  constructor({ contents, scheduler, deletionEnabled = false, onBrowser = () => {}, now = Date.now, sleeper = sleep }) {
-    Object.assign(this, { contents, scheduler, deletionEnabled, onBrowser, now, sleeper });
+  constructor({ contents, scheduler, writeTracker = null, deletionEnabled = false, onBrowser = () => {}, now = Date.now, sleeper = sleep }) {
+    Object.assign(this, { contents, scheduler, writeTracker, deletionEnabled, onBrowser, now, sleeper });
     this.links = new Map();
     this.lastURL = '';
   }
@@ -88,10 +88,12 @@ export class RedditBrowser {
     }
     return page;
   }
-  async getRaw(id, signal, { fresh = false } = {}) {
+  async getRaw(id, signal, { fresh = false, deletionProof = false } = {}) {
     const link = this.links.get(id);
     if (!link) fail('CONTENT_UNAVAILABLE', 'Item has no verified Reddit link. Scan again.');
-    await this.navigate(link, signal, { force: fresh });
+    const target = new URL(link);
+    if (deletionProof) target.searchParams.set('context', '0');
+    await this.navigate(target.href, signal, { force: fresh });
     let item = await this.dom('get', { id, expected: this.identity });
     if (item.needsBody) {
       await this.dom('expand', { id });
@@ -100,7 +102,7 @@ export class RedditBrowser {
     }
     return item;
   }
-  get(id, { signal } = {}) { return this.scheduler.request(() => this.getRaw(id, signal), { signal }); }
+  get(id, { signal } = {}) { return this.scheduler.request(() => this.getRaw(id, signal, { deletionProof: true }), { signal }); }
   async edit(id, text, expected, { signal, beforeDispatch } = {}) {
     // Each retry starts with a fresh server-rendered page and verifies current account/author.
     await this.scheduler.request(async () => {
@@ -132,14 +134,19 @@ export class RedditBrowser {
   }
   async delete(id, expected, replacement, { signal, beforeDispatch } = {}) {
     if (!this.deletionEnabled) fail('DELETION_UNVERIFIED', 'Deletion requires independently validated support or the explicit development testing gate.');
+    if (!this.writeTracker) fail('DELETION_UNVERIFIED', 'Native request observation is unavailable.');
     await this.scheduler.request(async () => {
       const current = await this.getRaw(id, signal, { fresh: true });
       if (replacement !== undefined && current.text !== replacement) throw new AppError('EDIT_CHANGED', 'Verified replacement changed. No deletion was sent.', { status: 400 });
       await this.dom('prepare-delete', { id, expected });
       await this.sleeper(150, signal);
       await this.scheduler.gate(signal);
-      beforeDispatch?.();
-      await this.dom('submit-delete', { id, expected, replacement });
+      const receipt = this.writeTracker.begin();
+      try {
+        beforeDispatch?.();
+        await this.dom('submit-delete', { id, expected, replacement });
+        await this.writeTracker.wait(receipt, { signal });
+      } finally { this.writeTracker.end(receipt); }
       const deadline = this.now() + 30000;
       while (this.now() < deadline) {
         checkAbort(signal);
@@ -154,10 +161,18 @@ export class RedditBrowser {
       }
       throw new AppError('UNCERTAIN', 'Reddit did not confirm the deletion.', { fatal: true });
     }, { signal, write: true });
-    let verified;
-    try { verified = await this.scheduler.request(() => this.getRaw(id, signal, { fresh: true }), { signal }); }
-    catch { throw new AppError('UNCERTAIN', 'Deletion was submitted but the original could not be verified. Do not repeat it automatically.', { fatal: true }); }
-    if (!verified.deleted) throw new AppError('UNCERTAIN', 'The original did not expose a verified deleted placeholder.', { fatal: true });
+    let verified, proofReason;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      verified = undefined;
+      try { verified = await this.scheduler.request(() => this.getRaw(id, signal, { fresh: true, deletionProof: true }), { signal }); }
+      catch (error) {
+        proofReason = error.reason || 'DELETE_ORIGINAL_UNAVAILABLE';
+        if (!['CONTENT_UNAVAILABLE', 'NAVIGATION', 'TIMEOUT'].includes(error.code)) throw new AppError('UNCERTAIN', 'The submitted deletion could not be verified on its original.', { fatal: true, reason: 'DELETE_ORIGINAL_UNAVAILABLE' });
+      }
+      if (verified?.deleted) break;
+      if (attempt < 2) await this.sleeper(500 * (attempt + 1), signal);
+    }
+    if (!verified?.deleted) throw new AppError('UNCERTAIN', 'The original did not expose a verified deleted placeholder. No deletion will be repeated automatically.', { fatal: true, reason: verified ? 'DELETE_MARKER_MISSING' : proofReason || 'DELETE_ORIGINAL_UNAVAILABLE' });
     return { acknowledged: true };
   }
 }

@@ -4,13 +4,13 @@ import {setup,item,run} from './helpers.mjs';
 import {AppError} from '../src/errors.js';
 import {normalizeOptions,eligibility} from '../src/filters.js';
 import {RedditBrowser} from '../src/desktop/reddit-browser.js';
-import {deletionCapability} from '../src/desktop/capabilities.js';
+import {deletionCapability, DELETION_VALIDATED} from '../src/desktop/capabilities.js';
 import {makeReport} from '../src/report.js';
 
-test('production deletion stays gated; only explicit development testing enables it',()=>{
-  assert.equal(deletionCapability({packaged:true,developmentFlag:'1'}),false);
+test('deletion follows reviewed validation; a development flag cannot override packaged policy',()=>{
+  assert.equal(deletionCapability({packaged:true,developmentFlag:'1'}),DELETION_VALIDATED);
   assert.equal(deletionCapability({packaged:false,developmentFlag:'1'}),true);
-  assert.equal(deletionCapability({packaged:false,developmentFlag:'0'}),false);
+  assert.equal(deletionCapability({packaged:false,developmentFlag:'0'}),DELETION_VALIDATED);
 });
 test('delete needs no replacement; combined requires editable and deletable content',()=>{
   assert.equal(normalizeOptions({mode:'delete',replacement:''}).replacement,'');
@@ -38,7 +38,7 @@ test('combined uncertain deletion preserves the verified edit and is not replaye
 });
 function native(outcome='deleted'){
   const {scheduler}=setup();let writes=0,reads=0;const operations=[];
-  const browser=new RedditBrowser({contents:{},scheduler,deletionEnabled:true,now:scheduler.now,sleeper:scheduler.sleeper});
+  const browser=new RedditBrowser({contents:{},scheduler,writeTracker:{begin:()=>({}),wait:async()=>{},end(){}},deletionEnabled:true,now:scheduler.now,sleeper:scheduler.sleeper});
   browser.getRaw=async()=>{reads++;if(reads>1&&outcome==='missing')throw new AppError('CONTENT_UNAVAILABLE','Missing');return item({deleted:reads>1&&outcome==='deleted'});};
   browser.dom=async operation=>{operations.push(operation);if(operation==='submit-delete')writes++;return {settled:true};};
   return {browser,operations,writes:()=>writes,reads:()=>reads};
@@ -48,7 +48,7 @@ test('native deletion requires fresh original verification, not a disappearing U
     const {browser,writes,reads,operations}=native(outcome);
     const task=browser.delete(item().id,{id:item().authorId,name:item().author},undefined,{beforeDispatch:()=>{}});
     if(outcome==='deleted')await task;else await assert.rejects(task,{code:'UNCERTAIN'});
-    assert.equal(writes(),1);assert.equal(reads(),2);assert.deepEqual(operations,['prepare-delete','submit-delete','delete-status']);
+    assert.equal(writes(),1);assert.equal(reads(),outcome==='deleted'?2:4);assert.deepEqual(operations,['prepare-delete','submit-delete','delete-status']);
   }
 });
 test('native combined refuses deletion when verified replacement changed',async()=>{
@@ -63,7 +63,7 @@ test('native delete gate refuses a write before any browser interaction',async()
 
 test('explicit native throttling retries from fresh preflight and verifies once',async()=>{
   const {scheduler}=setup();let attempts=0,confirmed=false,reads=0;
-  const browser=new RedditBrowser({contents:{},scheduler,deletionEnabled:true,now:scheduler.now,sleeper:scheduler.sleeper});
+  const browser=new RedditBrowser({contents:{},scheduler,writeTracker:{begin:()=>({}),wait:async()=>{},end(){}},deletionEnabled:true,now:scheduler.now,sleeper:scheduler.sleeper});
   browser.getRaw=async()=>{reads++;return item({deleted:confirmed});};
   browser.dom=async operation=>{
     if(operation==='submit-delete')attempts++;

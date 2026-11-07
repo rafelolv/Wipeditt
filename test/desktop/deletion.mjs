@@ -4,6 +4,7 @@ import { resolve, join } from 'node:path';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import assert from 'node:assert/strict';
+import { verifyAnonymousDeletion } from './deleted-placeholder.mjs';
 import { installFixture } from './fixture.mjs';
 process.on('uncaughtExceptionMonitor', error => { if(process.env.GITHUB_ACTIONS==='true')console.error(`::error title=Native deletion::${String(error.stack).replaceAll('%','%25').replaceAll('\n','%0A').replaceAll('\r','%0D')}`); });
 const profile=await mkdtemp(join(tmpdir(),'wipeditt-delete-fixture-'));
@@ -37,6 +38,7 @@ try{
   assert.match(await page.locator('#confirmation-warning').textContent(),/irreversible/);await page.keyboard.press('Escape');
   assert.equal(await application.evaluate(()=>globalThis.fixture.deletions.length),0);
   await confirm();await finished();assert.equal(await application.evaluate(()=>globalThis.fixture.items.t1_abc.deleted),true);assert.match(await page.locator('#finished-summary').textContent(),/1 deleted/);
+  await verifyAnonymousDeletion(application);
   await configure({type:'post'});await confirm();await finished();assert.equal(await application.evaluate(()=>globalThis.fixture.items.t3_post.deleted),true);
   await configure({type:'post'});await page.locator('#select-none').click();await page.waitForFunction(() => document.getElementById('selected-count').textContent === '0');await page.locator('.item[data-id="t3_link"] input').check();await confirm();await finished();assert.equal(await application.evaluate(()=>globalThis.fixture.items.t3_link.deleted),true);
   await configure({mode:'combined'});await confirm();await finished();

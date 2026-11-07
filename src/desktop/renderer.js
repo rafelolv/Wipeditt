@@ -198,7 +198,7 @@ function render(next) {
   $('version').textContent = `Version ${state.version}`;
   $('mode-badge').hidden = !state.simulation && !state.deletionTesting;
   $('mode-badge').textContent = state.simulation ? 'Sample data · nothing changes' : 'DELETION VALIDATION · Disposable content only';
-  document.title = state.deletionTesting ? 'Wipeditt — Deletion validation' : 'Wipeditt';
+  document.title = state.deletionTesting ? `Wipeditt — Deletion validation ${state.version}` : 'Wipeditt';
   $('browser-help').hidden = !state.browserVisible;
   $('workspace').hidden = !!state.browserVisible;
 

@@ -38,7 +38,7 @@ export class DesktopController {
       if (event.type === 'progress') {
         this.progress = { total: event.total, elapsed: event.elapsed, counts: {} };
         for (const record of event.records) this.progress.counts[record.state] = (this.progress.counts[record.state] || 0) + 1;
-        this.log(`${event.records.at(-1)?.id}: ${event.records.at(-1)?.state}`);
+        this.log(`${event.records.at(-1)?.id}: ${event.records.at(-1)?.state}${event.records.at(-1)?.reason ? ` · ${event.records.at(-1).reason}` : ''}`);
       }
       this.emit();
     } });

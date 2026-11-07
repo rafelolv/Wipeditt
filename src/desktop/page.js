@@ -10,7 +10,7 @@ export function redditPage(operation, input = {}) {
     } catch { return ''; }
   };
   const visible = node => !!node && getComputedStyle(node).display !== 'none' && getComputedStyle(node).visibility !== 'hidden' && !!node.getClientRects().length;
-  const own = (node, selector) => [...node.querySelectorAll(selector)].find(child => child.closest('.thing[data-fullname]') === node);
+  const own = (node, selector) => [...node.querySelectorAll(selector)].find(child => child.closest('.thing') === node);
   const identity = () => {
     const link = document.querySelector('#header-bottom-right .user a[href*="/user/"], #header-bottom-right .user a[href*="/u/"]');
     const name = link && profileName(link.href);
@@ -26,7 +26,7 @@ export function redditPage(operation, input = {}) {
   if (!current) return result('AUTH', 'Reddit sign-in is no longer available. Connect again.');
   if (input.expected && (input.expected.id !== current.id || input.expected.name.toLowerCase() !== current.name.toLowerCase())) return result('ACCOUNT_CHANGED', 'The signed-in Reddit account changed. Connect and scan again.');
   const normalize = node => {
-    const id = node.dataset.fullname;
+    const id = node.dataset.fullname || /^thing_(t[13]_[a-z0-9]+)$/.exec(node.id)?.[1];
     if (!/^t[13]_[a-z0-9]+$/.test(id || '')) return null;
     const username = value => {
       const text = String(value || '').trim().replace(/^\/?u\//i, '');
@@ -42,7 +42,8 @@ export function redditPage(operation, input = {}) {
     const visibleAuthor = authorNode && (!authorNode.matches('a[href]') || linked) ? username(authorNode.textContent) : '';
     const evidence = [linked, declared, visibleAuthor].filter(Boolean);
     const conflict = new Set(evidence.map(name => name.toLowerCase())).size > 1;
-    const deletedAuthor = /^\[deleted\]$/i.test(authorNode?.textContent?.trim() || '') && !linked;
+    const deletedLabel = own(node, '.tagline em');
+    const deletedAuthor = /^\[deleted\]$/i.test(authorNode?.textContent?.trim() || deletedLabel?.textContent?.trim() || '') && !linked;
     const removedAuthor = /^(?:\[deleted\]|\[removed\])$/i.test(String(node.dataset.author || authorNode?.textContent || '').trim());
     let author = !conflict && !removedAuthor ? evidence[0] || '' : '';
     let authorEvidence = author ? (linked ? 'profile-link' : declared ? 'data-author' : 'author-label') : '';
@@ -77,7 +78,31 @@ export function redditPage(operation, input = {}) {
       needsBody: self && !textArea && !!edit
     };
   };
-  const find = id => [...document.querySelectorAll('.thing[data-fullname]')].find(node => node.dataset.fullname === id);
+  const find = id => [...document.querySelectorAll('.thing')].find(node => node.dataset.fullname === id || !node.dataset.fullname && node.id === `thing_${id}`);
+  let proofReason = 'DELETE_ORIGINAL_UNAVAILABLE';
+  const noProof = reason => { proofReason = reason; return null; };
+  const anonymousDeleted = id => {
+    const match = /^\/(?:r\/[^/]+|user\/[A-Za-z0-9_-]+)\/comments\/([a-z0-9]+)\/[^/]+(?:\/([a-z0-9]+))?\/?$/.exec(location.pathname);
+    if (!match) return noProof('DELETE_FOCUS_URL_MISMATCH');
+    if (new URLSearchParams(location.search).get('context') !== '0') return noProof('DELETE_CONTEXT_NOT_FOCUSED');
+    const comment = id.startsWith('t1_');
+    if (comment ? match[2] !== id.slice(3) : match[1] !== id.slice(3) || match[2]) return noProof('DELETE_FOCUS_URL_MISMATCH');
+    const container = document.querySelector(comment ? '.commentarea .sitetable' : '.content > .sitetable.linklisting, #siteTable.linklisting');
+    if (!container) return noProof('DELETE_PLACEHOLDER_LAYOUT_UNKNOWN');
+    const kind = comment ? '.thing.comment' : '.thing.link';
+    const roots = [...container.querySelectorAll(kind)].filter(node => !node.parentElement.closest(kind));
+    if (roots.length !== 1) return noProof('DELETE_PLACEHOLDER_AMBIGUOUS');
+    const node = roots[0];
+    if (!node.classList.contains('deleted')) return noProof('DELETE_MARKER_MISSING');
+    if (node.dataset.fullname || node.id || [...node.classList].some(name => /^id-t[13]_/.test(name))) return noProof('DELETE_PLACEHOLDER_ID_CONFLICT');
+    if (own(node, '.tagline a.author, a.edit-usertext, form.del-button')) return noProof('DELETE_PLACEHOLDER_AUTHOR_VISIBLE');
+    const marker = own(node, '.tagline em, .tagline .author');
+    if (!marker || !marker.textContent.trim()) return noProof('DELETE_MARKER_MISSING');
+    // The server deliberately strips identity attributes from deleted entries.
+    // A unique deleted root in the exact focused permalink (context=0), with
+    // its deleted-author marker and no controls, is positive native evidence.
+    return { id, type: comment ? 'comment' : 'post', deleted: true, editable: false, deletable: false, author: '', authorId: '', text: '', permalink: location.href, evidence: 'focused-deleted-placeholder' };
+  };
   if (operation === 'listing') {
     const listing = document.querySelector('#siteTable, .sitetable.linklisting');
     // Profile context can embed other people's replies beneath a listed item.
@@ -92,7 +117,8 @@ export function redditPage(operation, input = {}) {
   const node = find(input.id);
   if (operation === 'delete-status' && !node) return { data: { settled: true } }; // Fresh original verification is still mandatory.
 
-  if (!node) return result('CONTENT_UNAVAILABLE', 'Reddit did not show the requested item. No change was made.');
+  if (!node && operation === 'get') { const deleted = anonymousDeleted(input.id); if (deleted) return { data: deleted }; }
+  if (!node) return result('CONTENT_UNAVAILABLE', 'Reddit did not show the requested item.', { reason: proofReason });
   const item = normalize(node);
   if (!item) return result('CONTENT_UNAVAILABLE', 'Content metadata is not recognized.');
   if (operation === 'get') return { data: item };
@@ -112,7 +138,7 @@ export function redditPage(operation, input = {}) {
     return { data: { submitted: true } };
   }
   if (operation === 'delete-status') {
-    const errors = [...node.querySelectorAll('.error')].filter(child => child.closest('.thing[data-fullname]') === node && !child.matches('.option.error') && !child.matches('.option.error') && visible(child) && child.textContent.trim());
+    const errors = [...node.querySelectorAll('.error')].filter(child => child.closest('.thing') === node && !child.matches('.option.error') && !child.matches('.option.error') && visible(child) && child.textContent.trim());
     const message = errors.map(child => child.textContent).join(' ').toLowerCase();
     if (/sign in|logged in|session expired/.test(message)) return result('AUTH', 'Reddit authorization is no longer available.', { status: 401, fatal: true });
     if (/permission|forbidden|not authorized/.test(message)) return result('PERMISSION', 'Reddit denied permission for this operation.', { status: 403, fatal: true });
@@ -148,7 +174,7 @@ export function redditPage(operation, input = {}) {
     return { data: { submitted: true } };
   }
   if (operation === 'edit-status') {
-    const errors = [...node.querySelectorAll('.error')].filter(child => child.closest('.thing[data-fullname]') === node && !child.matches('.option.error') && visible(child) && child.textContent.trim());
+    const errors = [...node.querySelectorAll('.error')].filter(child => child.closest('.thing') === node && !child.matches('.option.error') && visible(child) && child.textContent.trim());
     const message = errors.map(child => child.textContent).join(' ').toLowerCase();
     if (/sign in|logged in|session expired/.test(message)) return result('AUTH', 'Reddit authorization is no longer available.', { status: 401, fatal: true });
     if (/permission|forbidden|not authorized/.test(message)) return result('PERMISSION', 'Reddit denied permission for this operation.', { status: 403, fatal: true });

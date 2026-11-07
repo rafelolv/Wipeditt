@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.0-rc.2 — 2026-11-07
+
+- Fix verification of classic Reddit deleted roots that omit identity attributes and use an em deleted-author marker.
+- Bind anonymous deletion proof to a unique server-deleted root at the exact focused original, with context=0; reject unrelated or ambiguous placeholders.
+- Wait for native POST completion metadata before verification navigation so an optimistic delete label cannot cancel an in-flight write or imply success.
+- Retry bounded verification reads only and retain sanitized uncertainty reasons. Keep production deletion gated pending revised live validation.
+
 ## 1.0.0-rc.1 — 2026-11-07
 
 - Implement native Delete and Anonymize & Delete through the existing scheduler, preview/confirmation and execution engine; production deletion remains gated pending independent live validation.
