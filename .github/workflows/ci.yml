@@ -42,3 +42,5 @@ jobs:
       - name: Electron fixture tests (Windows/macOS)
         if: runner.os != 'Linux'
         run: npm run test:ui
+      - name: Build native installer
+        run: npm run package -- --${{ matrix.platform }} --${{ matrix.arch }}
