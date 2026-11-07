@@ -14,7 +14,7 @@ Official CI now runs only Linux x64 and Windows x64. Packaging validates GPLv3/N
 
 ## Real-account evidence
 
-The maintainer previously confirmed real login, history reading and working anonymization. No independent live deletion or combined-operation validation has been recorded for this candidate. The validation record in DELETION-VALIDATION.md is **incomplete**. Production deletion therefore remains gated; only the explicit unpackaged testing command enables it.
+The maintainer previously confirmed real login, history reading and working anonymization. The maintainer has now confirmed the RC3 combined-comment case with both stages verified; the remaining independent live cases are pending. The validation record in DELETION-VALIDATION.md is **incomplete**. Production deletion therefore remains gated; only the explicit unpackaged testing command enables it.
 
 Synthetic successes are not substituted for real observations. A stable v1 tag is blocked automatically until the manual record is completed and the capability flag is reviewed. Do not describe this candidate as a fully live-validated three-mode stable release.
 
@@ -25,3 +25,7 @@ On November 7, 2026 the maintainer reported successful-looking native deletion a
 ## RC2 empty leaf-comment observation
 
 On November 7, 2026 the maintainer reported that Reddit removed the disposable comment during a combined operation and its original showed no comments, while RC2 returned `DELETE_PLACEHOLDER_AMBIGUOUS`. One edit was verified and deletion remained uncertain. This does not complete the live checklist. RC3 distinguishes a bare missing original from an explicit empty focused thread: the latter requires the completed native action, matching available parent post, explicit empty marker and two consecutive fresh reads. Fixture tests cover direct/combined leaf deletion and reject missing receipts, markers, parent posts and wrong targets. UI uncertainty now says verification is incomplete instead of displaying a success checkmark. Revised live validation is still required.
+
+## RC3 combined-comment pass
+
+On November 7, 2026, the maintainer confirmed both anonymization and deletion verified for one new disposable comment using the Linux x64 RC3 validation app (runtime source `2caa579`). This confirms the reported comment regression in a real-account combined operation. Direct deletion, post cases and Stop still await explicit results; production deletion remains gated.

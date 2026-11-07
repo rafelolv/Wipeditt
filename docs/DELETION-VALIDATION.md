@@ -1,6 +1,6 @@
 # Independent live deletion validation
 
-Status: **not completed**. Packaged deletion is disabled. Automated fixtures do not satisfy this record. Stable v1 publication is blocked by build/check-release.mjs until validation is complete and the capability flag is reviewed.
+Status: **partially completed; production gate remains closed**. Packaged deletion is disabled. Automated fixtures do not satisfy this record. Stable v1 publication is blocked by build/check-release.mjs until validation is complete and the capability flag is reviewed.
 
 ## Open the controlled testing app
 
@@ -29,3 +29,7 @@ Only after these cases pass: update this status/VALIDATION.md with the actual ev
 ## RC2 follow-up
 
 On November 7, 2026 the maintainer reported that a combined operation removed its disposable comment on Reddit, but the app returned `DELETE_PLACEHOLDER_AMBIGUOUS`; the original showed an empty comment listing. The edit was verified and deletion remained uncertain. This is evidence of a missing leaf-comment verification case, not a full validation pass. RC3 adds the receipt-bound, twice-reloaded focused empty-thread check described in REDDIT-INTEGRATION.md. The complete live checklist remains pending. Do not repeat writes on these previously uncertain items.
+
+## RC3 live result
+
+On November 7, 2026, the maintainer confirmed Anonymize & Delete on one new disposable comment in the Linux x64 `1.0.0-rc.3` validation app (runtime source commit `2caa579`): one anonymization verified, one deletion verified and final deleted status. This is maintainer-reported live evidence, separate from automated fixtures. Direct comment/text/link-post deletion, combined text-post deletion and Stop after verified editing still require confirmation. No private identifiers or original text are recorded.
