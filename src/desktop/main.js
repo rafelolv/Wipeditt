@@ -23,7 +23,7 @@ const EXPORT_LIMIT = 64 * 1024 * 1024;
 function layout() {
   if (!window || window.isDestroyed() || !redditView) return;
   const [width, height] = window.getContentSize();
-  redditView.setBounds({ x: 268, y: 104, width: Math.max(100, width - 280), height: Math.max(100, height - 116) });
+  redditView.setBounds({ x: 246, y: 184, width: Math.max(100, width - 274), height: Math.max(100, height - 196) });
   redditView.setVisible(browserVisible);
 }
 function safeRemote(contents) {

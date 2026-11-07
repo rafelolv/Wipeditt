@@ -40,6 +40,10 @@ try {
   assert.equal(await page.locator('#scan-section').isVisible(), false);
   await page.locator('#connect').click();
   await page.getByRole('button', { name: 'Verify account', exact: true }).waitFor();
+  const browserBounds = await application.evaluate(({ BrowserWindow, session }) => BrowserWindow.getAllWindows()[0].contentView.children.find(view => view.webContents?.session === session.fromPartition('wipeditt-reddit')).getBounds());
+  const helpBounds = await page.locator('#browser-help').boundingBox();
+  assert.ok(browserBounds.y >= helpBounds.y + helpBounds.height, 'embedded Reddit must not cover the sign-in instructions');
+  await capture('desktop-sign-in');
   const preferences = await application.evaluate(({ webContents, session }) => {
     const remote = webContents.getAllWebContents().find(contents => contents.session === session.fromPartition('wipeditt-reddit'));
     return remote.getLastWebPreferences();
