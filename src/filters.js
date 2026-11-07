@@ -2,7 +2,8 @@ import { fail } from './errors.js';
 export const DEFAULT_REPLACEMENT = 'This content has been removed for privacy reasons.';
 const list = value => [...new Set(String(value || '').split(/[\s,]+/).filter(Boolean).map(s => s.replace(/^r\//i, '').toLowerCase()))].sort();
 function date(value) {
-  if (!value) return null;
+  if (value === null || value === undefined || value === '') return null;
+  if (typeof value === 'number' && Number.isFinite(value) && !Number.isNaN(new Date(value).getTime())) return value;
   const parts = /^(\d{4})-(\d{2})-(\d{2})(?:T|$)/.exec(String(value));
   if (!parts) fail('FILTER', 'Enter an ISO date or date and time.');
   const [year, month, day] = parts.slice(1).map(Number);

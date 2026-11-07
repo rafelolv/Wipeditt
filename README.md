@@ -1,111 +1,55 @@
-<p align="center"><img src="images/banner.svg" alt="Wipeditt — Your Reddit history. Your control." width="960"></p>
+# Wipeditt
 
-<p align="center">
-<img src="https://img.shields.io/badge/version-0.2.0-a0dcb4?labelColor=171e1a" alt="Version 0.2.0">
-<img src="https://img.shields.io/badge/license-proprietary-a0dcb4?labelColor=171e1a" alt="Proprietary license">
-<img src="https://img.shields.io/badge/runtime-local_only-a0dcb4?labelColor=171e1a" alt="Local only">
-</p>
+A local desktop app for reviewing and anonymizing your own Reddit comments and text posts. Created by **Rafael (rafaelolv)**. Proprietary software; [LICENSE](LICENSE) governs original code and artwork.
 
-**Your Reddit history. Your control.** Wipeditt helps you review and replace the bodies of your own comments and editable text posts. Created by **Rafael (rafaelolv)**. Runs in your browser, without a backend or telemetry.
+![Wipeditt review](images/screenshots/desktop-review-dark.png)
 
-**0.2.0 implements real OAuth authentication and Reddit API discovery/anonymization.** A registered Reddit **installed app** with access enabled for your use case is required. There is no shared Wipeditt Client ID. Reddit controls registration and approval; this project cannot create that permission by signing you in. The integration has been tested end-to-end with intercepted HTTP fixtures, **not a real authorized Reddit account**. Live deletion is intentionally unavailable pending separate validation.
+## Desktop preview
 
-## Install
+Download installers from [Releases](https://github.com/rafelolv/Wipeditt/releases). Version 0.3.0 replaces the userscript/extension with an Electron desktop app. Linux AppImage and Debian packages, Windows installer and macOS disk images are built on native CI runners. Packages are unsigned; macOS builds are not notarized. Verify downloaded files against the release's `SHA256SUMS`.
 
-Choose one distribution. All use the same engine and panel; no store publication is claimed.
+1. Open Wipeditt and choose **Connect Reddit**.
+2. Sign in directly on Reddit inside the app, then choose **Verify account**. No registered API application or Client ID is needed for this website connector.
+3. Set a small **Maximum items** and choose **Scan history**.
+4. Review matching items, select eligible content and set replacement text.
+5. Inspect the confirmation, then explicitly authorize anonymization. Changes can be permanent.
 
-| Distribution | Install |
-| --- | --- |
-| Userscript | Install [Tampermonkey](https://www.tampermonkey.net/) or [Violentmonkey](https://violentmonkey.github.io/), then open [wipeditt.user.js](https://raw.githubusercontent.com/rafelolv/Wipeditt/main/wipeditt.user.js). Accept Reddit-only request permissions. Actual manager/browser combinations remain unverified. |
-| Chromium | Build locally, open `chrome://extensions`, enable Developer mode, choose **Load unpacked**, select `dist/chromium`. |
-| Firefox | Build locally, open `about:debugging#/runtime/this-firefox`, choose **Load Temporary Add-on**, select `dist/firefox/manifest.json`. Unsigned temporary installs disappear on restart; Firefox runtime remains unverified. |
+The connector operates Reddit's classic website forms using your own session. It does not import browser cookies or ask you to paste credentials. Website availability, account restrictions and Reddit's rules still apply. Authentication, account changes and uncertain writes stop the operation.
 
-Open **[www.reddit.com](https://www.reddit.com/)** and click **Wipeditt**. The old.reddit.com launcher directs you to www for live work, keeping all operations under one origin lock. See [extension details](docs/EXTENSION.md).
+**Validation:** the maintainer confirmed real Reddit sign-in, account identification and a scan displaying their comments. Automated tests cover native form editing and verification against local fixtures. **Real-account editing has not been validated. Live deletion remains disabled.**
 
-## Connect Reddit
+## What it does
 
-1. Click **Connect Reddit**. The dialog contains setup instructions.
-2. If you have no registered app, open [Reddit app settings](https://www.reddit.com/prefs/apps). Create an **installed app** named Wipeditt and set its redirect URI to **`https://www.reddit.com/`**, including the trailing slash. If Reddit refuses creation or redirects to policy, follow its [API approval process](https://support.reddithelp.com/hc/en-us/articles/42728983564564-Responsible-Builder-Policy); do not use cookies or another app's credentials to bypass it.
-3. Paste the **public Client ID**, shown below the app name, into Wipeditt. Do not enter a password, client secret or access token.
-4. Choose **Sign in with Reddit**. Sign in on Reddit and approve the requested identity/history/read/edit permissions. Wipeditt verifies the returned account before enabling scans.
+- Scan comments, text posts or both; filter by date, subreddit, text and score.
+- Separate inspected, discovered, matched, eligible and selected counts. Review per item or subreddit.
+- Replace editable body text; recheck account/author and reread saved text. Titles, link posts and inaccessible content cannot be anonymized by body replacement.
+- Pause, resume, stop, bounded throttling and minimized local checkpoints. Submitted edits may finish after Stop; uncertain writes are never automatically replayed.
+- Local privacy mode, light/dark themes and JSON reports without original content or account names.
+- Optional clearly labeled simulation for exploring edit/delete workflows without touching Reddit.
 
-The Client ID can be remembered locally. Tokens stay in memory and expire after at most one hour. Disconnect, close the panel or reload to clear the token; reconnect when needed. Current flow and limitations: [Reddit integration](docs/REDDIT-INTEGRATION.md).
+History listings can be partial; a successful scan is not proof of complete account coverage. Editing cannot remove external copies, quotations or backups. See [limits](docs/REDDIT-LIMITS.md).
 
-## Scan, review, replace
+## Development
 
-1. Choose **Comments**, **Text posts** or both, plus a maximum item count. Optional subreddit/date/text/regex/score/edited filters are under **Add filters**.
-2. Click **Scan history**. Scanning never edits anything.
-3. Review the list and deselect individual items, select all/none, or select by subreddit. Ineligible content cannot be selected.
-4. Enter the exact replacement. Changing replacement updates this preview without fetching your history again; it invalidates any previous confirmation.
-5. Click **Review N selected**. Check the account, count and exact text. Explicitly confirm; above 100 items type **ANONYMIZE**.
-6. Watch progress. Pause/Resume work at request boundaries. Stop prevents new requests; submitted requests may finish. Export a local report from **Settings & help**.
-
-<details><summary>Interface — actual Chromium capture using intercepted HTTP fixtures</summary>
-
-<img src="images/screenshots/panel-dark.png" alt="Wipeditt review panel using a synthetic fixture account, selected comments and exact replacement" width="580">
-
-</details>
-
-## What ships
-
-- A real installed-app OAuth code flow, consent popup, state validation, callback recovery without window.opener, memory-only token and account verification.
-- Official API history pagination, normalized comments/self-post bodies, deduplication, cursor-loop/page guards and honest partial-history notices.
-- Filtered review, own-account/ownership guards, expiring confirmation, exact custom replacement and read-after-write verification.
-- Serial request pacing for authentication, reads, write guards and writes. Rate-limit headers, Retry-After, explicit body cooldowns, bounded retries and uncertain outcomes.
-- A compact isolated panel, light/dark themes, keyboard focus, mobile layout, visual privacy masking and minimized local reports/checkpoints.
-- A demo behind **Settings & help → Try demo data**, separate from normal account connection. Delete and Anonymize & Delete are demo-only.
-
-| Target | Anonymization |
-| --- | --- |
-| Your comments | Replace body, when editable |
-| Your text/self posts | Replace body, when editable |
-| Titles | Cannot be edited |
-| Image, video, gallery or link bodies | Not advertised as anonymizable |
-| Archived, locked, removed or restricted content | Conservatively skipped or rejected by Reddit |
-| Other authors | Never eligible |
-| Chats/private messages | Unsupported |
-
-Anonymization here means replacing visible text. **Archives, caches, moderation records and external copies can remain.** Changes can be permanent. Listings cannot guarantee complete account history. Deletion/combined mode remain unavailable for real accounts; an official data-export importer is planned.
-
-## Request pacing and privacy
-
-All HTTP calls are serialized, spaced by at least 1.5 seconds and subject to stricter server cooldowns. Writes are guarded again before dispatch and each explicit throttling retry. Authentication/permission failures stop processing. Ambiguous write timeouts/5xx/verification failures are **uncertain** and are never replayed automatically. See [Reddit limits](docs/REDDIT-LIMITS.md).
-
-Requests go directly to `www.reddit.com` for token exchange and `oauth.reddit.com` for API work. No backend, analytics, tracking, remote configuration, fonts, CDN scripts or credential proxy. No cookie extraction or Reddit password collection. The userscript uses its manager's anonymous request API; extensions use a restricted broker that omits cookies. No automatic background jobs.
-
-Scans are held in memory. Optional session checkpoints contain only IDs/states, a simulation flag and expiry. Reports omit original/replacement text, usernames, subreddit names and sensitive filter values. IDs can still be sensitive. Privacy mode masks the interface; it is not encryption. [Privacy details](docs/PRIVACY.md).
-
-## Troubleshooting
-
-- **Cannot create an app / policy redirect:** Reddit controls API registration and approval. Follow its access process. Wipeditt has no shared approved registration and does not bypass a denial.
-- **Authorization refused:** check that the app type is installed, Client ID is correct, redirect URI matches exactly, and Reddit has enabled access for your app/use case.
-- **Popup blocked / canceled:** allow the Reddit popup and reconnect; **Cancel sign-in** cancels the attempt.
-- **Expired token / HTTP 401:** reconnect. Tokens are temporary and never persisted.
-- **HTTP 403:** check app/account permissions; do not retry through alternative private endpoints.
-- **Preview expired / filters changed:** scan again. Previews last five minutes, confirmation one minute. Changing only replacement/mode/scheduling does not extend preview lifetime.
-- **Already running in another tab:** finish or stop that run. Live operations use a non-queued Web Lock on www.reddit.com.
-- **Uncertain result:** check current content before attempting another change. Reports never count dispatch alone as success.
-
-## Development and validation
-
-Maintainer-authorized development requires Node.js 24+, npm, Python 3 and Chromium/Chrome. Build/test dependencies are locked; runtime dependencies are fully bundled.
+Node.js 24+ and npm are required. Native Electron GUI dependencies and a graphical session are required on Linux.
 
 ```sh
-npm ci
-npx playwright-core install chromium
-npm run build
-npm run build:extensions
-npm test
-npm run test:ui
-npm run check
+npm ci --ignore-scripts
+npm run setup
+npm start
 ```
 
-Set `WIPEDITT_CHROME=/path/to/chrome` for icon generation/userscript checks and `WIPEDITT_EXTENSION_CHROME=/path/to/chromium` for extension-loading support. CI uses preinstalled Chrome and matching Playwright Chromium on Ubuntu 24.04. Packages and SHA256SUMS appear in `dist/`.
+`setup` explicitly downloads the locked Electron runtime. Build outputs live in ignored `app/` and `dist/`.
 
-The browser suite drives the **real OAuth/API code**, intercepting every HTTP response: consent redirect, code exchange, identity, listings, guarded edits and verification. It also loads the actual Chromium content script/background broker. This does **not** prove live Reddit, Firefox or userscript-manager compatibility. [Validation record](docs/VALIDATION.md), [architecture](docs/MAINTENANCE.md), [user guide](docs/USER-GUIDE.md), [release process](docs/RELEASING.md), [changelog](CHANGELOG.md).
+```sh
+npm run check
+npm run test:ui
+npm run package
+npm run checksums
+```
 
-## Ownership and credits
+For headless Linux tests use `xvfb-run -a npm run test:ui`. Tests intercept HTTPS in an isolated synthetic session; no Reddit account is required. Packaging targets the host platform by default; release CI builds each supported target natively.
 
-Copyright © 2026 **Rafael (rafaelolv)**. [Wipeditt Proprietary License](LICENSE): personal non-commercial use of official unmodified packages is allowed; modification, redistribution, commercial use and derivative software require prior written permission. This is not open source. The license protects original material, not abstract ideas or independently implemented functionality. [Licensing details](docs/LICENSING.md).
+Read the [user guide](docs/USER-GUIDE.md), [privacy details](docs/PRIVACY.md), [integration design](docs/REDDIT-INTEGRATION.md), [validation record](docs/VALIDATION.md) and [third-party notices](docs/THIRD-PARTY.md). Previous browser integrations remain available only in historical tags; see [migration](docs/EXTENSION.md).
 
-[Wipegram](https://github.com/rafelolv/Wipegram) and [Wipecord](https://github.com/rafelolv/Wipecord) informed engineering conventions. [Redact](https://redact.dev/services/reddit) informed workflow research. No platform-specific implementation was copied. Development tools retain their own licenses. Wipeditt is independent of Reddit and Redact.
+Original Wipeditt material may not be redistributed, adapted or used commercially without Rafael's permission except as expressly allowed by the license or applicable rights. Third-party components retain their independent licenses. Wipeditt is independent of Reddit and Redact.

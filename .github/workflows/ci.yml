@@ -6,31 +6,39 @@ on:
 permissions:
   contents: read
 jobs:
-  check:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            platform: linux
+            arch: x64
+          - os: windows-2025
+            platform: win
+            arch: x64
+          - os: macos-15
+            platform: mac
+            arch: arm64
+          - os: macos-15-intel
+            platform: mac
+            arch: x64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
-      - run: npm ci
-      - name: Install matching extension test browser
-        timeout-minutes: 5
-        run: npx playwright-core install chromium
-      - name: Resolve test browsers
-        shell: bash
-        run: |
-          WIPEDITT_CHROME=$(command -v google-chrome)
-          WIPEDITT_EXTENSION_CHROME=$(node --input-type=module -e "import { chromium } from 'playwright-core'; process.stdout.write(chromium.executablePath())")
-          test -n "$WIPEDITT_CHROME"
-          test -n "$WIPEDITT_EXTENSION_CHROME"
-          echo "WIPEDITT_CHROME=$WIPEDITT_CHROME" >> "$GITHUB_ENV"
-          echo "WIPEDITT_EXTENSION_CHROME=$WIPEDITT_EXTENSION_CHROME" >> "$GITHUB_ENV"
-          "$WIPEDITT_CHROME" --version
-          "$WIPEDITT_EXTENSION_CHROME" --version
+      - run: npm ci --ignore-scripts
+      - run: npm run setup
       - run: npm run check
-      - run: npm run test:ui
-      - name: Validate committed runtime
-        run: git diff --exit-code -- wipeditt.user.js
+      - name: Electron fixture tests (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npm run test:ui
+      - name: Electron fixture tests (Windows/macOS)
+        if: runner.os != 'Linux'
+        run: npm run test:ui

@@ -1,0 +1,113 @@
+import { _electron as electron } from 'playwright-core';
+import executablePath from 'electron';
+import { resolve, join } from 'node:path';
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import assert from 'node:assert/strict';
+import { installFixture } from './fixture.mjs';
+
+process.on('uncaughtExceptionMonitor', error => {
+  if (process.env.GITHUB_ACTIONS === 'true') console.error(`::error title=Desktop validation::${String(error.stack || error.message).replaceAll('%', '%25').replaceAll('\n', '%0A').replaceAll('\r', '%0D')}`);
+});
+const profile = await mkdtemp(join(tmpdir(), 'wipeditt-desktop-test-'));
+const environment = { ...process.env, WIPEDITT_TEST_USER_DATA: profile };
+delete environment.ELECTRON_RUN_AS_NODE;
+const args = [resolve('.')];
+if (process.env.CI === 'true') args.push('--no-sandbox'); // Isolated CI container only; never a production default.
+await mkdir('artifacts', { recursive: true });
+let application;
+const deadline = setTimeout(() => { console.error('Desktop test exceeded 150 seconds.'); application?.process().kill('SIGTERM'); process.exitCode = 1; }, 150000);
+deadline.unref();
+try {
+  application = await electron.launch({ executablePath, args, env: environment, timeout: 30000 });
+  const page = await application.firstWindow();
+  await page.getByRole('button', { name: 'Connect Reddit', exact: true }).first().waitFor();
+  await installFixture(application);
+  console.log('Electron window and isolated fixture session ready.');
+  const capture = name => process.env.WIPEDITT_TEST_SCREENSHOTS === '1' ? page.screenshot({ path: `artifacts/${name}.png`, timeout: 15000 }) : Promise.resolve();
+  await capture('desktop-welcome');
+  assert.equal(await page.locator('#scan-section').isVisible(), false);
+  await page.locator('#connect').click();
+  await page.getByRole('button', { name: 'Verify account', exact: true }).waitFor();
+  const preferences = await application.evaluate(({ webContents, session }) => {
+    const remote = webContents.getAllWebContents().find(contents => contents.session === session.fromPartition('wipeditt-reddit'));
+    return remote.getLastWebPreferences();
+  });
+  assert.equal(preferences.nodeIntegration, false);
+  assert.equal(preferences.contextIsolation, true);
+  assert.equal(preferences.sandbox, true);
+  await application.evaluate(async ({ webContents, session }) => {
+    const remote = webContents.getAllWebContents().find(contents => contents.session === session.fromPartition('wipeditt-reddit'));
+    const exposed = await remote.executeJavaScript('typeof window.wipeditt');
+    if (exposed !== 'undefined') throw new Error('Reddit page received privileged bridge');
+    await remote.executeJavaScript('document.querySelector("#fixture-login").click()');
+  });
+  await page.waitForTimeout(200);
+  await page.locator('#verify').click();
+  await page.locator('#account').filter({ hasText: 'u/fixture_user' }).waitFor({ timeout: 15000 });
+  console.log('Native fixture login and account verification passed.');
+  await page.locator('#limit').fill('1');
+  await page.locator('#scan').click();
+  await page.locator('.item').waitFor({ timeout: 15000 });
+  assert.match(await page.locator('#counts').textContent(), /1 selected/);
+  assert.equal(await application.evaluate(() => globalThis.fixture.writes.length), 0);
+  const navigationCount = await application.evaluate(() => globalThis.fixture.navigations.length);
+  const replacement = '<img src=x onerror="window.INJECTED=true">';
+  await page.locator('#replacement').fill(replacement);
+  await page.locator('#review').click();
+  assert.equal(await page.locator('#confirmation-text').textContent(), replacement);
+  assert.equal(await page.locator('#confirmation-text img').count(), 0);
+  assert.equal(await application.evaluate(() => globalThis.fixture.navigations.length), navigationCount, 'replacement changes must not rescan');
+  await page.keyboard.press('Escape');
+  assert.equal(await application.evaluate(() => globalThis.fixture.writes.length), 0);
+  await page.locator('#replacement').fill('A fresh start.');
+  await page.locator('#review').click();
+  await page.locator('#accept').click();
+  await page.locator('#pause').click();
+  await page.waitForTimeout(500);
+  assert.equal(await application.evaluate(() => globalThis.fixture.writes.length), 0);
+  await page.locator('#pause').click();
+  await page.locator('#status').filter({ hasText: 'Finished' }).waitFor({ timeout: 30000 });
+  assert.equal(await application.evaluate(() => globalThis.fixture.writes.length), 1);
+  assert.equal(await application.evaluate(() => globalThis.fixture.items.t1_abc.text), 'A fresh start.');
+  const navigations = await application.evaluate(() => globalThis.fixture.navigations);
+  assert.ok(navigations.filter(path => path === '/r/privacy/comments/post/fixture/abc/').length >= 2, 'verified replacement must reload native item page');
+  assert.ok(!navigations.some(path => path.startsWith('/api/')), 'app must not replay a private API');
+  await page.locator('#scope').evaluate(node => { node.open = true; });
+  await page.locator('#limit').fill('0');
+  await page.locator('#scan').click();
+  await page.locator('#counts').filter({ hasText: '3 found' }).waitFor({ timeout: 15000 });
+  assert.equal(await page.getByRole('checkbox', { name: 'Select t1_other', exact: true }).isDisabled(), true);
+  await capture('desktop-review-dark');
+  await page.locator('#privacy').check();
+  assert.equal(await page.locator('.original').first().evaluate(node => getComputedStyle(node).filter), 'blur(6px)');
+  await page.locator('#privacy').uncheck();
+  await page.locator('#theme').click();
+  await capture('desktop-review-light');
+  await page.locator('#theme').click();
+  // Explicit rejection must be a failed edit, not a sent-request success.
+  await page.locator('#scope').evaluate(node => { node.open = true; });
+  await page.locator('#limit').fill('1');
+  await page.locator('#scan').click();
+  await page.locator('#counts').filter({ hasText: '1 found' }).waitFor({ timeout: 15000 });
+  await application.evaluate(() => { globalThis.fixture.failWrite = true; });
+  await page.locator('#replacement').fill('Rejected fixture replacement.');
+  await page.locator('#review').click(); await page.locator('#accept').click();
+  await page.locator('#status').filter({ hasText: '1 failed' }).waitFor({ timeout: 30000 });
+  assert.equal(await application.evaluate(() => globalThis.fixture.writes.length), 1);
+  await application.evaluate(() => { globalThis.fixture.failWrite = false; });
+  // Text-post bodies use the same native edit form boundary as comments.
+  await page.locator('#scope').evaluate(node => { node.open = true; });
+  await page.locator('#type').selectOption('post');
+  await page.locator('#scan').click();
+  await page.locator('.original').filter({ hasText: 'synthetic editable text-post body' }).waitFor({ timeout: 15000 });
+  // A changed native website account invalidates the operation before any new save.
+  await application.evaluate(() => { globalThis.fixture.username = 'other_user'; });
+  await page.locator('#review').click(); await page.locator('#accept').click();
+  await page.locator('#status').filter({ hasText: 'Stopped' }).waitFor({ timeout: 15000 });
+  assert.equal(await application.evaluate(() => globalThis.fixture.writes.length), 1);
+  await page.locator('#disconnect').click();
+  await page.locator('#connect').waitFor();
+  assert.equal(await page.locator('#review-section').isVisible(), false);
+  console.log('Electron desktop passed: native login, isolated session/renderer, account detection, pagination, selection, safe preview, cancel, pause/resume, native save, fresh-page verification, account-change stop, disconnect and themes. All Reddit pages were local fixtures.');
+} finally { await application?.close(); clearTimeout(deadline); await rm(profile, { recursive: true, force: true }); }

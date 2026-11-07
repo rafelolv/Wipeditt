@@ -1,35 +1,31 @@
-# User guide — 0.2.0
+# User guide
 
 ## Connect
 
-Open www.reddit.com, then Wipeditt. Choose **Connect Reddit**. First-time instructions open inside the connection dialog: create a Reddit **installed app**, set its redirect URI to `https://www.reddit.com/`, then paste its public Client ID. Reddit may require approval before registering/enabling that app. Use the linked official guidance if registration is denied; signing into an account does not create API approval.
+Install a desktop package from the official release. Choose Connect Reddit; sign in directly on Reddit's page in the embedded browser. Wipeditt never asks for a pasted password, cookie or token. Choose Verify account after login. The sidebar shows the verified username; privacy mode masks it.
 
-Click **Sign in with Reddit**, complete Reddit's sign-in and permission screen, and return to Wipeditt. The connected username appears only after API identity verification. No password/client secret/pasted token is needed. Tokens stay in memory, expire after at most one hour and clear on disconnect, panel close or reload. The public Client ID may be remembered. **Cancel sign-in** stops a pending connection; blocked popups need browser permission.
+Session memory is off by default. Enable Remember session before connecting only if you want Chromium to retain this app's Reddit session on this device. Disconnect clears Wipeditt's own session storage and invalidates the review. It does not sign out your normal browser.
 
-On old.reddit.com, choose **Open Reddit** to continue on www. Live mutations share a non-queued origin lock, so multiple tabs cannot run together.
+Opening the browser or switching accounts invalidates the previous preview. Verify again and scan from the new account. Reddit may require its own verification or deny website access; Wipeditt does not bypass those checks.
 
-## Choose content
+## Scan and review
 
-Comments are the default. Choose text posts or both if needed, plus a maximum matching item count. Zero means all available, up to a 1000-page safety cap; no listing is guaranteed to include complete historical content. The item cap includes ineligible matches.
+Start with Maximum items set to 5. Select comments, text posts or both, optional date/subreddit/text/score filters, then Scan history. This stage reads only. A scan is a bounded listing, not an export or guarantee that all historical content was found. Duplicate entries count toward inspected rows but not unique discoveries.
 
-**Add filters** contains subreddit include/exclude (comma/space lists, optional r/ prefix, exclusion wins), case-insensitive contains/JavaScript regex (no slash delimiters), inclusive local date/time bounds, min/max score and edited status. Unknown metadata does not satisfy a filter requiring it. Invalid expressions, dates and ranges fail before network access.
+Inspect snippets, dates, subreddit and eligibility. Open original links when needed. Only your own editable body text is eligible. Select individual items or a subreddit group. Changing filters requires a fresh scan; changing selection, replacement or timing invalidates confirmation. Review shows the exact replacement as text, including markup characters.
 
-Choose **Scan history**. No content changes during scanning. The summary distinguishes found/eligible/selected; **Settings & help → Scan details & activity** includes inspected/unique/matching counts. Read the stopping reason and partial-history limitation.
+## Anonymize
 
-## Review and replace
+Live desktop mode replaces comment or text-post bodies only. It does not change titles. Deletion and edit-then-delete are available in simulation only.
 
-The content list shows original text previews, subreddit/type/date/score, original links and ineligible reasons. Select all/none, individual items, or expand **Select by subreddit**. Only eligible own content can be selected.
+Choose a replacement and review the confirmation. Above 100 items, type ANONYMIZE exactly. Confirmation expires after five minutes. Canceling or closing it does nothing. Each live edit rechecks the account and author, submits the website's save form, then navigates again to verify the saved text.
 
-Enter the exact replacement under **Replace selected text with**. The default is `This content has been removed for privacy reasons.` Any nonblank 1–10000-character replacement is accepted. Changing replacement updates the existing scan without a new request; it cancels any previous confirmation and does not extend preview lifetime. Filter changes require a new scan.
+Pause takes effect at a request boundary; Resume continues the current reviewed operation. Stop prevents new work. A submitted edit may still finish. A missing response or changed account after submission is uncertain; inspect the original and obtain a fresh preview before acting again. Never assume a failed save means nothing changed.
 
-Choose **Review N selected**. The dialog repeats account/count/action and exact replacement. Above 100 items, type ANONYMIZE. Accept explicitly. Cancel/Escape/Close does not authorize any write. A preview expires after five minutes; confirmation after one minute.
+Reports contain statuses and IDs, not original text or names. Checkpoints support conservative status recovery, not automatic write replay. Clearing local checkpoints does not undo Reddit changes.
 
-The API rechecks account and ownership before writes/retries, interprets responses, then reads current content to verify exact replacement. A request being sent is not success. Ambiguous outcomes become uncertain and are not auto-replayed. Titles/media cannot be anonymized; external archives/caches/moderation copies may remain.
+## Simulation and troubleshooting
 
-## Progress and settings
+Demo data is local and explicitly labeled; it never proves that your real account supports writes. Switching between simulation and Reddit invalidates the preview.
 
-Pause/Resume work at request boundaries. Stop aborts waits and prevents new dispatch; submitted writes may finish. Closing the panel stops work and clears real-account authorization. Use **Settings & help** for visual privacy masking, theme, activity, report export and checkpoint clearing. Reports exclude original/replacement text, usernames/subreddits and sensitive filter values, but issue IDs may be sensitive.
-
-**Operation settings** contains minimum request interval; stricter server limits always win. Live mode supports anonymization only. Delete, combined mode and deletion delay are demo-only pending separate real-account validation.
-
-**Try demo data** is under Settings & help. It disconnects real authorization and loads synthetic content; the demo notice remains visible. Use Disconnect, then Connect Reddit to return to an account. Demo content resets on reload. An interrupted checkpoint never auto-resumes writes; fresh scan/review are required.
+If login fails, use Open Reddit in app and complete Reddit's own sign-in flow, then Verify account. If history stops loading or controls cannot be found, stop and report the app version and error code without sharing credentials, cookies, original private text or tokens. The classic website connector may need maintenance after Reddit changes.

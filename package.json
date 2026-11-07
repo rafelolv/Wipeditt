@@ -1,9 +1,9 @@
 {
   "name": "wipeditt",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
-  "description": "Review and anonymize your own Reddit history with local OAuth authentication",
+  "description": "Local desktop browser for reviewing and anonymizing your own Reddit history",
   "author": "Rafael (rafaelolv)",
   "license": "SEE LICENSE IN LICENSE",
   "repository": {
@@ -15,14 +15,79 @@
     "node": ">=24"
   },
   "scripts": {
-    "build": "node build/userscript.mjs",
-    "build:extensions": "npm run build && node build/extensions.mjs",
+    "setup": "node build/setup.mjs",
+    "start": "npm run build && node build/run.mjs",
+    "build": "node build/desktop.mjs",
+    "package": "npm run build && electron-builder --publish never",
+    "package:dir": "npm run build && electron-builder --dir --publish never",
     "test": "node --test --test-isolation=none test/*.test.mjs",
-    "test:ui": "node test/ui/browser.mjs",
-    "check": "node build/check-source.mjs && npm test && npm run build:extensions && node build/check-artifacts.mjs"
+    "test:ui": "node test/desktop/browser.mjs",
+    "check": "node build/check-source.mjs && npm test && npm run build && node build/check-desktop.mjs",
+    "checksums": "node build/checksums.mjs"
   },
   "devDependencies": {
+    "@resvg/resvg-js": "2.6.2",
+    "electron": "45.2.3",
+    "electron-builder": "26.18.0",
     "esbuild": "0.25.12",
     "playwright-core": "1.58.2"
-  }
+  },
+  "main": "app/main.cjs",
+  "overrides": {
+    "minimatch@>=7.0.0 <11.0.1": "11.0.1"
+  },
+  "build": {
+    "appId": "com.rafelolv.wipeditt",
+    "productName": "Wipeditt",
+    "copyright": "Copyright \u00a9 2026 Rafael (rafaelolv)",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "app/**/*",
+      "package.json"
+    ],
+    "extraFiles": [
+      {
+        "from": "LICENSE",
+        "to": "WIPEDITT-LICENSE"
+      },
+      {
+        "from": "docs/THIRD-PARTY.md",
+        "to": "THIRD-PARTY.md"
+      }
+    ],
+    "asar": true,
+    "artifactName": "Wipeditt-${version}-${os}-${arch}.${ext}",
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Utility",
+      "icon": "app/icons",
+      "maintainer": "Rafael <82127878+rafelolv@users.noreply.github.com>",
+      "syncDesktopName": true
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "app/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.utilities",
+      "icon": "app/icon.png"
+    },
+    "electronDist": "node_modules/electron/dist"
+  },
+  "desktopName": "Wipeditt"
 }

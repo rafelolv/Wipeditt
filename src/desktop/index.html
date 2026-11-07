@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Wipeditt</title>
+  <link rel="stylesheet" href="renderer.css">
+  <script src="renderer.js" defer></script>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand"><img src="icon.png" alt="" width="40" height="40"><div><h1>Wipeditt</h1><p>Your history. Your control.</p></div></div>
+    <div class="account"><span class="dot"></span><span id="account" class="sensitive">Not connected</span></div>
+    <label class="remember"><input id="remember" type="checkbox"> Remember login on this device</label>
+    <button id="connect" class="primary">Connect Reddit</button>
+    <button id="verify" hidden>Verify account</button>
+    <button id="show-browser" hidden>Open Reddit browser</button>
+    <button id="hide-browser" hidden>Return to workspace</button>
+    <button id="disconnect" hidden>Disconnect & clear session</button>
+    <nav aria-label="Workflow"><div class="step" id="step-connect"><b>1</b> Connect your account</div><div class="step" id="step-scan"><b>2</b> Find your content</div><div class="step" id="step-review"><b>3</b> Review & anonymize</div></nav>
+    <div class="sidebar-bottom"><label><input type="checkbox" id="privacy"> Privacy mode</label><button id="theme">Light mode</button><details><summary>Tools</summary><button id="demo">Try demo data</button><button id="report" disabled>Save report</button><button id="clear-checkpoint">Clear checkpoint</button></details><small id="version"></small><small>Rafael (rafaelolv) · Local only</small></div>
+  </aside>
+  <main>
+    <header><div><p class="eyebrow">YOUR REDDIT HISTORY. YOUR CONTROL.</p><h2 id="heading">A fresh start, on your terms.</h2></div><span id="mode-badge" hidden>DEMO</span></header>
+    <section id="browser-help" hidden><p>Sign in directly on Reddit. Then choose <strong>Verify account</strong> in the sidebar.</p></section>
+    <div id="workspace">
+      <section id="welcome"><div class="intro-mark">W</div><h3>Decide what stays.</h3><p>Connect your Reddit account, find older comments and text posts, then replace only the content you approve.</p><p class="muted">Login happens inside the Reddit browser. No Client ID or copied token is required by this website connector.</p><button id="welcome-connect" class="primary">Connect Reddit</button></section>
+      <section id="scan-section" hidden><details id="scope" open><summary>Choose content</summary><div class="grid"><label>Content<select id="type"><option value="comment">Comments</option><option value="post">Text posts</option><option value="all">Comments & text posts</option></select></label><label>Maximum items<input id="limit" type="number" value="100" min="0" max="100000"></label></div><details id="filters"><summary>Add filters</summary><div class="grid"><label>Include subreddits<input id="include" class="sensitive" placeholder="privacy, technology"></label><label>Exclude subreddits<input id="exclude" class="sensitive"></label><label>Text contains<input id="contains" class="sensitive"></label><label>Regular expression<input id="regex" class="sensitive" maxlength="300"></label><label>From<input id="after" type="datetime-local"></label><label>Until<input id="before" type="datetime-local"></label><label>Minimum score<input id="minScore" type="number"></label><label>Maximum score<input id="maxScore" type="number"></label><label>Edited status<select id="edited"><option value="all">Any</option><option value="yes">Edited</option><option value="no">Unedited</option></select></label></div></details><small>0 = all available. Reddit listings may omit older history.</small></details><button id="scan" class="primary">Scan history</button></section>
+      <section id="review-section" hidden><div class="section-heading"><h3>Review your selection</h3><span id="counts"></span></div><div class="selection-actions"><button id="select-all">Select all</button><button id="select-none">Select none</button><select id="subreddit-select" class="sensitive" aria-label="Select by subreddit"><option value="">Select by subreddit…</option></select></div><div id="items" aria-label="Content preview"></div><label class="replacement-label">Replace selected text with<textarea id="replacement" class="sensitive" maxlength="10000" rows="3"></textarea></label><small>Comment and text-post bodies only. Titles and media stay unchanged. Archives and external copies may remain.</small><details><summary>Advanced operation settings</summary><div class="grid"><label>Mode<select id="mode"><option value="anonymize">Anonymize</option><option value="delete">Delete · demo only</option><option value="combined">Anonymize & delete · demo only</option></select></label><label>Minimum action interval (ms)<input id="interval" type="number" value="1500" min="1500" max="3600000"></label><label>Demo deletion delay (ms)<input id="deleteDelay" type="number" value="0" min="0" max="86400000"></label></div></details><button id="review" class="primary">Review selected</button></section>
+      <section id="progress-section" hidden><div class="section-heading"><h3>Operation progress</h3><div><button id="pause">Pause</button><button id="stop" class="danger">Stop</button></div></div><progress id="progress" max="1" value="0"></progress><p id="progress-counts"></p><p id="cooldown" class="muted"></p></section>
+      <p id="status" role="status" aria-live="polite">Connect Reddit to get started.</p>
+      <details id="activity-details"><summary>Activity & scan details</summary><p id="scan-details" class="muted"></p><ol id="activity"></ol></details>
+    </div>
+  </main>
+  <dialog id="confirmation" aria-labelledby="confirmation-title"><h2 id="confirmation-title">Confirm content changes</h2><p id="confirmation-summary" class="sensitive"></p><strong>Exact replacement</strong><pre id="confirmation-text" class="sensitive"></pre><p class="muted">Changes may be permanent. Stop prevents new actions; submitted edits may finish. External copies can remain.</p><label id="phrase-label" hidden><span id="phrase-prompt"></span><input id="phrase" autocomplete="off"></label><div class="dialog-actions"><button id="cancel-confirmation">Cancel</button><button id="accept" class="primary">Anonymize selected</button></div></dialog>
+</body>
+</html>

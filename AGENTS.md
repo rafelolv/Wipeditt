@@ -2,21 +2,19 @@
 
 Created by Rafael (rafaelolv). Repository: https://github.com/rafelolv/Wipeditt.
 
-- Use English for code, comments, UI, metadata and documentation. Follow the user's language in conversation.
-- Source: `src/`; packaging: `build/`; tests: `test/`; canonical icon: `images/icon.svg`.
-- Regenerate `wipeditt.user.js` and `dist/`; never edit outputs manually. Commit the root userscript with source changes. `dist/` is ignored.
-- Keep focused changes and preserve unrelated work. Never stage, commit, push, tag or publish without authorization. User-requested commits and releases authorize those steps. Use repository-local Rafael <82127878+rafelolv@users.noreply.github.com>. Never rewrite history or add co-authors automatically.
-- Preserve the proprietary license and original attribution. Do not describe this as open source. Third-party dependencies keep their own licenses.
-- No backend, telemetry, tracking, remote configuration, runtime CDN, external fonts or executable remote dependencies. Never read Reddit cookies or ask for passwords. Never expose or persist tokens.
-- Ship a real installed-app OAuth flow and adapter. Reddit controls registration/approval and may deny access; do not invent a shared Client ID, represent a token as proof of policy approval, or bypass denials. Ask for no password, client secret or pasted website token. Keep setup actionable and distinguish implemented networking from verified real-account success.
-- All API calls belong in adapters and pass through the centralized serial scheduler. UI must not make platform requests. No undocumented endpoint bypasses.
-- Use DOM creation and text APIs. No innerHTML, outerHTML, insertAdjacentHTML or runtime HTML parsing. Validate external links before assigning them.
-- Own content only. Recheck account and item ownership immediately before each write. Stop on authentication/account/permission failure. No moderator or administrator scope.
-- Scan then review then explicitly confirm. Filter, mode, replacement, account, selection or schedule changes invalidate confirmation. Preview expires after five minutes. Type ANONYMIZE or DELETE above 100 items. Closing a dialog never authorizes writes.
-- Do not auto-delete after failed or uncertain edits. Verify replacement before combined-mode deletion. Non-editable content has no implicit delete fallback.
-- Stop prevents new requests; submitted writes may finish. Pause waits at request boundaries. No automatic replay of ambiguous writes. Retry reads and explicit throttling with bounded backoff; honor stricter server cooldowns.
-- Listings are not complete archives. Track raw inspected, unique discovered, matched, eligible and selected separately. Guard duplicate IDs, pagination loops, malformed filters and cancellation.
-- Checkpoints retain only IDs/statuses with expiry; no original content or account identifiers. Interrupted writes become uncertain and require fresh state verification and preview. Reports omit original text, names and sensitive filter values.
-- Run `npm run check` and `npm run test:ui` after runtime changes. Tests use deterministic simulated adapters and isolated browser profiles. Never modify real Reddit content in automated tests; report simulated and live validation separately. Chromium checks do not prove Firefox behavior.
-- Live mutations require a non-queued origin Web Lock. Enable live UI only on www.reddit.com so old/www cannot run concurrently under different origin locks. Keep deletion disabled until independently live-validated.
-- Keep package, lockfile, metadata, manifests and release notes at the same version. Prepare checksummed packages before release; inspect existing tags/releases before publishing. No store submissions or automatic publication without authorization.
+- English code, comments, UI and documentation; user's language in conversation.
+- Source: `src/`; desktop: `src/desktop/`; packaging: `build/`; tests: `test/`; canonical artwork: `images/icon.svg`. Generate ignored `app/` and `dist/`; never edit generated outputs.
+- Preserve unrelated work. Commit/push/tag/release only when authorized; the user's requested commits and release authorize those steps. Use repository-local Rafael <82127878+rafelolv@users.noreply.github.com>. No history rewriting or automatic co-authors.
+- Original material is proprietary. Preserve LICENSE and attribution; independent dependencies retain their licenses and notices. Do not call Wipeditt open source.
+- Desktop shell has no backend, app telemetry, remote configuration, runtime CDN or external fonts. Embedded Reddit runs the website's own resources under its own terms.
+- Remote Reddit content: separate owned Electron session, sandbox, context isolation, no Node, no privileged preload/IPC. Main process validates exact shell sender and frame. Never extract cookies, passwords, website tokens or system-browser profiles. Remember-session is opt-in; disconnect clears only app-owned sessions.
+- Native connector uses the website's visible forms and DOM. No private endpoint replay, access-control evasion, CAPTCHA automation or invented OAuth approval. Stop on authentication, permission or account changes. Classic layout changes may require connector maintenance.
+- Main process owns Engine, confirmation, scheduler, reports and checkpoints. Renderer cannot issue platform requests. Native navigation and writes use the centralized serial scheduler and stricter server cooldowns.
+- Use safe DOM creation/text APIs. No innerHTML, outerHTML, insertAdjacentHTML, runtime HTML parsing or eval. Validate external links.
+- Own content only; bind verified account and recheck author/account immediately before each write. Scan, review, explicitly confirm. Changes invalidate confirmation; previews expire after five minutes. Type ANONYMIZE or DELETE above 100 items. Dialog dismissal never authorizes writes.
+- Native live mode only anonymizes editable comments and text posts. Keep deletion disabled until independently validated. Never delete after failed/uncertain edits. Simulation is explicitly separate.
+- Pause waits at request boundaries. Stop prevents new requests; submitted writes can finish. No automatic replay of ambiguous writes. Retry safe reads and explicit throttling with bounded backoff.
+- Listings are partial, not archives. Track inspected, discovered, matched, eligible and selected independently. Guard duplicates, pagination loops, malformed filters and cancellation.
+- Checkpoints contain expiring IDs/statuses, no text/account identifiers. Interrupted writes become uncertain. Reports omit original text, names and sensitive filter values.
+- Run `npm run check` and `npm run test:ui` after runtime changes. Electron UI tests use an isolated temporary profile and synthetic HTTPS protocol fixture; never change real Reddit content automatically. Distinguish fixtures, maintainer-confirmed live reads and live writes.
+- Keep package/lock/build metadata/release notes aligned. Validate native packages and checksums before release. Inspect tags/releases first. No store submissions or automatic updates without authorization.

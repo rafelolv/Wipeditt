@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0 — 2026-11-06
+
+- Replace userscript/extensions with an isolated Electron desktop app and native Reddit website sign-in.
+- Add classic history discovery, native form anonymization, fresh ownership/replacement checks and local session controls.
+- Rebuild connection/review/execution UI, desktop fixtures, native packaging and release CI.
+- Maintainer confirmed real login and comment discovery; live edits remain unvalidated and deletion disabled.
+
 ## 0.2.0 — 2026-11-06
 
 - Replace the permanently blocked live adapter with real installed-app OAuth and official Reddit API discovery/anonymization.

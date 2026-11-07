@@ -5,7 +5,59 @@ on:
 permissions:
   contents: read
 jobs:
-  release:
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            platform: linux
+            arch: x64
+          - os: windows-2025
+            platform: win
+            arch: x64
+          - os: macos-15
+            platform: mac
+            arch: arm64
+          - os: macos-15-intel
+            platform: mac
+            arch: x64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run setup
+      - run: npm run check
+      - name: Electron fixture tests (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npm run test:ui
+      - name: Electron fixture tests (Windows/macOS)
+        if: runner.os != 'Linux'
+        run: npm run test:ui
+      - name: Validate release version
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: node --input-type=module -e "import p from './package.json' with {type:'json'}; if (process.env.RELEASE_TAG !== 'v' + p.version) process.exit(1)"
+      - name: Build native installer
+        run: npm run package -- --${{ matrix.platform }} --${{ matrix.arch }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.platform }}-${{ matrix.arch }}
+          if-no-files-found: error
+          path: |
+            dist/*.AppImage
+            dist/*.deb
+            dist/*.exe
+            dist/*.dmg
+  publish:
+    needs: desktop
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -15,42 +67,23 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: npm
-      - name: Validate release version
-        env:
-          RELEASE_TAG: ${{ github.ref_name }}
-        run: node --input-type=module -e "import p from './package.json' with {type:'json'}; if (process.env.RELEASE_TAG !== 'v' + p.version) process.exit(1)"
-      - run: npm ci
-      - name: Install matching extension test browser
-        timeout-minutes: 5
-        run: npx playwright-core install chromium
-      - name: Resolve test browsers
-        shell: bash
-        run: |
-          WIPEDITT_CHROME=$(command -v google-chrome)
-          WIPEDITT_EXTENSION_CHROME=$(node --input-type=module -e "import { chromium } from 'playwright-core'; process.stdout.write(chromium.executablePath())")
-          test -n "$WIPEDITT_CHROME"
-          test -n "$WIPEDITT_EXTENSION_CHROME"
-          echo "WIPEDITT_CHROME=$WIPEDITT_CHROME" >> "$GITHUB_ENV"
-          echo "WIPEDITT_EXTENSION_CHROME=$WIPEDITT_EXTENSION_CHROME" >> "$GITHUB_ENV"
-          "$WIPEDITT_CHROME" --version
-          "$WIPEDITT_EXTENSION_CHROME" --version
-      - run: npm run check
-      - run: npm run test:ui
-      - run: git diff --exit-code -- wipeditt.user.js
-      - name: Package reviewer source
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: desktop-*
+          path: dist
+          merge-multiple: true
+      - name: Package source and checksum all assets
         env:
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
           git archive --format=zip --prefix=Wipeditt/ -o "dist/wipeditt-source-${RELEASE_TAG}.zip" HEAD
-          cd dist
-          sha256sum "wipeditt-source-${RELEASE_TAG}.zip" >> SHA256SUMS
-      - name: Publish technical preview
+          node build/checksums.mjs
+      - name: Publish desktop preview
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
           gh release create "$RELEASE_TAG" --verify-tag --prerelease \
-            --title "Wipeditt ${RELEASE_TAG} — Preview" \
+            --title "Wipeditt ${RELEASE_TAG} — Desktop preview" \
             --notes-file "docs/releases/${RELEASE_TAG}.md" \
-            dist/wipeditt.user.js dist/wipeditt-chromium-*.zip dist/wipeditt-firefox-*.zip dist/wipeditt-source-*.zip dist/SHA256SUMS
+            dist/*.AppImage dist/*.deb dist/*.exe dist/*.dmg dist/wipeditt-source-*.zip dist/SHA256SUMS
