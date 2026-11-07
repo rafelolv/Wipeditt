@@ -91,6 +91,17 @@ export function redditPage(operation, input = {}) {
     if (!container) return noProof('DELETE_PLACEHOLDER_LAYOUT_UNKNOWN');
     const kind = comment ? '.thing.comment' : '.thing.link';
     const roots = [...container.querySelectorAll(kind)].filter(node => !node.parentElement.closest(kind));
+    if (comment && roots.length === 0) {
+      // A deleted leaf comment can disappear entirely. An empty original is
+      // evidence only after this connector observed its native delete finish;
+      // the browser must confirm it on two independent fresh reads.
+      if (!input.nativeDeleteReceipt) return noProof('DELETE_EMPTY_THREAD_UNPROVEN');
+      const post = find(`t3_${match[1]}`);
+      const empty = [...container.children].find(child => child.matches('p#noresults.error'));
+      if (!post?.matches('.thing.link') || post.closest('.commentarea') || post.classList.contains('deleted') || post.classList.contains('promoted')) return noProof('DELETE_PARENT_POST_UNAVAILABLE');
+      if (!container.matches('.nestedlisting') || container.closest('.thing') || container.querySelector('.thing, .morechildren, .nav-buttons, .nextprev') || !visible(empty) || !empty.textContent.trim()) return noProof('DELETE_EMPTY_THREAD_UNPROVEN');
+      return { id, type: 'comment', deleted: true, editable: false, deletable: false, author: '', authorId: '', text: '', permalink: location.href, evidence: 'native-delete-focused-empty-thread' };
+    }
     if (roots.length !== 1) return noProof('DELETE_PLACEHOLDER_AMBIGUOUS');
     const node = roots[0];
     if (!node.classList.contains('deleted')) return noProof('DELETE_MARKER_MISSING');

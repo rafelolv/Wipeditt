@@ -47,10 +47,17 @@ try{
   assert.equal(await page.locator('.item[data-id="t3_link"] input').isDisabled(),true);
   await confirm();await finished();assert.equal(await application.evaluate(()=>globalThis.fixture.items.t3_post.deleted),true);
   console.log('Direct comment, text/link post deletion and combined comment/text post verification passed.');
+  for(const mode of ['delete','combined']){
+    await configure({mode,outcome:'empty'});await confirm();await finished();
+    assert.match(await page.locator('#finished-summary').textContent(),/1 deleted/);
+    assert.equal(await application.evaluate(()=>globalThis.fixture.deletions.length),1);
+  }
+  console.log('Leaf comment deletion verified from completed native action and repeated focused empty originals.');
   await configure({mode:'combined',failEdit:true});await confirm();await finished();assert.equal(await application.evaluate(()=>globalThis.fixture.deletions.length),0);
   await configure({mode:'combined',failDelete:true});await confirm();await finished();assert.match(await page.locator('#finished-summary').textContent(),/1 partial/);
   assert.equal(await application.evaluate(()=>globalThis.fixture.writes.length),1);assert.equal(await application.evaluate(()=>globalThis.fixture.deletions.length),0);
   await configure({mode:'combined',delay:60000});await confirm();await page.locator('#progress-counts').filter({hasText:'waiting'}).waitFor({timeout:30000});await page.locator('#stop').click();await finished();assert.match(await page.locator('#finished-summary').textContent(),/partial/);assert.equal(await application.evaluate(()=>globalThis.fixture.deletions.length),0);
   await configure({outcome:'missing'});await confirm();await finished();assert.match(await page.locator('#finished-summary').textContent(),/uncertain/);assert.equal(await application.evaluate(()=>globalThis.fixture.deletions.length),1);
+  assert.match(await page.locator('#finished-title').textContent(),/Verification incomplete/);assert.equal(await page.locator('#finished-help').isVisible(),true);assert.equal(await page.locator('#finished-mark').textContent(),'!');
   console.log('Native deletion passed: comment/text/link posts, native confirmation/cancel, verified original placeholders, combined order, edit rejection, partial failure, stop after edit and missing-page uncertainty without replay. All content was synthetic.');
 }finally{await application?.close();clearTimeout(deadline);await rm(profile,{recursive:true,force:true});}

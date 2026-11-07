@@ -46,9 +46,12 @@ export async function installFixture(application) {
       const original=id&&globalThis.fixture.items[id];
       let items=content?(original?[original]:[]):url.pathname.includes('/submitted')?Object.values(globalThis.fixture.items).filter(item=>item.type==='post'&&!item.deleted):url.searchParams.has('after')?[globalThis.fixture.items.t1_abc,globalThis.fixture.items.t1_next]:[globalThis.fixture.items.t1_abc,globalThis.fixture.items.t1_other];
       if(!content)items=items.filter(item=>!item.deleted);
-      if(original?.deleted&&globalThis.fixture.deletionOutcome==='missing')items=[];
+      if(original?.deleted&&['missing','empty'].includes(globalThis.fixture.deletionOutcome))items=[];
       const next=!content&&!url.searchParams.has('after')&&!url.pathname.includes('/submitted')?'<span class="next-button"><a href="https://old.reddit.com/user/fixture_user/comments/?after=t1_other">next</a></span>':'';
-      return new Response(page(`${content&&id?.startsWith('t1_')?'<div class="commentarea">':''}<div id="siteTable" class="sitetable ${content&&id?.startsWith('t1_')?'nestedlisting':'linklisting'}">${items.map(item=>itemHTML(item,!content)).join('')}</div>${content&&id?.startsWith('t1_')?'</div>':''}${next}`),{headers:{'content-type':'text/html'}});
+      const commentPage=content&&id?.startsWith('t1_');
+      const parent=commentPage?`<div class="sitetable linklisting">${itemHTML(globalThis.fixture.items.t3_post)}</div>`:'';
+      const empty=commentPage&&!items.length&&globalThis.fixture.deletionOutcome==='empty'?'<p id="noresults" class="error">there does not seem to be anything here</p>':'';
+      return new Response(page(`<div class="content">${parent}${commentPage?'<div class="commentarea">':''}<div id="siteTable" class="sitetable ${commentPage?'nestedlisting':'linklisting'}">${items.map(item=>itemHTML(item,!content)).join('')}${empty}</div>${commentPage?'</div>':''}${next}</div>`),{headers:{'content-type':'text/html'}});
     });
   });
 }

@@ -274,7 +274,10 @@ function render(next) {
     const counts = state.finished.counts || {};
     const countText = Object.entries(counts).map(([key, count]) => `${count} ${key}`).join(' · ') || 'No changes';
     const prefix = state.finished.simulation ? 'Sample only — no Reddit content changed. ' : '';
-    $('finished-title').textContent = state.finished.stopped ? 'Operation stopped.' : state.finished.simulation ? 'Sample finished.' : 'Operation finished.';
+    $('finished-mark').textContent = counts.uncertain ? '!' : '✓';
+    $('finished-label').textContent = counts.uncertain ? 'REVIEW NEEDED' : 'FINISHED';
+    $('finished-help').hidden = !counts.uncertain;
+    $('finished-title').textContent = counts.uncertain ? 'Verification incomplete. Operation stopped.' : state.finished.stopped ? 'Operation stopped.' : state.finished.simulation ? 'Sample finished.' : 'Operation finished.';
     $('finished-summary').textContent = `${prefix}${countText} · ${Math.max(1, Math.round((state.finished.elapsedMs || 0) / 1000))}s · ${state.finished.anonymized || 0} anonymizations verified · ${state.finished.deleted || 0} deletions verified`;
   }
 

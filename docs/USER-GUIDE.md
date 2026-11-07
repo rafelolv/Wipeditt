@@ -12,7 +12,7 @@ Choose comments, posts or both and optional filters. Live listings can omit old 
 
 Review body/title previews, original links, ownership/capability reasons, eligible count and selection. Select individual items or communities. Changing operation recalculates eligibility and invalidates confirmation; newly eligible items are not silently selected. Changed filters require a new search. Previews expire after five minutes.
 
-Anonymize replaces editable bodies with your message and freshly verifies the saved text. Titles and non-editable media/link posts are not editable. Delete does not require a replacement: it uses the native delete button and confirmation, then reloads the original to verify a deleted placeholder. The combined mode independently verifies the edit before rechecking account/author and deleting. It never deletes a non-editable item as a fallback.
+Anonymize replaces editable bodies with your message and freshly verifies the saved text. Titles and non-editable media/link posts are not editable. Delete does not require a replacement: it uses the native delete button and confirmation, then independently verifies the original. This checks a deleted placeholder or, for a leaf comment, the completed native action and two focused reads showing Reddit's explicit empty thread under the matching parent post. The combined mode independently verifies the edit before rechecking account/author and deleting. It never deletes a non-editable item as a fallback.
 
 The final confirmation shows mode, account, selected/eligible/ineligible counts, the replacement when relevant, and the irreversible deletion warning. More than 100 items require ANONYMIZE or DELETE. Canceling never authorizes a write.
 

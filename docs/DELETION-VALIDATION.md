@@ -10,7 +10,7 @@ Create disposable content you own in a place where testing is allowed. Use disti
 
 ## Required cases
 
-1. **Direct comment deletion.** Delete one disposable comment. Confirm the app records deletion as verified, then independently reload its original and inspect Reddit's deleted placeholder. Disappearance from history alone is not proof.
+1. **Direct comment deletion.** Delete one disposable comment. Confirm the app records deletion as verified, then independently reload its original and inspect Reddit's deleted placeholder or its explicit empty focused thread when a leaf comment disappears completely. Disappearance from history alone is not proof.
 2. **Direct text-post deletion.** Repeat on a disposable text post. Record whether its original supplies a reliable deleted marker. An inaccessible or missing page must stay uncertain.
 3. **Direct non-editable post deletion.** Use a disposable link post. It must be eligible for Delete and ineligible for the combined operation. Verify its original separately.
 4. **Combined comment.** Use a new comment and Anonymize & Delete, with a delay long enough to inspect the intermediate saved replacement. Verify the replacement and final deletion separately.
@@ -25,3 +25,7 @@ Do not intentionally repeat an uncertain write. If a post cannot be verified, re
 Record the date, OS/architecture, app version/commit and pass/fail for each case, plus error categories and stage outcomes. Do not publish account names, original text, cookies, tokens or disposable-content IDs. Independent manual observation should be identified as maintainer-reported evidence.
 
 Only after these cases pass: update this status/VALIDATION.md with the actual evidence, review `DELETION_VALIDATED` in src/desktop/capabilities.js, align version 1.0.0 and its release notes, then repeat required checks and native packaging CI. A stable tag with unvalidated deletion is rejected automatically.
+
+## RC2 follow-up
+
+On November 7, 2026 the maintainer reported that a combined operation removed its disposable comment on Reddit, but the app returned `DELETE_PLACEHOLDER_AMBIGUOUS`; the original showed an empty comment listing. The edit was verified and deletion remained uncertain. This is evidence of a missing leaf-comment verification case, not a full validation pass. RC3 adds the receipt-bound, twice-reloaded focused empty-thread check described in REDDIT-INTEGRATION.md. The complete live checklist remains pending. Do not repeat writes on these previously uncertain items.

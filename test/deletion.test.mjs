@@ -39,7 +39,7 @@ test('combined uncertain deletion preserves the verified edit and is not replaye
 function native(outcome='deleted'){
   const {scheduler}=setup();let writes=0,reads=0;const operations=[];
   const browser=new RedditBrowser({contents:{},scheduler,writeTracker:{begin:()=>({}),wait:async()=>{},end(){}},deletionEnabled:true,now:scheduler.now,sleeper:scheduler.sleeper});
-  browser.getRaw=async()=>{reads++;if(reads>1&&outcome==='missing')throw new AppError('CONTENT_UNAVAILABLE','Missing');return item({deleted:reads>1&&outcome==='deleted'});};
+  browser.getRaw=async()=>{reads++;if(reads>1&&outcome==='missing')throw new AppError('CONTENT_UNAVAILABLE','Missing');return item({deleted:reads>1&&['deleted','empty'].includes(outcome)||outcome==='last-empty'&&reads===4,evidence:['empty','last-empty'].includes(outcome)?'native-delete-focused-empty-thread':undefined});};
   browser.dom=async operation=>{operations.push(operation);if(operation==='submit-delete')writes++;return {settled:true};};
   return {browser,operations,writes:()=>writes,reads:()=>reads};
 }
@@ -50,6 +50,25 @@ test('native deletion requires fresh original verification, not a disappearing U
     if(outcome==='deleted')await task;else await assert.rejects(task,{code:'UNCERTAIN'});
     assert.equal(writes(),1);assert.equal(reads(),outcome==='deleted'?2:4);assert.deepEqual(operations,['prepare-delete','submit-delete','delete-status']);
   }
+});
+test('empty originals require two consecutive fresh proofs after one native write',async()=>{
+  for(const outcome of ['empty','last-empty']){
+    const {browser,writes,reads}=native(outcome);
+    const task=browser.delete(item().id,{id:item().authorId,name:item().author});
+    if(outcome==='empty')await task;else await assert.rejects(task,{code:'UNCERTAIN'});
+    assert.equal(writes(),1);assert.equal(reads(),outcome==='empty'?3:4);
+    assert.equal(browser.emptyDeletionProofs.has(item().id),outcome==='empty');
+  }
+});
+test('an empty proof cannot authorize another item, account, link or expired read',async()=>{
+  const {browser}=native();
+  const id=item().id;browser.identity={id:'reddit:first'};browser.links.set(id,'original');
+  browser.getRaw=async(_id,_signal,options)=>options.nativeDeleteReceipt;
+  const save=()=>browser.emptyDeletionProofs.set(id,{account:browser.identity.id,link:browser.links.get(id),at:browser.now()});
+  save();assert.equal(await browser.get(id),true);assert.equal(await browser.get('t1_other'),false);
+  browser.identity={id:'reddit:other'};assert.equal(await browser.get(id),false);
+  save();browser.links.set(id,'changed');assert.equal(await browser.get(id),false);
+  save();browser.emptyDeletionProofs.get(id).at-=300001;assert.equal(await browser.get(id),false);
 });
 test('native combined refuses deletion when verified replacement changed',async()=>{
   const {browser,writes}=native();
