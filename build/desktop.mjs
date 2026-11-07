@@ -15,5 +15,6 @@ await build({ entryPoints: ['src/desktop/preload.cjs'], outfile: 'app/preload.cj
 await build({ entryPoints: ['src/desktop/renderer.js'], outfile: 'app/renderer.js', bundle: true, platform: 'browser', format: 'iife', target: 'chrome140', legalComments: 'none' });
 await copyFile('src/desktop/index.html', 'app/index.html');
 await copyFile('LICENSE', 'app/LICENSE');
+await copyFile('NOTICE', 'app/NOTICE');
 await writeFile('app/version.json', JSON.stringify({ name: 'Wipeditt', version: pkg.version, creator: pkg.author, integration: 'native-browser' }, null, 2) + '\n');
 console.log(`Built Wipeditt Desktop ${pkg.version}.`);

@@ -37,7 +37,7 @@ export function sampleItems() {
     id: `${i % 3 ? 't1' : 't3'}_demo${i}`, authorId: 't2_demo', author: 'demo_user',
     subreddit: ['privacy', 'technology', 'casualconversation'][i % 3],
     type: i % 3 ? 'comment' : 'post', created: Date.UTC(2025, i, 5, 12), score: i * 3 - 5,
-    edited: i % 2 === 0, editable: i !== 6, deleted: false,
+    edited: i % 2 === 0, deletable: true, editable: i !== 6, deleted: false,
     text: [
       'I used to share too much about my daily routine. Time for a fresh start.',
       'Small privacy habits make a difference. This is a synthetic example comment.',

@@ -1,7 +1,11 @@
 # Licensing
 
-Rafael (rafaelolv) owns Wipeditt's original code, documentation and artwork under the [Wipeditt Proprietary License 1.0](../LICENSE). Official unmodified packages are permitted for personal, non-commercial use subject to its terms. Public source visibility does not grant a general redistribution, modification or commercial license.
+Beginning with 1.0.0-rc.1, Rafael (rafaelolv) licenses original Wipeditt code, documentation and artwork under **GNU GPL version 3 only**, SPDX `GPL-3.0-only`. The full unmodified license is in LICENSE; project copyright and distribution information are in NOTICE.
 
-The license reserves rights in original expression and branding. It expressly does not claim ownership of abstract ideas, functionality, Reddit or independently developed implementations. Mandatory legal rights and applicable hosting-platform permissions remain intact.
+You may use, study, modify and redistribute this version under GPLv3. Redistribution must comply with its notices, license and corresponding-source obligations. There is no warranty to the extent permitted by law. The copyright remains Rafael's; the prior proprietary restrictions no longer govern current material licensed under GPLv3. Earlier published tags retain the license distributed with those versions.
 
-Electron, Chromium, Node.js, build tools and other third-party components retain their independent licenses. Preserve their original notices; Wipeditt's proprietary terms do not replace those rights. See [third-party notices](THIRD-PARTY.md). Packaged distributions include WIPEDITT-LICENSE plus Electron's LICENSE.electron.txt and LICENSES.chromium.html.
+Official binary releases provide the matching source ZIP, build scripts and lockfile at the same release page. Packaged copies include LICENSE/WIPEDITT-LICENSE, NOTICE, the source URL and independent runtime notices. The app's Settings & tools menu exposes the license, warranty notice and source link.
+
+Electron, Chromium, Node.js and build tools retain their independently applicable licenses. Preserve their notices. See THIRD-PARTY.md. Wipeditt's licensing does not claim ownership of Reddit, third-party material, abstract ideas or independent implementations.
+
+Canonical license: https://www.gnu.org/licenses/gpl-3.0.html

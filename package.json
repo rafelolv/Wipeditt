@@ -1,11 +1,11 @@
 {
   "name": "wipeditt",
-  "version": "0.6.0",
+  "version": "1.0.0-rc.1",
   "private": true,
   "type": "module",
   "description": "Local desktop browser for reviewing and anonymizing your own Reddit history",
   "author": "Rafael (rafaelolv)",
-  "license": "SEE LICENSE IN LICENSE",
+  "license": "GPL-3.0-only",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/rafelolv/Wipeditt.git"
@@ -21,9 +21,10 @@
     "package": "npm run build && node build/package.mjs",
     "package:dir": "npm run build && node build/package.mjs --dir",
     "test": "node --test --test-isolation=none test/*.test.mjs",
-    "test:ui": "node test/desktop/browser.mjs",
+    "test:ui": "node test/desktop/browser.mjs && node test/desktop/deletion.mjs",
     "check": "node build/check-source.mjs && npm test && npm run build && node build/check-desktop.mjs",
-    "checksums": "node build/checksums.mjs"
+    "checksums": "node build/checksums.mjs",
+    "validate:deletion": "npm run build && node build/validate-deletion.mjs"
   },
   "devDependencies": {
     "@resvg/resvg-js": "2.6.2",
@@ -55,14 +56,28 @@
       {
         "from": "docs/THIRD-PARTY.md",
         "to": "THIRD-PARTY.md"
+      },
+      {
+        "from": "NOTICE",
+        "to": "NOTICE"
       }
     ],
     "asar": true,
     "artifactName": "Wipeditt-${version}-${os}-${arch}.${ext}",
     "linux": {
       "target": [
-        "AppImage",
-        "deb"
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "category": "Utility",
       "icon": "app/icons",
@@ -71,7 +86,12 @@
     },
     "win": {
       "target": [
-        "nsis"
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "icon": "app/icon.png"
     },
@@ -79,13 +99,6 @@
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true
-    },
-    "mac": {
-      "target": [
-        "dmg"
-      ],
-      "category": "public.app-category.utilities",
-      "icon": "app/icon.png"
     },
     "electronDist": "node_modules/electron/dist"
   },

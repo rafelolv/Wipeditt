@@ -54,7 +54,7 @@ export class Scheduler {
         if (Number.isFinite(error.retryAfterMs) && error.retryAfterMs > 0) this.next = Math.max(this.next, this.now() + error.retryAfterMs);
         const status = error.status;
         if (error.code && !['NETWORK', 'TIMEOUT', 'RATELIMIT'].includes(error.code) && !status) throw error;
-        if (status === 401 || status === 403) throw new AppError(status === 401 ? 'AUTH' : 'PERMISSION', status === 401 ? 'Reddit authorization expired or was refused. Reconnect your account.' : 'Reddit denied permission. Check your app access and account permissions.', { fatal: true });
+        if (status === 401 || status === 403) throw new AppError(status === 401 ? 'AUTH' : 'PERMISSION', status === 401 ? 'Reddit authorization expired or was refused. Reconnect your account.' : 'Reddit denied permission. Check your app access and account permissions.', { fatal: true, status });
         const throttle = status === 429 || error.code === 'RATELIMIT';
         if (throttle) this.stats.throttles++;
         const transient = !status || status >= 500;

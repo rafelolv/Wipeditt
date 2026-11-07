@@ -33,7 +33,7 @@ export function normalizeOptions(raw = {}) {
   if (o.minScore !== null && o.maxScore !== null && o.minScore > o.maxScore) fail('FILTER', 'Minimum score must not exceed maximum score.');
   if (!Number.isInteger(o.limit) || o.limit < 0 || o.limit > 100000) fail('FILTER', 'Item limit must be a whole number from 0 to 100000.');
   if (o.interval < 1500 || o.interval > 3600000 || o.deleteDelay < 0 || o.deleteDelay > 86400000) fail('FILTER', 'Interval must be 1500–3600000 ms; deletion delay 0–86400000 ms.');
-  if (typeof o.replacement !== 'string' || !o.replacement.trim() || o.replacement.length > 10000) fail('FILTER', 'Replacement must contain 1–10000 characters.');
+  if (o.mode !== 'delete' && (typeof o.replacement !== 'string' || !o.replacement.trim() || o.replacement.length > 10000)) fail('FILTER', 'Replacement must contain 1–10000 characters.');
   if (o.regex.length > 300) fail('FILTER', 'Regex is limited to 300 characters.');
   try { if (o.regex) new RegExp(o.regex, 'iu'); } catch { fail('FILTER', 'Invalid regular expression.'); }
   return o;
@@ -55,6 +55,7 @@ export function eligibility(item, account, mode) {
   if (item.authorId !== account.id || item.author.toLowerCase() !== account.name.toLowerCase()) return 'This item belongs to another Reddit account';
   if (!/^t[13]_[a-z0-9]+$/.test(item.id)) return 'Invalid content ID';
   if (item.deleted) return 'Already deleted';
+  if (mode !== 'anonymize' && item.deletable === false) return 'Reddit does not offer deletion for this item';
   if (mode !== 'delete' && !item.editable) return 'Content cannot be edited; no deletion fallback';
   return '';
 }

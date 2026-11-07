@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.0-rc.1 — 2026-11-07
+
+- Implement native Delete and Anonymize & Delete through the existing scheduler, preview/confirmation and execution engine; production deletion remains gated pending independent live validation.
+- Verify deletion on a fresh original with positive deleted-placeholder evidence; never infer success from a hidden row, missing page or listing absence.
+- Preserve separate anonymization/deletion stage outcomes in reports and minimized checkpoints, including partial failures and interrupted operations.
+- Integrate the three-mode selector, operation-specific eligibility, replacement-free Delete mode and explicit irreversible confirmations.
+- Relicense current original code/documentation/artwork to GPL-3.0-only with preserved Rafael attribution, notices and corresponding source.
+- Retire macOS/ARM builds and release/update paths; support Linux x64 and Windows x64 only.
+- Add the controlled unpackaged live-validation procedure and a guard against premature stable v1 publication.
+
 ## 0.6.0 — 2026-11-07
 
 - Notify about newer compatible GitHub releases with an official release-page button.

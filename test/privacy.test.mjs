@@ -31,3 +31,14 @@ test('external or script links cannot be rendered as original content links', ()
   for (const bad of ['javascript:alert(1)', 'https://evil.com/x', 'https://www.reddit.com.evil.com/', 'https://evil@www.reddit.com/', 'http://www.reddit.com/x']) assert.equal(safeLink(bad), null);
   assert.equal(safeLink('/r/privacy/comments/example'), 'https://www.reddit.com/r/privacy/comments/example');
 });
+
+test('checkpoint retains only stage statuses and makes interrupted deletion uncertain', () => {
+  const memory=new Map();
+  const storage={getItem:key=>memory.get(key),setItem:(key,value)=>memory.set(key,value),removeItem:key=>memory.delete(key)};
+  const checkpoints=new Checkpoints(storage);
+  checkpoints.save([{id:'t1_stage',state:'deleting',steps:{anonymize:'verified',delete:'pending',text:'private original'},text:'secret',account:'private_name'}],false);
+  const stored=[...memory.values()][0];
+  assert.ok(!stored.includes('secret')&&!stored.includes('private'));
+  const record=checkpoints.load().records[0];
+  assert.equal(record.state,'uncertain');assert.deepEqual(record.steps,{anonymize:'verified',delete:'uncertain'});
+});

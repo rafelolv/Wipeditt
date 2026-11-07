@@ -1,0 +1,17 @@
+Wipeditt
+Copyright (C) 2026 Rafael (rafaelolv)
+
+Original Wipeditt code, documentation and artwork in version 1.0.0-rc.1
+and later are licensed under the GNU General Public License, version 3 only
+(SPDX-License-Identifier: GPL-3.0-only). See LICENSE for the full terms.
+
+Wipeditt is free software: you may redistribute and modify it under GPLv3.
+It comes WITHOUT ANY WARRANTY, to the extent permitted by law.
+
+Corresponding source, build scripts and original notices are published with
+each official binary release at https://github.com/rafelolv/Wipeditt/releases
+and in the repository https://github.com/rafelolv/Wipeditt.
+
+Earlier published tags retain the licenses included with those versions.
+Independent dependencies, Electron, Chromium and Node.js retain their own
+licenses. See THIRD-PARTY.md and the notices included in the distribution.

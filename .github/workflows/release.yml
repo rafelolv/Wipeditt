@@ -16,16 +16,8 @@ jobs:
           - os: windows-2025
             platform: win
             arch: x64
-          - os: macos-15
-            platform: mac
-            arch: arm64
-          - os: macos-15-intel
-            platform: mac
-            arch: x64
     runs-on: ${{ matrix.os }}
     timeout-minutes: 25
-    env:
-      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -38,13 +30,13 @@ jobs:
       - name: Electron fixture tests (Linux)
         if: runner.os == 'Linux'
         run: xvfb-run -a npm run test:ui
-      - name: Electron fixture tests (Windows/macOS)
+      - name: Electron fixture tests (Windows)
         if: runner.os != 'Linux'
         run: npm run test:ui
       - name: Validate release version
         env:
           RELEASE_TAG: ${{ github.ref_name }}
-        run: node --input-type=module -e "import p from './package.json' with {type:'json'}; if (process.env.RELEASE_TAG !== 'v' + p.version) process.exit(1)"
+        run: node build/check-release.mjs
       - name: Build native installer
         run: npm run package -- --${{ matrix.platform }} --${{ matrix.arch }}
       - uses: actions/upload-artifact@v4
@@ -55,7 +47,6 @@ jobs:
             dist/*.AppImage
             dist/*.deb
             dist/*.exe
-            dist/*.dmg
   publish:
     needs: desktop
     runs-on: ubuntu-24.04
@@ -83,7 +74,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          gh release create "$RELEASE_TAG" --verify-tag --prerelease \
-            --title "Wipeditt ${RELEASE_TAG} — Desktop preview" \
+          release_flags=()
+          if [[ "$RELEASE_TAG" == *-* ]]; then release_flags+=(--prerelease); fi
+          gh release create "$RELEASE_TAG" --verify-tag "${release_flags[@]}" \
+            --title "Wipeditt ${RELEASE_TAG} — Desktop" \
             --notes-file "docs/releases/${RELEASE_TAG}.md" \
-            dist/*.AppImage dist/*.deb dist/*.exe dist/*.dmg dist/wipeditt-source-*.zip dist/SHA256SUMS
+            dist/*.AppImage dist/*.deb dist/*.exe dist/wipeditt-source-*.zip dist/SHA256SUMS

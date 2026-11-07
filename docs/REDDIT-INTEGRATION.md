@@ -1,29 +1,25 @@
-# Reddit integration
+# Native Reddit integration
 
-## Native website connector
+Wipeditt uses an isolated Electron WebContentsView and Reddit's classic website. Sign-in belongs to Reddit; no Client ID, copied cookie/token, system-browser profile or private endpoint is used. Remote content has sandboxing, context isolation, no Node or privileged preload. The shell's IPC validates the exact trusted main frame.
 
-Version 0.4.1 uses an Electron WebContentsView containing Reddit's website. Sign-in belongs to Reddit. After the initial login leaves Reddit's credential screens, the main process verifies the account automatically; the manual **Verify account** action remains a fallback. A separate owned Chromium session is temporary by default, persistable only by explicit user choice. No Client ID, private API client, copied website token or imported browser profile is involved.
+The main-process adapter schedules navigation and native controls through the serial scheduler. Its constrained DOM function executes in an isolated world. Account identity comes from the page header. Item-local author links, data attributes and labels must agree; native author-only edit controls are a fallback when labels are absent. Unknown listing authors are rechecked on their original. Nested context is excluded. IDs use `reddit:<normalized username>` internally and are not Reddit API account IDs.
 
-The main-process adapter navigates classic account history and original permalinks, then executes a constrained DOM bridge in an isolated JavaScript world. The bridge reads native listing metadata and author links, opens the native editor, sets its textarea using the native setter, dispatches input/change events and clicks the native save control. This implementation was written independently; no Redact implementation is claimed or copied.
+## Three operations, one engine
 
-The browser session naturally manages its own authentication cookies. Wipeditt does not enumerate, export or persist those cookie values in app code. Owned session storage is cleared on Disconnect. The local renderer has no network permission or remote code; remote pages have no privileged preload, Node access or app bridge.
+Anonymize uses the native textarea/save control, then independently reloads the original and compares the exact body. Delete uses the item-local `form.del-button`, its native toggle and yes confirmation, then freshly reloads the original. Combined mode verifies the replacement before rechecking account/author and invoking deletion; changed or uncertain replacements never trigger deletion. Native confirmation selectors were checked against Reddit's archived classic template, not invented endpoints.
 
-## Ownership and execution
+Deletion verification requires the same original ID and a positive deleted placeholder: deleted author, absence of edit/delete controls and a deleted body/title or explicit deleted marker. A hidden or missing row is only an acknowledgement candidate, never final proof. Listing absence, missing/inaccessible original, moderator removal, network failure and unrecognized layouts remain uncertain. Some real post layouts may not expose sufficient proof; the feature must remain gated until manually validated.
 
-Account identity is derived from the authenticated page header and validated username links. Internal adapter IDs use `reddit:<normalized username>` and are not represented as Reddit API account IDs. Author evidence is read from an item-local profile link, `data-author` or an author span. Available sources must agree; contradictory or deleted authors remain blocked. When no author label is present, a native own edit action together with its own textarea supplies evidence from Reddit's author-only controls. It cannot override another author or conflicting metadata.
+The engine owns mode-aware eligibility, selected IDs, preview expiry, confirmation, stage order and cancellation. Each item records anonymize/delete stage results separately. An edit verified before a rejected delete is partial completion; an uncertain delete retains the edit's verified stage. Reports/checkpoints omit original bodies, names, replacements and sensitive filters. Checkpoint recovery never resumes writes automatically.
 
-Unknown listing authors are rechecked on their original permalink through the same serial scheduler. The scanner does not assume ownership from a profile URL, a matching filter, or merely finding an item. Nested context replies are excluded from profile history results. Each write still checks the fresh original independently.
+Authentication/account/permission changes stop work. Explicit native rate-limit errors have bounded retries and a fresh preflight; ambiguous writes are not retried. Pause waits at boundaries. Stop cannot retract a submitted action.
 
-Every item is bound to a validated original Reddit URL. Immediately before saving, Wipeditt freshly loads the original and verifies the account, author, content and editable control. The main-process engine owns preview expiry, explicit confirmation, selected IDs and cancellation. The renderer cannot submit arbitrary URLs or scripts.
+## Production gate
 
-The serial scheduler controls reads and writes. Response headers and explicit website rate-limit messages can impose stricter cooldowns. Authentication/account/permission changes stop work. Explicit rejected forms fail; ambiguous submissions become uncertain and are not replayed. Saved replacement is checked after a fresh navigation. Native deletion is disabled pending independent live validation.
+`src/desktop/capabilities.js` currently declares deletion unvalidated. A packaged app ignores the development environment flag. Only `npm run validate:deletion` (unpackaged, separate temporary profile) enables testing against disposable owned content. See DELETION-VALIDATION.md. Simulation and intercepted HTTPS fixtures are separate and never prove live deletion.
 
-## Older history import
+## Distribution and policy
 
-Reddit's classic listing is not a complete archive. The optional import path reads `comments.csv` from Reddit's official data export in the main process, maps owned comments to validated Reddit permalinks, applies the same local filters and feeds the normal preview/confirmation engine. It does not replay a private API or trust the file: account identity, author, current text and edit controls are checked again on the live original before each write. The export is treated as a stale snapshot, so changed or unavailable comments are skipped rather than assumed to match.
+Official packages are Linux x64 and Windows x64 only. Current material is GPL-3.0-only; original attribution and independent runtime notices remain. A successful browser login or test does not establish Reddit policy approval, full history coverage or erasure of external copies.
 
-## Constraints and evidence
-
-The maintainer manually confirmed real login/account verification and history comments in a 0.3.1 scan. Native edits, import mapping, server rejection, uncapped pagination, ownership changes, review selection, themes and post handling are tested with synthetic local pages. No real-account mutation has been validated. A browser connector is not evidence of Reddit policy approval or a guarantee of ongoing access.
-
-References: [Electron WebContentsView](https://www.electronjs.org/docs/latest/api/web-contents-view), [Electron security](https://www.electronjs.org/docs/latest/tutorial/security), [Reddit Responsible Builder Policy](https://support.reddithelp.com/hc/en-us/articles/42728983564564-Responsible-Builder-Policy). These describe platform interfaces and obligations; they do not certify Wipeditt.
+References: [Electron security](https://www.electronjs.org/docs/latest/tutorial/security), [classic native button template](https://github.com/reddit-archive/reddit/blob/master/r2/r2/templates/printablebuttons.html), [Reddit Responsible Builder Policy](https://support.reddithelp.com/hc/en-us/articles/42728983564564-Responsible-Builder-Policy).

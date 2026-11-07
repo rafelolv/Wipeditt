@@ -20,6 +20,7 @@ test('updates reject drafts, missing checksums, incomplete uploads and wrong pla
   for (const changes of [{draft:true},{tag_name:'v9.9.9/../../evil'},{assets:[]},{assets:[{name:'SHA256SUMS',state:'uploaded',size:100}]},{assets:[{name:'Wipeditt-0.6.0-linux-x86_64.AppImage',state:'new',size:0},{name:'SHA256SUMS',state:'uploaded',size:100}]}]) assert.equal(availableRelease([release('0.6.0',changes)],'0.5.0','linux','x64'),null);
   assert.equal(availableRelease([release('0.6.0')],'0.5.0','win32','x64'),null);
   assert.equal(availableRelease([release('0.6.0')],'0.5.0','linux','arm64'),null);
+  assert.equal(availableRelease([release('0.6.0')],'0.5.0','darwin','x64'),null);
 });
 test('stable installations do not advertise preview builds', () => {
   assert.equal(availableRelease([release('2.0.0')],'1.0.0','linux','x64'),null);

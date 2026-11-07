@@ -12,7 +12,7 @@ process.on('uncaughtExceptionMonitor', error => {
   if (process.env.GITHUB_ACTIONS === 'true') console.error(`::error title=Desktop validation::${String(error.stack || error.message).replaceAll('%', '%25').replaceAll('\n', '%0A').replaceAll('\r', '%0D')}`);
 });
 const profile = await mkdtemp(join(tmpdir(), 'wipeditt-desktop-test-'));
-const environment = { ...process.env, WIPEDITT_TEST_USER_DATA: profile };
+const environment = { ...process.env, WIPEDITT_TEST_USER_DATA: profile, WIPEDITT_ENABLE_DELETION: '0' };
 delete environment.ELECTRON_RUN_AS_NODE;
 const args = [resolve('.')];
 if (process.env.CI === 'true') args.push('--no-sandbox'); // Isolated CI container only; never a production default.
@@ -39,6 +39,12 @@ try {
   const capture = name => process.env.WIPEDITT_TEST_SCREENSHOTS === '1' ? page.screenshot({ path: `artifacts/${name}.png`, timeout: 15000 }) : Promise.resolve();
   await capture('desktop-welcome');
   assert.equal(await page.locator('#scan-section').isVisible(), false);
+  await page.locator('.tools').evaluate(node => { node.open = true; });
+  await page.locator('#show-license').click();
+  await page.waitForFunction(() => document.getElementById('legal-text').textContent.includes('GNU GENERAL PUBLIC LICENSE'));
+  assert.match(await page.locator('#legal-text').textContent(), /Rafael/);
+  await page.locator('#close-legal').click();
+  await page.locator('.tools').evaluate(node => { node.open = false; });
   await page.locator('#connect').click();
   await page.getByRole('button', { name: 'Verify account', exact: true }).waitFor();
   const browserBounds = await application.evaluate(({ BrowserWindow, session }) => BrowserWindow.getAllWindows()[0].contentView.children.find(view => view.webContents?.session === session.fromPartition('wipeditt-reddit')).getBounds());

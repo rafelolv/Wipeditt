@@ -42,6 +42,7 @@ export function redditPage(operation, input = {}) {
     const visibleAuthor = authorNode && (!authorNode.matches('a[href]') || linked) ? username(authorNode.textContent) : '';
     const evidence = [linked, declared, visibleAuthor].filter(Boolean);
     const conflict = new Set(evidence.map(name => name.toLowerCase())).size > 1;
+    const deletedAuthor = /^\[deleted\]$/i.test(authorNode?.textContent?.trim() || '') && !linked;
     const removedAuthor = /^(?:\[deleted\]|\[removed\])$/i.test(String(node.dataset.author || authorNode?.textContent || '').trim());
     let author = !conflict && !removedAuthor ? evidence[0] || '' : '';
     let authorEvidence = author ? (linked ? 'profile-link' : declared ? 'data-author' : 'author-label') : '';
@@ -58,6 +59,7 @@ export function redditPage(operation, input = {}) {
     const permalink = own(node, 'a.bylink, a[data-event-action="permalink"], a[data-event-action="comments"]')?.href || '';
     const self = id.startsWith('t1_') || node.classList.contains('self') || node.dataset.domain?.startsWith('self.') || !!own(node, '.expando-button.selftext');
     const edit = own(node, 'a.edit-usertext, .edit-usertext > a');
+    const deletion = own(node, 'form.del-button');
     // Classic Reddit emits this native editing action only for an editable
     // item owned by the signed-in author. Use it when the author label is
     // absent, never to override conflicting or explicitly deleted authors.
@@ -67,10 +69,12 @@ export function redditPage(operation, input = {}) {
     }
     return {
       id, author, authorEvidence, authorConflict: conflict, authorId: author ? `reddit:${author.toLowerCase()}` : '', subreddit,
-      type: id.startsWith('t1_') ? 'comment' : 'post', created, score,
+      type: id.startsWith('t1_') ? 'comment' : 'post', title: own(node, 'a.title')?.textContent?.trim() || '', created, score,
       edited: !!own(node, 'time.edited-timestamp, .edited-timestamp'), text, permalink,
       editable: self && !!edit && !!textArea && !node.classList.contains('archived') && !node.classList.contains('locked') && !['[deleted]', '[removed]'].includes(text),
-      deleted: false, needsBody: self && !textArea && !!edit
+      deletable: !!deletion && !!own(node, 'form.del-button a.togglebutton[data-event-action="delete"]'),
+      deleted: deletedAuthor && !edit && !deletion && (/^\[deleted\]$/i.test(text.trim()) || node.classList.contains('deleted') || /^\[deleted\]$/i.test(own(node, 'a.title')?.textContent?.trim() || '')),
+      needsBody: self && !textArea && !!edit
     };
   };
   const find = id => [...document.querySelectorAll('.thing[data-fullname]')].find(node => node.dataset.fullname === id);
@@ -86,11 +90,40 @@ export function redditPage(operation, input = {}) {
     return { data: { items, after: next, empty } };
   }
   const node = find(input.id);
+  if (operation === 'delete-status' && !node) return { data: { settled: true } }; // Fresh original verification is still mandatory.
+
   if (!node) return result('CONTENT_UNAVAILABLE', 'Reddit did not show the requested item. No change was made.');
   const item = normalize(node);
   if (!item) return result('CONTENT_UNAVAILABLE', 'Content metadata is not recognized.');
   if (operation === 'get') return { data: item };
+  if (operation === 'delete-status' && item.deleted) return { data: { settled: true } };
   if (item.authorId !== current.id || item.author.toLowerCase() !== current.name.toLowerCase()) return result('OWNERSHIP', 'This content does not belong to the signed-in account.');
+  if (operation === 'prepare-delete') {
+    const toggle = own(node, 'form.del-button a.togglebutton[data-event-action="delete"]');
+    if (!item.deletable || !toggle || !visible(toggle)) return result('INELIGIBLE', 'Reddit does not offer a native delete action for this item.', { status: 400 });
+    toggle.click();
+    return { data: { prepared: true } };
+  }
+  if (operation === 'submit-delete') {
+    if (input.replacement !== undefined && item.text !== input.replacement) return result('EDIT_CHANGED', 'Replacement changed before deletion. No deletion was sent.', { status: 400 });
+    const yes = own(node, 'form.del-button a.yes');
+    if (!item.deletable || !yes || !visible(yes) || yes.getAttribute('aria-disabled') === 'true') return result('INELIGIBLE', 'Reddit deletion confirmation is unavailable. No deletion was sent.', { status: 400 });
+    yes.click();
+    return { data: { submitted: true } };
+  }
+  if (operation === 'delete-status') {
+    const errors = [...node.querySelectorAll('.error')].filter(child => child.closest('.thing[data-fullname]') === node && !child.matches('.option.error') && !child.matches('.option.error') && visible(child) && child.textContent.trim());
+    const message = errors.map(child => child.textContent).join(' ').toLowerCase();
+    if (/sign in|logged in|session expired/.test(message)) return result('AUTH', 'Reddit authorization is no longer available.', { status: 401, fatal: true });
+    if (/permission|forbidden|not authorized/.test(message)) return result('PERMISSION', 'Reddit denied permission for this operation.', { status: 403, fatal: true });
+    if (/try again|wait|too much|ratelimit/.test(message)) {
+      const wait = /(?:in|wait)\s+(\d+)\s*(second|minute|hour)/i.exec(message);
+      return result('RATELIMIT', 'Reddit asked Wipeditt to wait.', { status: 429, retryAfterMs: wait ? Number(wait[1]) * ({ second: 1000, minute: 60000, hour: 3600000 }[wait[2]]) : 60000 });
+    }
+    if (errors.length) return result('REDDIT_REJECTED', 'Reddit rejected the deletion.', { status: 400 });
+    const yes = own(node, 'form.del-button a.yes');
+    return { data: { settled: item.deleted || !yes || !visible(yes) } };
+  }
   if (operation === 'expand') {
     const expand = own(node, '.expando-button.selftext');
     if (expand && !expand.classList.contains('expanded')) expand.click();
@@ -115,12 +148,14 @@ export function redditPage(operation, input = {}) {
     return { data: { submitted: true } };
   }
   if (operation === 'edit-status') {
-    const errors = [...node.querySelectorAll('.error')].filter(child => child.closest('.thing[data-fullname]') === node && visible(child) && child.textContent.trim());
+    const errors = [...node.querySelectorAll('.error')].filter(child => child.closest('.thing[data-fullname]') === node && !child.matches('.option.error') && visible(child) && child.textContent.trim());
     const message = errors.map(child => child.textContent).join(' ').toLowerCase();
+    if (/sign in|logged in|session expired/.test(message)) return result('AUTH', 'Reddit authorization is no longer available.', { status: 401, fatal: true });
+    if (/permission|forbidden|not authorized/.test(message)) return result('PERMISSION', 'Reddit denied permission for this operation.', { status: 403, fatal: true });
     if (/try again|wait|too much|ratelimit/.test(message)) {
       const wait = /(?:in|wait)\s+(\d+)\s*(second|minute|hour)/i.exec(message);
       const retryAfterMs = wait ? Number(wait[1]) * ({ second: 1000, minute: 60000, hour: 3600000 }[wait[2]]) : 60000;
-      return result('RATELIMIT', 'Reddit asked Wipeditt to wait.', { retryAfterMs });
+      return result('RATELIMIT', 'Reddit asked Wipeditt to wait.', { status: 429, retryAfterMs });
     }
     if (errors.length) return result('REDDIT_REJECTED', 'Reddit rejected this edit. Review the item in the browser.', { status: 400 });
     const area = own(node, '.usertext-edit textarea[name="text"]');

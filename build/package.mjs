@@ -1,5 +1,8 @@
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
+if (!['linux', 'win32'].includes(process.platform) || process.arch !== 'x64' || process.argv.slice(2).some(arg => !['--linux', '--win', '--x64', '--dir'].includes(arg))) {
+  throw new Error('Official packages support Linux x64 and Windows x64 only.');
+}
 const require = createRequire(import.meta.url);
 const child = spawn(process.execPath, [require.resolve('electron-builder/cli.js'), '--publish', 'never', ...process.argv.slice(2)], { stdio: ['inherit', 'pipe', 'pipe'] });
 let tail = '';

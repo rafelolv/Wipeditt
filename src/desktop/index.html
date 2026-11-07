@@ -37,6 +37,7 @@
       <button id="theme" class="quiet block" aria-pressed="false">Dark appearance</button>
       <details class="tools">
         <summary>Settings &amp; tools</summary>
+        <button id="show-license">License &amp; source</button>
         <button id="demo">Try sample data</button>
         <button id="report" disabled>Save last report</button>
         <button id="clear-checkpoint">Clear local checkpoint</button>
@@ -45,7 +46,7 @@
         <small id="update-status" role="status" aria-live="polite"></small>
       </details>
       <small id="version"></small>
-      <small class="credit">By Rafael (rafaelolv)<br>Local only · No telemetry</small>
+      <small class="credit">By Rafael (rafaelolv)<br>GPLv3 · No warranty</small>
     </div>
   </aside>
 
@@ -81,12 +82,13 @@
         </div>
       </section>
 
+      <section id="operation-section" class="operation-section" hidden><label id="mode-label">Operation<select id="mode"><option value="anonymize">Anonymize</option><option value="delete">Delete</option><option value="combined">Anonymize &amp; Delete</option></select></label><div><p id="mode-description">Replace your Reddit content with a custom message.</p><small id="mode-availability"></small></div></section>
       <section id="scan-section" class="scan-grid" hidden>
         <div class="surface scan-card">
           <div class="card-head"><div><p class="kicker">STEP 2</p><h3>Find your history</h3></div><span class="pill">Read only</span></div>
           <p class="section-intro">Wipeditt searches every page Reddit makes available. You review the results before anything changes.</p>
           <div class="field-row">
-            <label>What to search<select id="type"><option value="comment">Comments</option><option value="post">Text posts</option><option value="all">Comments &amp; text posts</option></select></label>
+            <label>What to search<select id="type"><option value="comment">Comments</option><option value="post">Posts</option><option value="all">Comments &amp; posts</option></select></label>
           </div>
           <details id="filters"><summary>Filter by community, date or text <span class="optional">Optional</span></summary><div class="grid"><label>Include subreddits<input id="include" class="sensitive" placeholder="e.g. privacy, technology"></label><label>Exclude subreddits<input id="exclude" class="sensitive" placeholder="Communities to keep"></label><label>Text contains<input id="contains" class="sensitive"></label><label>Regular expression<input id="regex" class="sensitive" maxlength="300" placeholder="Optional advanced search"></label><label>From<input id="after" type="datetime-local"></label><label>Until<input id="before" type="datetime-local"></label><label>Minimum score<input id="minScore" type="number"></label><label>Maximum score<input id="maxScore" type="number"></label><label>Edited status<select id="edited"><option value="all">Any</option><option value="yes">Edited</option><option value="no">Unedited</option></select></label></div></details>
           <div class="search-actions"><button id="scan" class="primary">Find my comments</button><small>Nothing changes during a search.</small></div>
@@ -124,11 +126,11 @@
           </div>
           <aside class="replacement-panel surface">
             <p class="kicker">STEP 3</p>
-            <h3>Choose the replacement</h3>
-            <p>Selected comments keep their place. Their body text becomes your message.</p>
-            <label class="replacement-label">Replacement message<textarea id="replacement" class="sensitive" maxlength="10000" rows="4"></textarea></label>
-            <label>Quick message<select id="replacement-preset"><option value="default">Removed for privacy</option><option value="short">[Deleted for privacy]</option><option value="removed">[Content removed]</option><option value="custom">Custom message</option></select></label>
-            <details><summary>Timing &amp; advanced options</summary><div class="grid"><label id="mode-label">Mode<select id="mode"><option value="anonymize">Replace text</option><option value="delete">Delete · sample only</option><option value="combined">Replace &amp; delete · sample only</option></select></label><label>Minimum action interval (ms)<input id="interval" type="number" value="1500" min="1500" max="3600000"></label><label id="delete-delay-label">Sample deletion delay (ms)<input id="deleteDelay" type="number" value="0" min="0" max="86400000"></label></div></details>
+            <h3 id="operation-heading">Choose the replacement</h3>
+            <p id="operation-copy">Selected items keep their place. Their body text becomes your message.</p>
+            <div id="replacement-content"><label class="replacement-label">Replacement message<textarea id="replacement" class="sensitive" maxlength="10000" rows="4"></textarea></label>
+            <label>Quick message<select id="replacement-preset"><option value="default">Removed for privacy</option><option value="short">[Deleted for privacy]</option><option value="removed">[Content removed]</option><option value="custom">Custom message</option></select></label></div>
+            <details><summary>Timing &amp; advanced options</summary><div class="grid"><label>Minimum action interval (ms)<input id="interval" type="number" value="1500" min="1500" max="3600000"></label><label id="delete-delay-label">Delay after anonymization (ms)<input id="deleteDelay" type="number" value="0" min="0" max="86400000"></label></div></details>
             <button id="review" class="primary block">Review changes</button>
             <p class="review-note">You will see the exact text next. Titles, media and external copies are not changed.</p>
           </aside>
@@ -144,9 +146,9 @@
     <p class="eyebrow">FINAL REVIEW</p>
     <h2 id="confirmation-title">Replace this text?</h2>
     <p id="confirmation-summary" class="sensitive"></p>
-    <strong>Your exact replacement</strong>
-    <pre id="confirmation-text" class="sensitive"></pre>
-    <p class="muted">This changes your Reddit content and may be permanent. Stop prevents new actions; edits already sent may finish. External copies can remain.</p>
+    <div id="confirmation-replacement"><strong>Your exact replacement</strong>
+    <pre id="confirmation-text" class="sensitive"></pre></div>
+    <p class="muted" id="confirmation-warning">This changes your Reddit content and may be permanent. Stop prevents new actions; edits already sent may finish. External copies can remain.</p>
     <label id="phrase-label" hidden><span id="phrase-prompt"></span><input id="phrase" autocomplete="off"></label>
     <div class="dialog-actions"><button id="cancel-confirmation">Go back</button><button id="accept" class="primary">Confirm &amp; replace text</button></div>
   </dialog>
@@ -159,5 +161,6 @@
     <p class="muted">Only the comments file is read. Importing does not change anything on Reddit. Ownership and current text are checked again before each change.</p>
     <div class="dialog-actions"><button id="close-export-help">Close</button><button id="open-data-request" class="primary">Open Reddit data request</button></div>
   </dialog>
+<dialog id="legal-dialog" aria-labelledby="legal-title"><h2 id="legal-title">Wipeditt · GPLv3</h2><p>Copyright © 2026 Rafael (rafaelolv). You may copy, modify and redistribute Wipeditt under GNU GPL version 3. There is no warranty to the extent permitted by law.</p><details><summary>Full license and notices</summary><pre id="legal-text"></pre></details><div class="dialog-actions"><button id="close-legal">Close</button><button id="open-source">Source code</button></div></dialog>
 </body>
 </html>

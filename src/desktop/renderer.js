@@ -54,13 +54,13 @@ function rawOptions() {
   return options;
 }
 function typeLabel(type) {
-  return { comment: 'Comments', post: 'Text posts', all: 'Comments & text posts' }[type] || 'Comments';
+  return { comment: 'Comments', post: 'Posts', all: 'Comments & posts' }[type] || 'Comments';
 }
 function communityLabel(value) {
   return value.startsWith('u_') ? `u/${value.slice(2)}` : `r/${value}`;
 }
 function modeLabel(mode) {
-  return { anonymize: 'replace text', delete: 'delete · sample only', combined: 'replace & delete · sample only' }[mode] || mode;
+  return { anonymize: 'Anonymize', delete: 'Delete', combined: 'Anonymize & Delete' }[mode] || mode;
 }
 function filterCount(options) {
   if (!options) return 0;
@@ -93,7 +93,7 @@ function scheduleOptionsUpdate() {
   }, 220);
 }
 function toggleDeleteDelay() {
-  $('delete-delay-label').hidden = !state?.simulation || $('mode').value === 'anonymize';
+  $('delete-delay-label').hidden = $('mode').value !== 'combined';
 }
 
 function renderItems(preview) {
@@ -114,8 +114,8 @@ function renderItems(preview) {
       disabled: !!state.busy,
       onClick: event => { event.stopPropagation(); command('open-original', { id: item.id }).catch(error); }
     });
-    const meta = `${item.type === 'post' ? 'text post' : 'comment'} · ${new Date(item.created).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })} · ${item.score ?? '?'} points${item.edited ? ' · edited' : ''}`;
-    const body = item.text || '[No body text]';
+    const meta = `${item.type === 'post' ? 'post' : 'comment'} · ${new Date(item.created).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })} · ${item.score ?? '?'} points${item.edited ? ' · edited' : ''}`;
+    const body = item.text || item.title || '[No body text]';
     const article = el('article', { class: `item${item.selected ? ' selected' : ''}${item.skip ? ' skipped' : ''}`, 'data-id': item.id },
       selected,
       el('div', { class: 'item-heading' }, el('strong', { class: 'community sensitive', text: communityLabel(item.subreddit) }), el('span', { class: 'item-meta', text: meta }), open),
@@ -196,11 +196,14 @@ function render(next) {
   $('status').classList.toggle('error', !!state.statusError);
   $('account').textContent = state.account ? (state.simulation ? 'Sample data · synthetic' : `u/${state.account.name}`) : 'Not connected';
   $('version').textContent = `Version ${state.version}`;
-  $('mode-badge').hidden = !state.simulation;
+  $('mode-badge').hidden = !state.simulation && !state.deletionTesting;
+  $('mode-badge').textContent = state.simulation ? 'Sample data · nothing changes' : 'DELETION VALIDATION · Disposable content only';
+  document.title = state.deletionTesting ? 'Wipeditt — Deletion validation' : 'Wipeditt';
   $('browser-help').hidden = !state.browserVisible;
   $('workspace').hidden = !!state.browserVisible;
 
   $('welcome').hidden = connected || !!preview || finished || busy || !!state.browserVisible;
+  $('operation-section').hidden = !connected || busy || !!state.browserVisible;
   $('scan-section').hidden = !connected || !!preview || busy || !!state.browserVisible;
   $('progress-section').hidden = !busy || !!state.browserVisible;
   $('finished').hidden = !finished || busy || !!state.browserVisible;
@@ -252,7 +255,7 @@ function render(next) {
       : 'Searching is read only. You will review the results next.';
     if (progress) {
       const counts = progress.counts || {};
-      const completed = ['anonymized', 'deleted', 'skipped', 'failed', 'uncertain'].reduce((sum, key) => sum + (counts[key] || 0), 0);
+      const completed = ['anonymized', 'deleted', 'skipped', 'failed', 'uncertain', 'partial'].reduce((sum, key) => sum + (counts[key] || 0), 0);
       const total = progress.total || 0;
       $('progress').max = Math.max(total, 1);
       $('progress').value = total ? completed : 0;
@@ -272,7 +275,7 @@ function render(next) {
     const countText = Object.entries(counts).map(([key, count]) => `${count} ${key}`).join(' · ') || 'No changes';
     const prefix = state.finished.simulation ? 'Sample only — no Reddit content changed. ' : '';
     $('finished-title').textContent = state.finished.stopped ? 'Operation stopped.' : state.finished.simulation ? 'Sample finished.' : 'Operation finished.';
-    $('finished-summary').textContent = `${prefix}${countText} · ${Math.max(1, Math.round((state.finished.elapsedMs || 0) / 1000))}s`;
+    $('finished-summary').textContent = `${prefix}${countText} · ${Math.max(1, Math.round((state.finished.elapsedMs || 0) / 1000))}s · ${state.finished.anonymized || 0} anonymizations verified · ${state.finished.deleted || 0} deletions verified`;
   }
 
   if (!initialized) {
@@ -280,8 +283,14 @@ function render(next) {
     initialized = true;
   }
   syncPreset();
-  if (!state.simulation) $('mode').value = 'anonymize';
-  for (const option of $('mode').options) option.disabled = !state.simulation && option.value !== 'anonymize';
+  if (!state.deletionEnabled) $('mode').value = 'anonymize';
+  for (const option of $('mode').options) option.disabled = !state.deletionEnabled && option.value !== 'anonymize';
+  const mode = $('mode').value;
+  $('mode-description').textContent = { anonymize: 'Replace your Reddit content with a custom message.', delete: 'Permanently delete your selected Reddit content.', combined: 'Replace your content with a custom message, then delete it.' }[mode];
+  $('mode-availability').textContent = state.simulation ? 'Sample data only. No Reddit content changes.' : state.deletionEnabled ? state.deletionValidated ? 'Live deletion enabled.' : 'Deletion testing enabled. Use disposable content only.' : 'Deletion is awaiting independent live validation.';
+  $('replacement-content').hidden = mode === 'delete';
+  $('operation-heading').textContent = mode === 'delete' ? 'Permanently delete' : 'Choose the replacement';
+  $('operation-copy').textContent = mode === 'delete' ? 'Selected items will be deleted through Reddit. This cannot be undone.' : mode === 'combined' ? 'Each replacement is verified before its item can be deleted.' : 'Selected items keep their place. Their body text becomes your message.';
   toggleDeleteDelay();
 
   if (preview) renderPreview(preview);
@@ -306,6 +315,10 @@ $('review').addEventListener('click', async () => {
     await command('options', { options: rawOptions() });
     confirmation = await command('confirm');
     $('confirmation-summary').textContent = `${confirmation.count} ${confirmation.count === 1 ? 'item' : 'items'} · ${modeLabel(confirmation.mode)} · ${confirmation.simulation ? 'sample data' : `u/${confirmation.account}`}`;
+    $('confirmation-summary').textContent += ` · ${confirmation.eligible} eligible · ${confirmation.ineligible} ineligible`;
+    $('confirmation-title').textContent = confirmation.mode === 'delete' ? 'Permanently delete these items?' : confirmation.mode === 'combined' ? 'Anonymize, then permanently delete?' : 'Replace this text?';
+    $('confirmation-replacement').hidden = confirmation.mode === 'delete';
+    $('confirmation-warning').textContent = confirmation.mode === 'anonymize' ? 'Your selected body text will be replaced. External copies may remain.' : 'Deletion is irreversible. Only independently verified replacements proceed to deletion in combined mode. Stop prevents new actions; submitted actions may finish. External copies may remain.';
     $('confirmation-text').textContent = confirmation.replacement;
     $('phrase-label').hidden = !confirmation.phrase;
     $('phrase-prompt').textContent = `Type ${confirmation.phrase}`;
@@ -313,7 +326,7 @@ $('review').addEventListener('click', async () => {
     $('accept').disabled = !!confirmation.phrase;
     $('accept').textContent = confirmation.simulation
       ? (confirmation.mode === 'anonymize' ? 'Run sample replacement' : 'Run sample operation')
-      : 'Confirm & replace text';
+      : confirmation.mode === 'anonymize' ? 'Confirm & anonymize' : confirmation.mode === 'delete' ? 'Confirm & delete' : 'Confirm both steps';
     $('confirmation').showModal();
     $('cancel-confirmation').focus();
   } catch (failure) { error(failure); }
@@ -349,7 +362,7 @@ $('replacement-preset').addEventListener('change', () => {
   $('replacement').value = presets[preset];
   scheduleOptionsUpdate();
 });
-$('mode').addEventListener('change', toggleDeleteDelay);
+$('mode').addEventListener('change', () => { toggleDeleteDelay(); if (state) render(state); });
 $('subreddit-select').addEventListener('change', () => {
   const name = $('subreddit-select').value;
   if (!name || !state?.preview || state.busy) return;
@@ -403,5 +416,10 @@ action('open-update', 'open-update');
 $('automatic-updates').addEventListener('change', () => command('update-settings', { enabled: $('automatic-updates').checked }).catch(error));
 $('pause').addEventListener('click', () => command(state?.paused ? 'resume' : 'pause').catch(error));
 
+$('show-license').addEventListener('click', async () => {
+  try { const legal = await command('read-license'); $('legal-text').textContent = `${legal.notice}\n${legal.license}`; $('legal-dialog').showModal(); $('close-legal').focus(); } catch (failure) { error(failure); }
+});
+$('close-legal').addEventListener('click', () => $('legal-dialog').close());
+action('open-source', 'open-source');
 bridge.onState(render);
 command('state').then(render).catch(error);

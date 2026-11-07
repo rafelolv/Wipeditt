@@ -31,7 +31,7 @@ export class Engine {
       let after = null, inspected = 0, pages = 0, reason = 'Listing exhausted; older history may still be missing';
       outer: do {
         checkAbort(signal);
-        const page = await this.read(() => this.adapter.page({ account, after, type: options.type, signal }), signal);
+        const page = await this.read(() => this.adapter.page({ account, after, type: options.type, mode: options.mode, signal }), signal);
         if (!Array.isArray(page?.items)) fail('RESPONSE', 'Invalid listing response.');
         pages++;
         for (const item of page.items) {
@@ -126,7 +126,7 @@ export class Engine {
     const preview = this.validate(raw);
     const ids = preview.items.filter(i => i.selected && !i.skip).map(i => i.id);
     this.confirmation = { revision: preview.revision, ids: JSON.stringify(ids), key: preview.key, created: this.now() };
-    return { count: ids.length, phrase: ids.length > 100 ? (preview.options.mode === 'anonymize' ? 'ANONYMIZE' : 'DELETE') : '', simulation: this.adapter.simulation };
+    return { count: ids.length, eligible: preview.stats.eligible, ineligible: preview.stats.matched - preview.stats.eligible, phrase: ids.length > 100 ? (preview.options.mode === 'anonymize' ? 'ANONYMIZE' : 'DELETE') : '', simulation: this.adapter.simulation };
   }
   cancelConfirmation() { this.confirmation = null; }
   async execute(raw, { confirmed = false, phrase = '', signal } = {}) {
@@ -147,7 +147,8 @@ export class Engine {
     try {
       for (const item of selected) {
         checkAbort(signal);
-        const record = { id: item.id, state: 'pending' };
+        const record = { id: item.id, state: 'pending', steps: { anonymize: run.mode === 'delete' ? 'not-requested' : 'pending', delete: run.mode === 'anonymize' ? 'not-requested' : 'pending' } };
+        let stage = run.mode === 'delete' ? 'delete' : 'anonymize';
         run.records.push(record);
         const state = (value, code) => { record.state = value; record.code = code; emit(); };
         let writeSubmitted = false;
@@ -155,9 +156,10 @@ export class Engine {
           await this.account(preview.account, signal);
           let current = await this.read(() => this.adapter.get(item.id, { signal }), signal);
           const skip = current && eligibility(current, preview.account, run.mode);
-          if (!current || skip) { state('skipped', 'INELIGIBLE'); continue; }
+          if (!current || skip) { for (const step of ['anonymize', 'delete']) if (record.steps[step] === 'pending') record.steps[step] = 'skipped'; state('skipped', 'INELIGIBLE'); continue; }
           // Identity and ownership reads are scheduled separately; no adapter networking in UI.
           const write = async task => {
+            writeSubmitted = false;
             await this.account(preview.account, signal);
             current = await this.read(() => this.adapter.get(item.id, { signal }), signal);
             if (!current || eligibility(current, preview.account, run.mode)) fail('OWNERSHIP', 'Ownership or capability changed.');
@@ -175,10 +177,12 @@ export class Engine {
               await write((expected, settings) => this.adapter.edit(item.id, preview.options.replacement, expected, settings));
             }
             const verified = await this.read(() => this.adapter.get(item.id, { signal }), signal);
-            if (!verified || verified.text !== preview.options.replacement) { state('uncertain', 'EDIT_UNVERIFIED'); continue; }
+            if (!verified || verified.text !== preview.options.replacement) { record.steps.anonymize = 'uncertain'; if (run.mode === 'combined') record.steps.delete = 'skipped'; state('uncertain', 'EDIT_UNVERIFIED'); continue; }
+            record.steps.anonymize = 'verified';
             state('anonymized');
             item.text = preview.options.replacement;
             if (run.mode === 'combined') {
+              stage = 'delete'; writeSubmitted = false;
               state('waiting');
               const until = this.now() + preview.options.deleteDelay;
               while (this.now() < until) {
@@ -186,19 +190,25 @@ export class Engine {
                 await this.sleeper(Math.min(250, until - this.now()), signal);
               }
               const again = await this.read(() => this.adapter.get(item.id, { signal }), signal);
-              if (!again || again.text !== preview.options.replacement) { state('uncertain', 'EDIT_CHANGED'); continue; }
+              if (!again || again.text !== preview.options.replacement) { record.steps.delete = 'skipped'; state('partial', 'EDIT_CHANGED'); continue; }
             }
           }
           if (run.mode !== 'anonymize') {
+            stage = 'delete';
+            state('deleting');
             await write((expected, settings) => this.adapter.delete(item.id, expected, run.mode === 'combined' ? preview.options.replacement : undefined, settings));
             const verified = await this.read(() => this.adapter.get(item.id, { signal }), signal);
-            if (!verified?.deleted) { state('uncertain', 'DELETE_UNVERIFIED'); continue; }
+            if (!verified?.deleted) { record.steps.delete = 'uncertain'; state('uncertain', 'DELETE_UNVERIFIED'); continue; }
+            record.steps.delete = 'verified';
             state('deleted');
             item.text = '';
           }
         } catch (error) {
           const ambiguous = writeSubmitted && !(error.status >= 400 && error.status < 500) && !['ACCOUNT_CHANGED', 'OWNERSHIP', 'PERMISSION'].includes(error.code);
-          state(error.code === 'UNCERTAIN' || ambiguous ? 'uncertain' : 'failed', error.code || 'API');
+          if (stage === 'anonymize' && run.mode === 'combined') record.steps.delete = 'skipped';
+          const uncertain = error.code === 'UNCERTAIN' || ambiguous;
+          record.steps[stage] = uncertain ? 'uncertain' : error.code === 'STOPPED' ? 'skipped' : 'failed';
+          state(uncertain ? 'uncertain' : record.steps.anonymize === 'verified' && stage === 'delete' ? 'partial' : error.code === 'STOPPED' ? 'skipped' : 'failed', error.code || 'API');
           if (['STOPPED', 'ACCOUNT_CHANGED', 'AUTH', 'PERMISSION', 'OWNERSHIP', 'STALE'].includes(error.code) || error.fatal) {
             run.stopped = true;
             break;

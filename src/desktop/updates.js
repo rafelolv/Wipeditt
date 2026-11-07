@@ -44,7 +44,7 @@ export function availableRelease(releases, current, platform, arch) {
     const version = tag.slice(1);
     const packageNames = platform === 'linux' && arch === 'x64' ? [`Wipeditt-${version}-linux-x86_64.AppImage`, `Wipeditt-${version}-linux-amd64.deb`]
       : platform === 'win32' && arch === 'x64' ? [`Wipeditt-${version}-win-x64.exe`]
-        : platform === 'darwin' && ['arm64', 'x64'].includes(arch) ? [`Wipeditt-${version}-mac-${arch}.dmg`] : [];
+        : [];
     const uploaded = new Set((Array.isArray(release.assets) ? release.assets : []).filter(asset => asset?.state === 'uploaded' && asset.size > 0).map(asset => asset.name));
     if (!uploaded.has('SHA256SUMS') || !packageNames.some(name => uploaded.has(name))) continue;
     if (!newest || compareVersions(tag, newest.version) > 0) newest = { version, preview, url: RELEASE_ROOT + encodeURIComponent(tag) };

@@ -6,8 +6,8 @@ export class RedditBrowser {
   simulation = false;
   handlesScheduling = true;
   label = 'Reddit browser session';
-  constructor({ contents, scheduler, onBrowser = () => {}, now = Date.now, sleeper = sleep }) {
-    Object.assign(this, { contents, scheduler, onBrowser, now, sleeper });
+  constructor({ contents, scheduler, deletionEnabled = false, onBrowser = () => {}, now = Date.now, sleeper = sleep }) {
+    Object.assign(this, { contents, scheduler, deletionEnabled, onBrowser, now, sleeper });
     this.links = new Map();
     this.lastURL = '';
   }
@@ -58,7 +58,7 @@ export class RedditBrowser {
     }, { signal });
   }
   account({ signal } = {}) { return this.scheduler.request(() => this.dom('account'), { signal }); }
-  async page({ account, after, type, signal }) {
+  async page({ account, after, type, mode = 'anonymize', signal }) {
     const listing = type === 'comment' ? 'comments' : type === 'post' ? 'submitted' : 'overview';
     const url = after ? historyURL(after, account) : `${REDDIT_CLASSIC}/user/${encodeURIComponent(account.name)}/${listing}/?sort=new`;
     const page = await this.scheduler.request(async () => {
@@ -76,7 +76,7 @@ export class RedditBrowser {
     for (let index = 0; index < page.items.length; index++) {
       const item = page.items[index];
       const missingAuthor = !item.authorId;
-      if (this.links.has(item.id) && (missingAuthor || (item.needsBody && item.authorId === account.id))) {
+      if (this.links.has(item.id) && (missingAuthor || (item.authorId === account.id && (item.needsBody || mode !== 'anonymize' && !item.deletable)))) {
         // Listing metadata is sometimes incomplete. Verify the actual item,
         // rather than infer authorship merely from the account profile URL.
         try { page.items[index] = await this.get(item.id, { signal }); }
@@ -130,5 +130,34 @@ export class RedditBrowser {
     if (verified.text !== text) fail('UNCERTAIN', 'Reddit reloaded different text. The edit outcome is uncertain.');
     return { acknowledged: true };
   }
-  delete() { fail('DELETION_UNVERIFIED', 'Deletion is not enabled until the native browser workflow is validated on a real account.'); }
+  async delete(id, expected, replacement, { signal, beforeDispatch } = {}) {
+    if (!this.deletionEnabled) fail('DELETION_UNVERIFIED', 'Deletion requires independently validated support or the explicit development testing gate.');
+    await this.scheduler.request(async () => {
+      const current = await this.getRaw(id, signal, { fresh: true });
+      if (replacement !== undefined && current.text !== replacement) throw new AppError('EDIT_CHANGED', 'Verified replacement changed. No deletion was sent.', { status: 400 });
+      await this.dom('prepare-delete', { id, expected });
+      await this.sleeper(150, signal);
+      await this.scheduler.gate(signal);
+      beforeDispatch?.();
+      await this.dom('submit-delete', { id, expected, replacement });
+      const deadline = this.now() + 30000;
+      while (this.now() < deadline) {
+        checkAbort(signal);
+        let status;
+        try { status = await this.dom('delete-status', { id, expected }); }
+        catch (error) {
+          if (['AUTH', 'ACCOUNT_CHANGED', 'OWNERSHIP'].includes(error.code)) throw new AppError('UNCERTAIN', 'Account or ownership changed after deletion was submitted. Verify the original.', { fatal: true });
+          throw error;
+        }
+        if (status.settled) return;
+        await this.sleeper(250, signal);
+      }
+      throw new AppError('UNCERTAIN', 'Reddit did not confirm the deletion.', { fatal: true });
+    }, { signal, write: true });
+    let verified;
+    try { verified = await this.scheduler.request(() => this.getRaw(id, signal, { fresh: true }), { signal }); }
+    catch { throw new AppError('UNCERTAIN', 'Deletion was submitted but the original could not be verified. Do not repeat it automatically.', { fatal: true }); }
+    if (!verified.deleted) throw new AppError('UNCERTAIN', 'The original did not expose a verified deleted placeholder.', { fatal: true });
+    return { acknowledged: true };
+  }
 }

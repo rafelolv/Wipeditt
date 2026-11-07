@@ -11,7 +11,7 @@ export async function verifyUpdateNotice(application, page) {
       globalThis.updateFixture.requests++;
       const request=new EventEmitter(); request.destroy=error=>{if(error)request.emit('error',error);request.emit('close');};
       process.nextTick(()=>{
-        const response=Readable.from([Buffer.from(JSON.stringify([{tag_name:'v0.99.0',draft:false,prerelease:true,html_url:'https://evil.test/',assets:[{name:`Wipeditt-0.99.0-${process.platform==='linux'?'linux-x86_64.AppImage':process.platform==='win32'?'win-x64.exe':`mac-${process.arch}.dmg`}`,state:'uploaded',size:100},{name:'SHA256SUMS',state:'uploaded',size:100}]}]))]);
+        const response=Readable.from([Buffer.from(JSON.stringify([{tag_name:'v9.0.0',draft:false,prerelease:true,html_url:'https://evil.test/',assets:[{name:`Wipeditt-9.0.0-${process.platform==='linux'?'linux-x86_64.AppImage':'win-x64.exe'}`,state:'uploaded',size:100},{name:'SHA256SUMS',state:'uploaded',size:100}]}]))]);
         response.statusCode=200;response.on('end',()=>request.emit('close'));callback(response);
       });
       return request;
@@ -21,10 +21,10 @@ export async function verifyUpdateNotice(application, page) {
   await page.locator('.tools').evaluate(node=>{node.open=true;});
   await page.locator('#automatic-updates').uncheck();
   await page.locator('#check-updates').click();
-  await page.locator('#update-title').filter({hasText:'0.99.0'}).waitFor();
+  await page.locator('#update-title').filter({hasText:'9.0.0'}).waitFor();
   assert.equal(await page.locator('#update-notice').isVisible(),true);
   await page.locator('#open-update').click();
-  assert.deepEqual(await application.evaluate(()=>globalThis.updateFixture.opened),['https://github.com/rafelolv/Wipeditt/releases/tag/v0.99.0']);
+  assert.deepEqual(await application.evaluate(()=>globalThis.updateFixture.opened),['https://github.com/rafelolv/Wipeditt/releases/tag/v9.0.0']);
   await page.locator('#check-updates').click();
   assert.equal(await application.evaluate(()=>globalThis.updateFixture.requests),1);
   await page.locator('.tools').evaluate(node=>{node.open=false;});

@@ -13,6 +13,8 @@ export class DesktopController {
     this.checkpoints = new Checkpoints(storage);
     this.options = normalizeOptions({ type: 'comment' });
     this.updates = null;
+    this.deletionValidated = false;
+    this.deletionTesting = false;
     this.account = null;
     this.busy = false;
     this.simulation = false;
@@ -49,6 +51,8 @@ export class DesktopController {
       browserVisible: this.browserVisible, paused: this.scheduler.paused, options: this.options,
       status: this.status, wait: this.busy ? this.wait : null, progress: this.progress,
       activity: this.activity, hasReport: !!this.report,
+      deletionValidated: this.deletionValidated, deletionTesting: this.deletionTesting,
+      deletionEnabled: this.simulation || this.browser.adapter.deletionEnabled === true,
       statusError: this.statusError, finished: this.finished, updates: this.updates?.snapshot() || null,
       preview: preview ? { items: preview.items, stats: preview.stats, reason: preview.reason, selected: preview.items.filter(item => item.selected && !item.skip).length, options: preview.options, source: preview.source || 'live', created: preview.created } : null
     };
@@ -79,7 +83,7 @@ export class DesktopController {
       if (!imported) { this.status = 'Import canceled. Nothing changed.'; return; }
       if (!imported.items?.length) fail('IMPORT', 'No comments were found in that file.');
       this.options = normalizeOptions({ ...data.options, type: 'comment', limit: 0 });
-      if (!this.simulation && this.options.mode !== 'anonymize') fail('DELETION_UNVERIFIED', 'Real-account deletion is not enabled.');
+      if (!this.simulation && !this.browser.adapter.deletionEnabled && this.options.mode !== 'anonymize') fail('DELETION_UNVERIFIED', 'Real-account deletion is not enabled.');
       this.browser.adapter.register?.(imported.items);
       this.status = `Reading ${imported.items.length} imported comments…`; this.emit();
       const preview = await this.engine.import(imported.items, this.options, signal);
@@ -91,7 +95,7 @@ export class DesktopController {
       if (!this.account) fail('AUTH', 'Connect and verify your Reddit account first.');
       this.browser.hide(); this.browserVisible = false; this.progress = null; this.report = null; this.finished = null;
       this.options = normalizeOptions(data.options);
-      if (!this.simulation && this.options.mode !== 'anonymize') fail('DELETION_UNVERIFIED', 'Real-account deletion is not enabled.');
+      if (!this.simulation && !this.browser.adapter.deletionEnabled && this.options.mode !== 'anonymize') fail('DELETION_UNVERIFIED', 'Real-account deletion is not enabled.');
       this.status = 'Scanning your Reddit history…';
       const preview = await this.engine.scan(this.options, signal);
       this.status = `${preview.stats.matched} matching items. ${preview.reason}.`;
@@ -104,7 +108,7 @@ export class DesktopController {
       const run = await this.engine.execute(this.options, { confirmed: true, phrase: data.phrase || '', signal });
       this.report = makeReport(run, this.version, this.scheduler.stats);
       this.report.integration = this.simulation ? 'simulation' : 'native-browser';
-      this.finished = { stopped: run.stopped, simulation: this.simulation, counts: this.report.counts, total: run.records.length, elapsedMs: this.report.elapsedMs };
+      this.finished = { stopped: run.stopped, simulation: this.simulation, counts: this.report.counts, total: run.records.length, elapsedMs: this.report.elapsedMs, anonymized: this.report.stages.filter(record => record.steps?.anonymize === 'verified').length, deleted: this.report.stages.filter(record => record.steps?.delete === 'verified').length };
       this.status = `${this.simulation ? 'DEMO · No Reddit content changed. ' : ''}${run.stopped ? 'Stopped' : 'Finished'} · ${Object.entries(this.report.counts).map(([state, count]) => `${count} ${state}`).join(' · ') || 'No changes'}`;
     });
     this.requireIdle();
@@ -139,7 +143,7 @@ export class DesktopController {
       this.invalidate(); this.status = 'Filters changed. Scan again to update your selection.';
     } else if (name === 'options') {
       const next = normalizeOptions(data.options);
-      if (!this.simulation && next.mode !== 'anonymize') fail('DELETION_UNVERIFIED', 'Real-account deletion is not enabled.');
+      if (!this.simulation && !this.browser.adapter.deletionEnabled && next.mode !== 'anonymize') fail('DELETION_UNVERIFIED', 'Real-account deletion is not enabled.');
       this.options = next;
       this.confirmation = null;
       this.engine.updateOperation(next);
@@ -150,7 +154,7 @@ export class DesktopController {
     } else if (name === 'confirm') {
       const confirmation = this.engine.confirmationFor(this.options);
       this.confirmation = randomUUID();
-      return { ...confirmation, token: this.confirmation, account: this.account?.name, replacement: this.options.replacement, mode: this.options.mode };
+      return { ...confirmation, token: this.confirmation, account: this.account?.name, replacement: this.options.replacement, mode: this.options.mode, eligible: this.engine.preview.stats.eligible, ineligible: this.engine.preview.stats.matched - this.engine.preview.stats.eligible };
     } else if (name === 'export-report') {
       if (!this.report) fail('REPORT', 'Run an operation before exporting its report.');
       await this.saveReport(this.report);

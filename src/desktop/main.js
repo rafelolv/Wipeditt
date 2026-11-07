@@ -7,6 +7,7 @@ import { RedditBrowser } from './reddit-browser.js';
 import { DesktopController } from './controller.js';
 import { CheckpointStorage } from './storage.js';
 import { REDDIT_CLASSIC, REMOTE_PREFERENCES, redditURL, trustedSender, loginNavigation } from './policy.js';
+import { deletionCapability, DELETION_VALIDATED } from './capabilities.js';
 import { UpdateChecker } from './updates.js';
 import { parseCommentsCSV } from './import.js';
 import { fail } from '../errors.js';
@@ -98,7 +99,7 @@ const browser = {
     redditView = new WebContentsView({ webPreferences: { ...REMOTE_PREFERENCES, session: activeSession } });
     safeRemote(redditView.webContents);
     window.contentView.addChildView(redditView);
-    browser.adapter = new RedditBrowser({ contents: redditView.webContents, scheduler });
+    browser.adapter = new RedditBrowser({ contents: redditView.webContents, scheduler, deletionEnabled: deletionCapability({ packaged: app.isPackaged, developmentFlag: process.env.WIPEDITT_ENABLE_DELETION }) });
     browserVisible = true; layout();
     // Ask Reddit to return to the classic overview after sign-in. If the login
     // flow ignores the destination, the watcher below still verifies once the
@@ -158,10 +159,14 @@ if (acquired) app.whenReady().then(async () => {
   });
   const updates = new UpdateChecker({ version: app.getVersion(), settingsPath: join(app.getPath('userData'), 'updates-v1.json'), onChange: () => controller.emit() });
   controller.updates = updates;
+  controller.deletionValidated = DELETION_VALIDATED;
+  controller.deletionTesting = !DELETION_VALIDATED && deletionCapability({ packaged: app.isPackaged, developmentFlag: process.env.WIPEDITT_ENABLE_DELETION });
   ipcMain.handle('wipeditt:command', async (event, request) => {
     if (!trustedSender(event, window, appURL)) return { error: { code: 'IPC', message: 'Request origin refused.' } };
     try {
       if (!request || typeof request.name !== 'string' || !request.data || typeof request.data !== 'object') throw new Error('Invalid command.');
+      if (request.name === 'read-license') return { data: { license: await readFile(join(__dirname, 'LICENSE'), 'utf8'), notice: await readFile(join(__dirname, 'NOTICE'), 'utf8') } };
+      if (request.name === 'open-source') { await shell.openExternal('https://github.com/rafelolv/Wipeditt'); return { data: null }; }
       if (request.name === 'check-updates') return { data: await updates.check({ manual: true }) };
       if (request.name === 'update-settings') { updates.setEnabled(request.data.enabled); return { data: updates.snapshot() }; }
       if (request.name === 'open-update') {

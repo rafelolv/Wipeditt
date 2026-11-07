@@ -10,4 +10,8 @@ After runtime changes run `npm run check`, then `npm run test:ui` (under Xvfb fo
 
 Maintain classic website selectors conservatively. Recheck exact author/account binding and native form verification after any selector change. Authentication or access failure is not permission to add cookie extraction, private endpoint replay, a new privileged remote bridge or a sandbox bypass.
 
-Packaging: `npm run package`, then `npm run checksums`. Release CI uses native Linux, Windows and both macOS architectures. Packages are unsigned unless a future explicitly authorized signing setup is introduced. There is no automatic installer/updater. `src/desktop/updates.js` checks fixed public GitHub release metadata, compares versions and identifies compatible uploaded packages; its notice never downloads or executes an installer.
+Packaging: `npm run package`, then `npm run checksums`. Release CI uses Linux x64 and Windows x64 only; macOS and ARM were retired. Packages are unsigned unless a future explicitly authorized signing setup is introduced. There is no automatic installer/updater. `src/desktop/updates.js` checks fixed public GitHub release metadata, compares versions and identifies compatible uploaded packages; its notice never downloads or executes an installer.
+
+Native deletion uses the existing adapter and engine, with fresh-original verification and stage-specific reports/checkpoints. Keep the production capability gate until DELETION-VALIDATION.md has actual independent live evidence. `npm run validate:deletion` opens an isolated unpackaged manual-testing profile; never automate real deletions in tests.
+
+Current original material is GPL-3.0-only. Package LICENSE and NOTICE, preserve third-party notices and publish matching corresponding source/build scripts with every binary release.

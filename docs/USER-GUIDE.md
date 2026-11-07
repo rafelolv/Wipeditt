@@ -1,69 +1,29 @@
 # User guide
 
-## Connect
+## Connect and discover
 
-Install a desktop package from the official release. Choose **Connect Reddit**; sign in directly on Reddit's page in the embedded browser. Wipeditt never asks for a pasted password, cookie or token. Wipeditt verifies the account automatically after login; **Verify account** remains a manual fallback. The sidebar shows the verified username; privacy mode masks it.
+Connect Reddit and sign in on its own page. Verification is automatic with a manual fallback. Session memory is opt-in; Disconnect clears only Wipeditt's own sessions. macOS/ARM are unsupported; official packages are Linux x64 and Windows x64.
 
-Session memory is off by default. Enable **Keep me signed in on this device** before connecting only if you want Chromium to retain this app's Reddit session on this device. Disconnect clears Wipeditt's own session storage and invalidates the review. It does not sign out your normal browser.
+Choose an operation before searching: Anonymize, Delete, or Anonymize & Delete. Anonymize is the default. In candidate packages, deletion remains unavailable pending independent live validation. Sample mode enables all operations on synthetic content. The explicit unpackaged testing procedure is in DELETION-VALIDATION.md.
 
-Opening the browser or switching accounts invalidates the previous preview. Verify again and scan from the new account. Reddit may require its own verification or deny website access; Wipeditt does not bypass those checks.
+Choose comments, posts or both and optional filters. Live listings can omit old history even after every available page is followed. Import comments.csv from Reddit's own export to include comments in that snapshot. Score/edited filters require metadata actually present in the source. No search starts editing or deletion.
 
-## Scan and review
+## Review and confirm
 
-Choose **Comments**, **Text posts** or **Comments & text posts**, add optional community, date, text, score or edited-status filters, then choose **Find my comments**. This stage reads only.
+Review body/title previews, original links, ownership/capability reasons, eligible count and selection. Select individual items or communities. Changing operation recalculates eligibility and invalidates confirmation; newly eligible items are not silently selected. Changed filters require a new search. Previews expire after five minutes.
 
-The live scan follows every history page Reddit's classic listing makes available. Wipeditt no longer applies its own item cap. Reddit can still stop a listing early or omit inaccessible and very old content, so a finished scan is not proof of complete account coverage. Duplicate entries count toward inspected rows but not unique discoveries.
+Anonymize replaces editable bodies with your message and freshly verifies the saved text. Titles and non-editable media/link posts are not editable. Delete does not require a replacement: it uses the native delete button and confirmation, then reloads the original to verify a deleted placeholder. The combined mode independently verifies the edit before rechecking account/author and deleting. It never deletes a non-editable item as a fallback.
 
-Inspect snippets, dates, community and eligibility. **Open ↗** opens the original in the embedded Reddit browser. Only your own editable body text is eligible.
+The final confirmation shows mode, account, selected/eligible/ineligible counts, the replacement when relevant, and the irreversible deletion warning. More than 100 items require ANONYMIZE or DELETE. Canceling never authorizes a write.
 
-The review view shows 10 items per page. Select or deselect a row by clicking it, or use its checkbox. **Select all ready** selects every eligible match across all pages; **Clear** removes the selection. The community menu selects or clears every eligible match in one community. Selection is kept while you change pages.
+## Progress, interruption and reports
 
-Changing a filter after a scan requires a fresh scan. Changing selection, replacement or timing invalidates the pending confirmation.
+Pause waits at action boundaries. Stop prevents new actions; already submitted changes may finish. Combined delay is active only while the app stays open. A stopped combined operation can leave verified anonymization without deletion: this is partial completion, not complete deletion.
 
-## Older history: import the official export
+Reports and checkpoints preserve each requested stage's status separately. A failed or uncertain delete after a verified edit remains distinguishable from complete success. Ambiguous submissions are never replayed. Checkpoints contain IDs and stage statuses, not text, names or replacement messages; restart requires fresh review. If verification fails, inspect the original instead of repeating the write automatically.
 
-Reddit's live pages may stop before your oldest comments. For broader coverage, request your data from [Reddit's data request page](https://www.reddit.com/settings/data-request). Wipeditt also links there from **How to get it**.
+Neither mode removes external archives, backups, screenshots, quotes or caches.
 
-When Reddit sends the archive, download and open it, then use **Import comments.csv** in Wipeditt and choose the `comments.csv` file. The main process reads the file locally (up to 64 MB); it is never uploaded.
+## Settings
 
-Import applies the same filters as a live scan. Rows from another author, `[deleted]` or `[removed]` bodies, duplicates and malformed rows are skipped. Import covers comments, not text posts. The export is a snapshot: if a comment changed or disappeared on Reddit since then, Wipeditt skips it during the pre-write ownership and text check. Never assume an old export still matches the live site.
-
-## Replace text
-
-Live desktop mode replaces comment or text-post bodies only. It does not change titles, links or media. Deletion and replace-then-delete are available in simulation only.
-
-Choose a replacement message or one of the quick messages. **Review changes** shows the exact replacement as text, including markup characters. Above 100 selected items, type `ANONYMIZE` exactly. Confirmation expires after five minutes. Canceling or closing it does nothing.
-
-Each live edit rechecks the account and author, reloads the original, submits Reddit's own save form, then navigates again to verify the saved text. Saved replacement is compared as text; markup is not rendered.
-
-Pause takes effect at a request boundary; Resume continues the current reviewed operation. Stop prevents new work. A submitted edit may still finish. A missing response or changed account after submission is uncertain; inspect the original and obtain a fresh preview before acting again. Never assume a failed save means nothing changed.
-
-Theme and privacy preferences are saved locally. **Hide private text** blurs sensitive text in the app; it does not change Reddit data or protect the operating-system account.
-
-## Finished state and reports
-
-When a run finishes or stops, Wipeditt shows a summary with operation counts and elapsed time. **Save report** writes a local JSON file through the native save dialog.
-
-Reports contain the app version, timestamp, source (`live` or `import`), operation, filter presence flags, counts and per-item IDs/statuses. They omit original text, usernames and sensitive filter values. Treat reports as private because IDs can still be identifying.
-
-Checkpoints contain expiring IDs and statuses only. They support conservative status recovery, not automatic write replay. Clearing local checkpoints does not undo Reddit changes.
-
-## Simulation and troubleshooting
-
-Sample data is local and explicitly labeled; it never proves that your real account supports writes. Switching between simulation and Reddit invalidates the preview.
-
-If login fails, use **Open Reddit browser** and complete Reddit's own sign-in flow. Verification normally runs automatically; use **Verify account** if it does not finish. If history stops loading or controls cannot be found, stop and report the app version and error code without sharing credentials, cookies, original private text or tokens. The classic website connector may need maintenance after Reddit changes.
-
-If an import is rejected, choose the `comments.csv` from Reddit's official archive and check that it is under 64 MB. If live history is incomplete, import the export; there is no hidden archive in Reddit's live listing.
-
-## Author checks
-
-A missing author label in a listing does not immediately reject a comment: Wipeditt checks alternate item-local metadata and, when needed, reads the original permalink. Native author-only edit controls can identify an editable own item when labels are absent. Nested context replies are not treated as profile entries. Conflicting, deleted or still-unverifiable authors remain unavailable. Review messages distinguish an unknown author from a known different account.
-
-The interface opens in a black monochrome theme by default. A previously chosen light preference is respected. Use the appearance button in the sidebar to switch.
-
-## New versions
-
-When a compatible newer release is available, a banner shows its version and a View release button. Open it to download the official installer yourself. The app does not interrupt an operation, download packages or install automatically. Install this version once to receive future release notices; older versions without the checker cannot show them.
-
-Settings & tools contains Check for updates and Check releases automatically. Automatic checks run on startup and at most every four hours while idle in packaged apps. Turn them off if you prefer manual checks. Offline and rate-limit failures show an unobtrusive retry message and do not affect Reddit work. Manual retries are limited to one per minute. Preview installations include preview releases; stable 1.x and later installations omit preview builds. Only releases with an uploaded installer for this OS/architecture and checksums are advertised.
+Black-first appearance and optional light mode, privacy masking, reports and checkpoints live in the sidebar. License & source shows GPLv3, copyright, the warranty disclaimer and the source link. New-release checks use fixed public GitHub metadata without Reddit data, can be disabled, and never install updates automatically.
