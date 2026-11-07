@@ -4,14 +4,14 @@ import { DesktopController } from '../src/desktop/controller.js';
 import { REMOTE_PREFERENCES, contentURL, historyURL, redditURL, trustedSender } from '../src/desktop/policy.js';
 import { normalizeOptions } from '../src/filters.js';
 import { setup, item } from './helpers.mjs';
-function controller() {
+function controller(overrides = {}) {
   const { adapter, scheduler } = setup([item()]);
   adapter.scheduler = scheduler;
   adapter.connect = () => adapter.account();
   const browser = { adapter, open: async () => {}, hide() {}, show: async () => {}, clear: async () => {} };
   const store = new Map();
   const storage = { getItem: key => store.get(key), setItem: (key, value) => store.set(key, value), removeItem: key => store.delete(key) };
-  return { desktop: new DesktopController({ browser, storage, version: '0.3.0' }), adapter };
+  return { desktop: new DesktopController({ browser, storage, version: '0.3.0', ...overrides }), adapter };
 }
 test('desktop remote pages have no Node privileges and strict sender validation', () => {
   assert.equal(REMOTE_PREFERENCES.nodeIntegration, false);
@@ -63,4 +63,19 @@ test('desktop keeps deletion unavailable for real-account mode and demo isolated
   await desktop.command('demo'); assert.equal(desktop.simulation, true);
   await desktop.command('disconnect'); assert.equal(desktop.account, null);
   assert.equal(desktop.snapshot().preview, null);
+});
+
+test('desktop imports a local comments.csv through the main-process hook', async () => {
+  let asked = 0;
+  const { desktop } = controller({ importExport: async ({ account }) => { asked++; assert.equal(account.name, 'demo_user'); return { items: [item()], skipped: 0, name: 'comments.csv' }; } });
+  await desktop.command('connect'); await desktop.command('verify-account');
+  await desktop.command('import-export', { options: { type: 'comment' } });
+  assert.equal(asked, 1);
+  assert.equal(desktop.engine.preview.source, 'import');
+  assert.equal(desktop.snapshot().preview.stats.inspected, 1);
+  assert.match(desktop.snapshot().status, /imported comments match/);
+  const confirmation = await desktop.command('confirm');
+  await desktop.command('run', { token: confirmation.token, phrase: confirmation.phrase });
+  assert.equal(desktop.report.source, 'import');
+  assert.equal(desktop.snapshot().finished.counts.anonymized, 1);
 });

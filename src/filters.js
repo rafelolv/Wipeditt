@@ -24,7 +24,7 @@ export function normalizeOptions(raw = {}) {
     type: raw.type || 'all', include: list(raw.include), exclude: list(raw.exclude),
     after: date(raw.after), before: date(raw.before), contains: String(raw.contains || ''),
     regex: String(raw.regex || ''), minScore: number(raw.minScore), maxScore: number(raw.maxScore),
-    edited: raw.edited || 'all', limit: number(raw.limit, 100),
+    edited: raw.edited || 'all', limit: number(raw.limit, 0),
     mode: raw.mode || 'anonymize', replacement: raw.replacement ?? DEFAULT_REPLACEMENT,
     interval: number(raw.interval, 1500), deleteDelay: number(raw.deleteDelay, 0)
   };

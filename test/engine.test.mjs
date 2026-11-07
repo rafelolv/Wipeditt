@@ -179,3 +179,22 @@ test('operation-only updates cannot extend preview lifetime or reuse changed fil
   await engine.scan({});
   assert.throws(() => engine.updateOperation({ contains: 'different' }), { code: 'STALE' });
 });
+
+test('imported comments use the same filters, ownership checks and confirmation path', async () => {
+  const { engine, adapter } = setup([item({ id: 't1_imported' })]);
+  const imported = [
+    item({ id: 't1_imported', text: 'Imported synthetic comment' }),
+    item({ id: 't1_foreign', authorId: 't2_other', author: 'other', text: 'Imported foreign comment' }),
+    item({ id: 't1_imported', text: 'Duplicate row' })
+  ];
+  const preview = await engine.import(imported, { type: 'comment', contains: 'imported' });
+  assert.equal(preview.source, 'import');
+  assert.deepEqual(preview.stats, { inspected: 3, unique: 2, matched: 2, eligible: 1 });
+  assert.match(preview.reason, /Imported 3 rows/);
+  const confirmation = engine.confirmationFor({ type: 'comment', contains: 'imported' });
+  assert.equal(confirmation.count, 1);
+  const result = await engine.execute({ type: 'comment', contains: 'imported' }, { confirmed: true, phrase: confirmation.phrase });
+  assert.equal(result.records[0].state, 'anonymized');
+  assert.equal(result.source, 'import');
+  assert.equal(adapter.items[0].text, 'This content has been removed for privacy reasons.');
+});

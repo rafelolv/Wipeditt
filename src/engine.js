@@ -56,6 +56,41 @@ export class Engine {
       return this.preview;
     } finally { this.running = false; }
   }
+  async import(items, raw, signal) {
+    if (this.running) fail('BUSY', 'Another operation is running.');
+    this.invalidate();
+    const revision = this.revision;
+    const options = normalizeOptions(raw);
+    const matches = makeMatcher(options);
+    this.scheduler.interval = options.interval;
+    this.running = true;
+    try {
+      const account = await this.account(null, signal);
+      const seen = new Set();
+      const matched = [];
+      let inspected = 0;
+      for (const item of Array.isArray(items) ? items : []) {
+        inspected++;
+        if (!item || !/^t[13]_[a-z0-9]+$/.test(item.id) || seen.has(item.id)) continue;
+        seen.add(item.id);
+        if (typeof item.text !== 'string' || typeof item.subreddit !== 'string' || typeof item.author !== 'string' || !Number.isFinite(item.created)) continue;
+        if (!matches(item)) continue;
+        const skip = eligibility(item, account, options.mode);
+        matched.push({ ...item, skip, selected: !skip });
+        if (options.limit && matched.length >= options.limit) break;
+      }
+      await this.account(account, signal);
+      if (this.revision !== revision) fail('STALE', 'Settings changed during import. Import again.');
+      const partial = options.limit && matched.length >= options.limit;
+      this.preview = {
+        account, options, key: fingerprint(options), created: this.now(), revision, items: matched, source: 'import',
+        reason: partial ? 'Import limit reached; preview is partial' : `Imported ${inspected} rows from comments.csv; every item is rechecked before a change`,
+        completeHistory: false,
+        stats: { inspected, unique: seen.size, matched: matched.length, eligible: matched.filter(item => !item.skip).length }
+      };
+      return this.preview;
+    } finally { this.running = false; }
+  }
   updateOperation(raw) {
     if (this.running) fail('BUSY', 'Operation is running.');
     const preview = this.preview;
@@ -104,7 +139,7 @@ export class Engine {
     const required = selected.length > 100 ? (preview.options.mode === 'anonymize' ? 'ANONYMIZE' : 'DELETE') : '';
     if (phrase !== required) fail('CONFIRM', 'Confirmation phrase does not match.');
     this.running = true;
-    const run = { simulation: this.adapter.simulation, mode: preview.options.mode, options: preview.options, started: this.now(), finished: this.now(), stopped: false, records: [] };
+    const run = { simulation: this.adapter.simulation, mode: preview.options.mode, source: preview.source || 'live', options: preview.options, started: this.now(), finished: this.now(), stopped: false, records: [] };
     const emit = () => {
       this.checkpoints?.save(run.records, run.simulation);
       this.onEvent({ type: 'progress', records: structuredClone(run.records), total: selected.length, elapsed: this.now() - run.started });

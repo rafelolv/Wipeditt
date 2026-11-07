@@ -9,30 +9,164 @@
   <script src="renderer.js" defer></script>
 </head>
 <body>
+  <a class="skip-link" href="#workspace">Skip to content</a>
   <aside class="sidebar">
-    <div class="brand"><img src="icon.png" alt="" width="40" height="40"><div><h1>Wipeditt</h1><p>Your history. Your control.</p></div></div>
-    <div class="account"><span class="dot"></span><span id="account" class="sensitive">Not connected</span></div>
-    <label class="remember"><input id="remember" type="checkbox"> Remember login on this device</label>
-    <button id="connect" class="primary">Connect Reddit</button>
-    <button id="verify" hidden>Verify account</button>
-    <button id="show-browser" hidden>Open Reddit browser</button>
-    <button id="hide-browser" hidden>Return to workspace</button>
-    <button id="disconnect" hidden>Disconnect & clear session</button>
-    <nav aria-label="Workflow"><div class="step" id="step-connect"><b>1</b> Connect your account</div><div class="step" id="step-scan"><b>2</b> Find your content</div><div class="step" id="step-review"><b>3</b> Review & anonymize</div></nav>
-    <div class="sidebar-bottom"><label><input type="checkbox" id="privacy"> Privacy mode</label><button id="theme">Light mode</button><details><summary>Tools</summary><button id="demo">Try demo data</button><button id="report" disabled>Save report</button><button id="clear-checkpoint">Clear checkpoint</button></details><small id="version"></small><small>Rafael (rafaelolv) · Local only</small></div>
+    <div class="brand">
+      <img class="brand-mark" src="icon.png" alt="" width="38" height="38">
+      <div><h1>Wipeditt</h1><p>Your history, in your hands</p></div>
+    </div>
+
+    <div class="connection">
+      <div class="account"><span class="dot" aria-hidden="true"></span><div><small>Reddit account</small><strong id="account" class="sensitive">Not connected</strong></div></div>
+      <label class="checkline remember"><input id="remember" type="checkbox"> Keep me signed in on this device</label>
+      <button id="connect" class="primary block">Connect Reddit</button>
+      <button id="verify" class="primary block" hidden>Verify account</button>
+      <button id="show-browser" class="quiet block" hidden>Open Reddit browser</button>
+      <button id="hide-browser" class="quiet block" hidden>Back to Wipeditt</button>
+      <button id="disconnect" class="quiet block" hidden>Disconnect</button>
+    </div>
+
+    <nav aria-label="Workflow">
+      <div class="step" id="step-connect"><b>1</b><span><strong>Connect</strong><small>Sign in on Reddit</small></span></div>
+      <div class="step" id="step-scan"><b>2</b><span><strong>Find</strong><small>Search your history</small></span></div>
+      <div class="step" id="step-review"><b>3</b><span><strong>Review</strong><small>Choose and replace</small></span></div>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <label class="switchline"><span>Hide private text</span><input type="checkbox" id="privacy" role="switch"></label>
+      <button id="theme" class="quiet block" aria-pressed="false">Dark appearance</button>
+      <details class="tools">
+        <summary>Settings &amp; tools</summary>
+        <button id="demo">Try sample data</button>
+        <button id="report" disabled>Save last report</button>
+        <button id="clear-checkpoint">Clear local checkpoint</button>
+      </details>
+      <small id="version"></small>
+      <small class="credit">By Rafael (rafaelolv)<br>Local only · No telemetry</small>
+    </div>
   </aside>
+
   <main>
-    <header><div><p class="eyebrow">YOUR REDDIT HISTORY. YOUR CONTROL.</p><h2 id="heading">A fresh start, on your terms.</h2></div><span id="mode-badge" hidden>DEMO</span></header>
-    <section id="browser-help" hidden><p>Sign in directly on Reddit. Then choose <strong>Verify account</strong> in the sidebar.</p></section>
+    <header>
+      <div><p class="eyebrow" id="eyebrow">YOUR PRIVACY, AT YOUR PACE</p><h2 id="heading">A little less history. A fresh start.</h2></div>
+      <span id="mode-badge" class="badge" hidden>Sample data · nothing changes</span>
+    </header>
+
+    <section id="browser-help" class="notice" hidden><strong>Sign in on Reddit below.</strong> When you are signed in, choose <b>Verify account</b> in the sidebar.</section>
+
     <div id="workspace">
-      <section id="welcome"><div class="intro-mark">W</div><h3>Decide what stays.</h3><p>Connect your Reddit account, find older comments and text posts, then replace only the content you approve.</p><p class="muted">Login happens inside the Reddit browser. No Client ID or copied token is required by this website connector.</p><button id="welcome-connect" class="primary">Connect Reddit</button></section>
-      <section id="scan-section" hidden><details id="scope" open><summary>Choose content</summary><div class="grid"><label>Content<select id="type"><option value="comment">Comments</option><option value="post">Text posts</option><option value="all">Comments & text posts</option></select></label><label>Maximum items<input id="limit" type="number" value="100" min="0" max="100000"></label></div><details id="filters"><summary>Add filters</summary><div class="grid"><label>Include subreddits<input id="include" class="sensitive" placeholder="privacy, technology"></label><label>Exclude subreddits<input id="exclude" class="sensitive"></label><label>Text contains<input id="contains" class="sensitive"></label><label>Regular expression<input id="regex" class="sensitive" maxlength="300"></label><label>From<input id="after" type="datetime-local"></label><label>Until<input id="before" type="datetime-local"></label><label>Minimum score<input id="minScore" type="number"></label><label>Maximum score<input id="maxScore" type="number"></label><label>Edited status<select id="edited"><option value="all">Any</option><option value="yes">Edited</option><option value="no">Unedited</option></select></label></div></details><small>0 = all available. Reddit listings may omit older history.</small></details><button id="scan" class="primary">Scan history</button></section>
-      <section id="review-section" hidden><div class="section-heading"><h3>Review your selection</h3><span id="counts"></span></div><div class="selection-actions"><button id="select-all">Select all</button><button id="select-none">Select none</button><select id="subreddit-select" class="sensitive" aria-label="Select by subreddit"><option value="">Select by subreddit…</option></select></div><div id="items" aria-label="Content preview"></div><label class="replacement-label">Replace selected text with<textarea id="replacement" class="sensitive" maxlength="10000" rows="3"></textarea></label><small>Comment and text-post bodies only. Titles and media stay unchanged. Archives and external copies may remain.</small><details><summary>Advanced operation settings</summary><div class="grid"><label>Mode<select id="mode"><option value="anonymize">Anonymize</option><option value="delete">Delete · demo only</option><option value="combined">Anonymize & delete · demo only</option></select></label><label>Minimum action interval (ms)<input id="interval" type="number" value="1500" min="1500" max="3600000"></label><label>Demo deletion delay (ms)<input id="deleteDelay" type="number" value="0" min="0" max="86400000"></label></div></details><button id="review" class="primary">Review selected</button></section>
-      <section id="progress-section" hidden><div class="section-heading"><h3>Operation progress</h3><div><button id="pause">Pause</button><button id="stop" class="danger">Stop</button></div></div><progress id="progress" max="1" value="0"></progress><p id="progress-counts"></p><p id="cooldown" class="muted"></p></section>
-      <p id="status" role="status" aria-live="polite">Connect Reddit to get started.</p>
-      <details id="activity-details"><summary>Activity & scan details</summary><p id="scan-details" class="muted"></p><ol id="activity"></ol></details>
+      <div id="statusbar"><p id="status" role="status" aria-live="polite">Connect Reddit to get started.</p></div>
+
+      <section id="welcome">
+        <div class="hero">
+          <div class="hero-copy">
+            <p class="kicker">CLEAN UP YOUR OWN COMMENTS</p>
+            <h3>Your words.<br>Your next chapter.</h3>
+            <p>Find old Reddit comments and text posts, review every match, and replace only what you choose. Nothing changes until you confirm.</p>
+            <div class="hero-actions">
+              <button id="welcome-connect" class="primary">Connect Reddit</button>
+              <button id="welcome-demo" class="quiet">See a sample first</button>
+            </div>
+            <p class="fineprint">Sign-in happens on Reddit inside the app. Wipeditt never asks for your password, cookies or an API key.</p>
+          </div>
+          <div class="hero-card" aria-hidden="true">
+            <div class="mock-top"><span class="mock-dot"></span><span class="mock-dot"></span><span class="mock-dot"></span><span class="mock-title">Your review</span></div>
+            <div class="mock-item">
+              <span class="mock-avatar">u</span>
+              <div><small>r/privacy · 3 years ago</small><p>An old comment you would rather leave behind.</p></div>
+            </div>
+            <div class="mock-arrow"><span></span></div>
+            <div class="mock-after">
+              <span class="mock-check">✓</span>
+              <div><small>Replacement preview</small><p>This content has been removed for privacy reasons.</p></div>
+            </div>
+            <div class="mock-footer"><span class="mock-chip">1 selected</span><span class="mock-button">Review changes</span></div>
+          </div>
+        </div>
+        <div class="welcome-steps">
+          <div><b>01</b><strong>Find everything</strong><p>Search every page Reddit makes available, or import your official data export.</p></div>
+          <div><b>02</b><strong>Review in control</strong><p>Select individual comments, a whole community, or everything you approve.</p></div>
+          <div><b>03</b><strong>Confirm once</strong><p>See the exact replacement before anything is sent to Reddit.</p></div>
+        </div>
+      </section>
+
+      <section id="scan-section" class="scan-grid" hidden>
+        <div class="surface scan-card">
+          <div class="card-head"><div><p class="kicker">STEP 2</p><h3>Find your history</h3></div><span class="pill">Read only</span></div>
+          <p class="section-intro">Wipeditt searches every page Reddit makes available. There is no item cap and no hidden sample.</p>
+          <div class="field-row">
+            <label>What to search<select id="type"><option value="comment">Comments</option><option value="post">Text posts</option><option value="all">Comments &amp; text posts</option></select></label>
+          </div>
+          <details id="filters"><summary>Filter by community, date or text <span class="optional">Optional</span></summary><div class="grid"><label>Include subreddits<input id="include" class="sensitive" placeholder="e.g. privacy, technology"></label><label>Exclude subreddits<input id="exclude" class="sensitive" placeholder="Communities to keep"></label><label>Text contains<input id="contains" class="sensitive"></label><label>Regular expression<input id="regex" class="sensitive" maxlength="300" placeholder="Optional advanced search"></label><label>From<input id="after" type="datetime-local"></label><label>Until<input id="before" type="datetime-local"></label><label>Minimum score<input id="minScore" type="number"></label><label>Maximum score<input id="maxScore" type="number"></label><label>Edited status<select id="edited"><option value="all">Any</option><option value="yes">Edited</option><option value="no">Unedited</option></select></label></div></details>
+          <div class="search-actions"><button id="scan" class="primary">Find my comments</button><small>Nothing changes during a search.</small></div>
+        </div>
+        <aside id="import-card" class="surface import-card">
+          <p class="kicker">OLDER HISTORY</p>
+          <h3>Have a Reddit export?</h3>
+          <p>Reddit's live pages can stop before your oldest comments. Import <strong>comments.csv</strong> from your official data export to include those comments too.</p>
+          <div class="import-actions"><button id="import-export">Import comments.csv</button><button id="request-export" class="quiet">How to get it</button></div>
+          <p class="fineprint">The file is read locally by the app and never uploaded. Ownership and current text are checked again before any change.</p>
+        </aside>
+      </section>
+
+      <section id="progress-section" class="surface progress-card" hidden>
+        <div class="section-heading"><div><p class="kicker" id="progress-kicker">WORKING</p><h3 id="progress-title">Finding your history</h3></div><div class="progress-actions"><button id="pause">Pause</button><button id="stop" class="danger">Stop</button></div></div>
+        <p id="progress-help" class="muted">Searching is read only. You will review the results next.</p>
+        <div class="progress-track"><progress id="progress" max="1" value="0"></progress><span id="progress-percent">0%</span></div>
+        <p id="progress-counts"></p><p id="cooldown" class="muted"></p>
+      </section>
+
+      <section id="finished" class="surface finished-card" hidden role="status">
+        <div class="finished-mark" aria-hidden="true">✓</div>
+        <div class="finished-copy"><p class="kicker">FINISHED</p><h3 id="finished-title">All done.</h3><p id="finished-summary"></p></div>
+        <button id="finished-report">Save report</button>
+      </section>
+
+      <section id="review-section" hidden>
+        <div class="review-toolbar"><button id="change-search" class="quiet">← Back to search</button><p id="search-summary"></p></div>
+        <div class="review-layout">
+          <div class="surface review-card">
+            <div class="stats"><span><strong id="matched-count">0</strong>found</span><span><strong id="eligible-count">0</strong>ready to review</span><span><strong id="selected-count">0</strong>selected</span></div>
+            <div class="selection-actions"><button id="select-all">Select all ready</button><button id="select-none">Clear</button><select id="subreddit-select" class="sensitive" aria-label="Select by community"><option value="">Select a community…</option></select></div>
+            <div id="items" aria-label="Content preview"></div>
+            <div class="pagination"><button id="previous-page">Previous</button><span id="page-label"></span><button id="next-page">Next</button></div>
+          </div>
+          <aside class="replacement-panel surface">
+            <p class="kicker">STEP 3</p>
+            <h3>Choose the replacement</h3>
+            <p>Selected comments keep their place. Their body text becomes your message.</p>
+            <label class="replacement-label">Replacement message<textarea id="replacement" class="sensitive" maxlength="10000" rows="4"></textarea></label>
+            <label>Quick message<select id="replacement-preset"><option value="default">Removed for privacy</option><option value="short">[Deleted for privacy]</option><option value="removed">[Content removed]</option><option value="custom">Custom message</option></select></label>
+            <details><summary>Timing &amp; advanced options</summary><div class="grid"><label id="mode-label">Mode<select id="mode"><option value="anonymize">Replace text</option><option value="delete">Delete · sample only</option><option value="combined">Replace &amp; delete · sample only</option></select></label><label>Minimum action interval (ms)<input id="interval" type="number" value="1500" min="1500" max="3600000"></label><label id="delete-delay-label">Sample deletion delay (ms)<input id="deleteDelay" type="number" value="0" min="0" max="86400000"></label></div></details>
+            <button id="review" class="primary block">Review changes</button>
+            <p class="review-note">You will see the exact text next. Titles, media and external copies are not changed.</p>
+          </aside>
+        </div>
+        <p id="counts" hidden></p><p id="coverage-note" class="review-note"></p>
+      </section>
+
+      <details id="activity-details"><summary>Search details &amp; activity</summary><p id="scan-details" class="muted"></p><ol id="activity"></ol></details>
     </div>
   </main>
-  <dialog id="confirmation" aria-labelledby="confirmation-title"><h2 id="confirmation-title">Confirm content changes</h2><p id="confirmation-summary" class="sensitive"></p><strong>Exact replacement</strong><pre id="confirmation-text" class="sensitive"></pre><p class="muted">Changes may be permanent. Stop prevents new actions; submitted edits may finish. External copies can remain.</p><label id="phrase-label" hidden><span id="phrase-prompt"></span><input id="phrase" autocomplete="off"></label><div class="dialog-actions"><button id="cancel-confirmation">Cancel</button><button id="accept" class="primary">Anonymize selected</button></div></dialog>
+
+  <dialog id="confirmation" aria-labelledby="confirmation-title">
+    <p class="eyebrow">FINAL REVIEW</p>
+    <h2 id="confirmation-title">Replace this text?</h2>
+    <p id="confirmation-summary" class="sensitive"></p>
+    <strong>Your exact replacement</strong>
+    <pre id="confirmation-text" class="sensitive"></pre>
+    <p class="muted">This changes your Reddit content and may be permanent. Stop prevents new actions; edits already sent may finish. External copies can remain.</p>
+    <label id="phrase-label" hidden><span id="phrase-prompt"></span><input id="phrase" autocomplete="off"></label>
+    <div class="dialog-actions"><button id="cancel-confirmation">Go back</button><button id="accept" class="primary">Confirm &amp; replace text</button></div>
+  </dialog>
+
+  <dialog id="export-help" aria-labelledby="export-help-title">
+    <p class="eyebrow">OLDER COMMENTS</p>
+    <h2 id="export-help-title">Request your Reddit export</h2>
+    <p>Open Reddit's data request page, request your data, then wait for Reddit to send the download link.</p>
+    <p>When it arrives, download the ZIP and open it. Choose its <strong>comments.csv</strong> file with <strong>Import comments.csv</strong>.</p>
+    <p class="muted">Only the comments file is read. Importing does not change anything on Reddit. Ownership and current text are checked again before each change.</p>
+    <div class="dialog-actions"><button id="close-export-help">Close</button><button id="open-data-request" class="primary">Open Reddit data request</button></div>
+  </dialog>
 </body>
 </html>

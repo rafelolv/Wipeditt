@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.0 — 2026-11-06
+
+- Redesign the desktop interface with a warm light theme, a full dark theme and a clearer connection, scan and review flow.
+- Follow every history page Reddit exposes by default; remove the app-imposed item cap and add paged review with row, checkbox and community selection.
+- Import local `comments.csv` files from Reddit's official data export to reach older comments, with pre-write ownership and text verification.
+- Persist theme and privacy preferences locally, add a finished summary and report action, and expose Reddit's data-request page.
+- Extend deterministic and Electron fixture coverage for import, uncapped pagination, selection, themes, privacy mode, rejection, text posts and account changes.
+
+Validation: 44 deterministic unit tests and the Electron fixture suite pass. Previous manual checks confirmed real sign-in, account verification and history reading; the redesigned UI, uncapped scan and import path are fixture-tested. Real-account editing remains unvalidated and live deletion stays disabled.
+
 ## 0.3.1 — 2026-11-06
 
 - Validate native installers in branch CI and expose actionable packaging failures.

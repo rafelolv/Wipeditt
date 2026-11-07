@@ -1,12 +1,14 @@
 import { app, BrowserWindow, WebContentsView, ipcMain, session, dialog, shell, nativeImage } from 'electron';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { writeFile } from 'node:fs/promises';
+import { readFile, stat, writeFile } from 'node:fs/promises';
 import { Scheduler } from '../scheduler.js';
 import { RedditBrowser } from './reddit-browser.js';
 import { DesktopController } from './controller.js';
 import { CheckpointStorage } from './storage.js';
 import { REMOTE_PREFERENCES, redditURL, trustedSender, loginNavigation } from './policy.js';
+import { parseCommentsCSV } from './import.js';
+import { fail } from '../errors.js';
 
 app.setName('Wipeditt');
 if (!app.isPackaged && process.env.WIPEDITT_TEST_USER_DATA) app.setPath('userData', process.env.WIPEDITT_TEST_USER_DATA);
@@ -16,10 +18,12 @@ let window, redditView, controller, checkpointStorage, activeSession;
 let browserVisible = false;
 const configuredSessions = new WeakSet();
 const appURL = pathToFileURL(join(__dirname, 'index.html')).href;
+const DATA_REQUEST_URL = 'https://www.reddit.com/settings/data-request';
+const EXPORT_LIMIT = 64 * 1024 * 1024;
 function layout() {
   if (!window || window.isDestroyed() || !redditView) return;
   const [width, height] = window.getContentSize();
-  redditView.setBounds({ x: 272, y: 104, width: Math.max(100, width - 284), height: Math.max(100, height - 116) });
+  redditView.setBounds({ x: 268, y: 104, width: Math.max(100, width - 280), height: Math.max(100, height - 116) });
   redditView.setVisible(browserVisible);
 }
 function safeRemote(contents) {
@@ -77,7 +81,7 @@ app.on('window-all-closed', () => app.quit());
 app.on('before-quit', () => { controller?.stop(); checkpointStorage?.flush(); });
 if (acquired) app.whenReady().then(async () => {
   const icon = nativeImage.createFromPath(join(__dirname, 'icon.png'));
-  window = new BrowserWindow({ width: 1280, height: 880, minWidth: 1000, minHeight: 720, title: 'Wipeditt', backgroundColor: '#141c17', icon,
+  window = new BrowserWindow({ width: 1360, height: 900, minWidth: 1040, minHeight: 720, title: 'Wipeditt', backgroundColor: '#f4f1ea', icon,
     webPreferences: { ...REMOTE_PREFERENCES, preload: join(__dirname, 'preload.cjs') } });
   window.setMenuBarVisibility(false);
   window.on('resize', layout);
@@ -88,6 +92,21 @@ if (acquired) app.whenReady().then(async () => {
   checkpointStorage = new CheckpointStorage(join(app.getPath('userData'), 'checkpoint-v1.json'));
   browser.adapter = { scheduler: new Scheduler(), account: async () => { throw new Error('Connect Reddit first.'); } };
   controller = new DesktopController({ browser, storage: checkpointStorage, version: app.getVersion(), onState: sendState,
+    openDataRequest: async () => { const url = redditURL(DATA_REQUEST_URL); await shell.openExternal(url.href); },
+    importExport: async ({ account }) => {
+      const result = await dialog.showOpenDialog(window, {
+        title: 'Choose comments.csv from your Reddit export',
+        defaultPath: app.getPath('downloads'),
+        properties: ['openFile'],
+        filters: [{ name: 'Reddit comments CSV', extensions: ['csv'] }]
+      });
+      if (result.canceled || !result.filePaths[0]) return null;
+      const file = result.filePaths[0];
+      const info = await stat(file);
+      if (!info.isFile() || info.size > EXPORT_LIMIT) fail('IMPORT', 'Choose a comments.csv file smaller than 64 MB.');
+      const parsed = parseCommentsCSV(await readFile(file, 'utf8'), account.name);
+      return { ...parsed, name: basename(file) };
+    },
     saveReport: async report => {
       const result = await dialog.showSaveDialog(window, { title: 'Save local Wipeditt report', defaultPath: `wipeditt-${app.getVersion()}-report.json`, filters: [{ name: 'JSON report', extensions: ['json'] }] });
       if (!result.canceled && result.filePath) await writeFile(result.filePath, JSON.stringify(report, null, 2), { mode: 0o600 });

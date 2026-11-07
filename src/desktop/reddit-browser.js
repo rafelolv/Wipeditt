@@ -43,8 +43,15 @@ export class RedditBrowser {
     if (!result || !Object.hasOwn(result, 'data')) fail('RESPONSE', 'Browser returned an invalid content snapshot.');
     return result.data;
   }
+  register(items = []) {
+    for (const item of items) {
+      try { this.links.set(item.id, contentURL(item.permalink, item.id)); }
+      catch { item.editable = false; }
+    }
+  }
   connect({ signal } = {}) {
     return this.scheduler.request(async () => {
+      this.links.clear();
       await this.navigate(`${REDDIT_CLASSIC}/user/me/overview/`, signal, { force: true });
       this.identity = await this.dom('account');
       return this.identity;
