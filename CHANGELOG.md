@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.1 — 2026-11-06
 
 - Verify the Reddit account automatically after the initial login; keep **Verify account** as a manual fallback.
 - Read classic Reddit author metadata when either the profile link or `data-author` is missing, so own comments remain selectable without weakening pre-write ownership checks.

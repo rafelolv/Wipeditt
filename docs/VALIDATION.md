@@ -1,4 +1,4 @@
-# Validation record — 0.4.0
+# Validation record — 0.4.1
 
 ## Automated
 
@@ -12,7 +12,7 @@ Screenshots in README show synthetic fixtures. They do not expose a real account
 
 On November 6, 2026 the maintainer confirmed signing in through the 0.3.1 desktop app, seeing their account after Verify account, and seeing their own comments after a five-item test scan. These observations validate real authentication and history reading for the native connector. They are manual reports, not automated assertions, and do not validate the redesigned 0.4.0 interface, uncapped scan or import path against a real account.
 
-After the 0.4.0 release, the maintainer reported that login still required a manual Verify account click and that many own comments showed “Ownership could not be verified”. Automatic post-login verification and the author-link/`data-author` fallback are covered by the Electron fixture suite above. These fixes have not yet been revalidated against a real account, and every write still independently rechecks the signed-in account and author.
+After the 0.4.0 release, the maintainer reported that login still required a manual Verify account click and that many own comments showed “Ownership could not be verified”. Automatic post-login verification and the author-link/`data-author` fallback ship in 0.4.1 and are covered by the Electron fixture suite above. These fixes have not yet been revalidated against a real account, and every write still independently rechecks the signed-in account and author.
 
 No real-account edit or deletion was performed as part of automated validation. Live editing remains a preview feature. Native deletion stays disabled until separately validated. Package generation alone does not prove installation, OS trust/signing or every account/layout variation.
 

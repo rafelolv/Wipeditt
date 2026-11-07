@@ -2,7 +2,7 @@
 
 ## Native website connector
 
-Version 0.4.0 uses an Electron WebContentsView containing Reddit's website. Sign-in belongs to Reddit. A separate owned Chromium session is temporary by default, persistable only by explicit user choice. No Client ID, private API client, copied website token or imported browser profile is involved.
+Version 0.4.1 uses an Electron WebContentsView containing Reddit's website. Sign-in belongs to Reddit. After the initial login leaves Reddit's credential screens, the main process verifies the account automatically; the manual **Verify account** action remains a fallback. A separate owned Chromium session is temporary by default, persistable only by explicit user choice. No Client ID, private API client, copied website token or imported browser profile is involved.
 
 The main-process adapter navigates classic account history and original permalinks, then executes a constrained DOM bridge in an isolated JavaScript world. The bridge reads native listing metadata and author links, opens the native editor, sets its textarea using the native setter, dispatches input/change events and clicks the native save control. This implementation was written independently; no Redact implementation is claimed or copied.
 
@@ -10,7 +10,7 @@ The browser session naturally manages its own authentication cookies. Wipeditt d
 
 ## Ownership and execution
 
-Account identity is derived from the authenticated page header and validated username links. Internal adapter IDs use `reddit:<normalized username>` and are not represented as Reddit API account IDs. Author declarations must agree with author links. Nested things are excluded when locating an item's controls/body.
+Account identity is derived from the authenticated page header and validated username links. Internal adapter IDs use `reddit:<normalized username>` and are not represented as Reddit API account IDs. Author profile links are canonical; when a classic layout omits one, `data-author` and the visible author-link text are validated fallbacks. Every candidate must still match the signed-in account before it can be selected or written. Nested things are excluded when locating an item's controls/body.
 
 Every item is bound to a validated original Reddit URL. Immediately before saving, Wipeditt freshly loads the original and verifies the account, author, content and editable control. The main-process engine owns preview expiry, explicit confirmation, selected IDs and cancellation. The renderer cannot submit arbitrary URLs or scripts.
 
