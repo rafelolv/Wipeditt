@@ -5,7 +5,7 @@ Wipeditt is proprietary software. Bug reports and validation reports are welcome
 ## Before reporting
 
 - Use the latest official release.
-- Check the [user guide](docs/USER-GUIDE.md), [limits](docs/REDDIT-LIMITS.md) and [troubleshooting](../README.md#troubleshooting).
+- Check the [user guide](docs/USER-GUIDE.md), [limits](docs/REDDIT-LIMITS.md) and [troubleshooting](README.md#troubleshooting).
 - Reproduce with sample data when the issue is in the review UI.
 - Include the Wipeditt version, operating system, workflow and exact error code from **Search details & activity**.
 
