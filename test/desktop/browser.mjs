@@ -52,10 +52,10 @@ try {
     if (exposed !== 'undefined') throw new Error('Reddit page received privileged bridge');
     await remote.executeJavaScript('document.querySelector("#fixture-login").click()');
   });
-  await page.waitForTimeout(200);
-  await page.locator('#verify').click();
-  await page.locator('#account').filter({ hasText: 'u/fixture_user' }).waitFor({ timeout: 15000 });
-  console.log('Native fixture login and account verification passed.');
+  // Verification must run automatically after login; never click #verify here.
+  await page.locator('#account').filter({ hasText: 'u/fixture_user' }).waitFor({ timeout: 20000 });
+  assert.equal(await page.locator('#verify').isVisible(), false);
+  console.log('Native fixture login and automatic account verification passed.');
 
   // A targeted scan by text keeps the test deterministic without an item cap.
   await openFilters(page);
@@ -114,6 +114,11 @@ try {
   await page.locator('#matched-count').filter({ hasText: '3' }).waitFor({ timeout: 15000 });
   assert.match(await page.locator('#counts').textContent(), /3 found · 2 selected/);
   assert.equal(await page.locator('.item[data-id="t1_other"] input[type="checkbox"]').isDisabled(), true);
+  assert.match(await page.locator('.item[data-id="t1_other"] .warning').textContent(), /Ownership could not be verified/);
+  // Missing author links and missing data-author attributes must not block ownership.
+  assert.equal(await page.locator('.item[data-id="t1_next"] .warning').count(), 0);
+  assert.equal(await page.locator('.item[data-id="t1_next"] input[type="checkbox"]').isDisabled(), false);
+  assert.equal(await page.locator('.item[data-id="t1_abc"] .warning').count(), 0);
   assert.equal(await page.locator('.item[data-id="t1_abc"]').count(), 1);
   assert.match(await page.locator('#page-label').textContent(), /Page 1 of 1 · 3 items/);
   await setTheme(page, true);
@@ -152,5 +157,5 @@ try {
   await page.locator('#disconnect').click();
   await page.locator('#connect').waitFor();
   assert.equal(await page.locator('#review-section').isVisible(), false);
-  console.log('Electron desktop passed: native login, isolated session/renderer, account detection, uncapped pagination, row/checkbox selection, safe preview, cancel, pause/resume, native save, fresh-page verification, account-change stop, disconnect and themes. All Reddit pages were local fixtures.');
+  console.log('Electron desktop passed: native login, automatic account verification, isolated session/renderer, author metadata fallbacks, uncapped pagination, row/checkbox selection, safe preview, cancel, pause/resume, native save, fresh-page verification, account-change stop, disconnect and themes. All Reddit pages were local fixtures.');
 } finally { await application?.close(); clearTimeout(deadline); await rm(profile, { recursive: true, force: true }); }

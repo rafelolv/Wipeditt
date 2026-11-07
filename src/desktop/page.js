@@ -21,17 +21,26 @@ export function redditPage(operation, input = {}) {
     if (current) return { data: current };
     const message = document.body?.textContent?.slice(0, 12000).toLowerCase() || '';
     if (/blocked|whoa there|too many requests|network security/.test(message)) return result('SITE_BLOCKED', 'Reddit is blocking this browser or connection. Review the Reddit page; Wipeditt will not bypass the restriction.');
-    return result('AUTH', 'Sign in to Reddit in the browser, then choose Verify account.');
+    return result('AUTH', 'Sign in to Reddit in the browser. Wipeditt will verify the account automatically.');
   }
   if (!current) return result('AUTH', 'Reddit sign-in is no longer available. Connect again.');
   if (input.expected && (input.expected.id !== current.id || input.expected.name.toLowerCase() !== current.name.toLowerCase())) return result('ACCOUNT_CHANGED', 'The signed-in Reddit account changed. Connect and scan again.');
   const normalize = node => {
     const id = node.dataset.fullname;
     if (!/^t[13]_[a-z0-9]+$/.test(id || '')) return null;
+    // Classic Reddit normally exposes the author as a profile link. Older
+    // listings and some compact layouts only keep data-author, so use every
+    // server-provided form before treating ownership as unknown.
     const authorLink = own(node, 'a.author');
+    const fallbackLink = authorLink || own(node, '.tagline a[href*="/user/"], .tagline a[href*="/u/"]');
     const linkedAuthor = authorLink ? profileName(authorLink.href) : '';
-    const declaredAuthor = node.dataset.author || '';
-    const author = linkedAuthor && (!declaredAuthor || declaredAuthor.toLowerCase() === linkedAuthor.toLowerCase()) ? linkedAuthor : '';
+    const linkAuthor = (fallbackLink?.textContent || '').trim().replace(/^u\//i, '');
+    const declaredAuthor = String(node.dataset.author || '').trim().replace(/^u\//i, '');
+    const validAuthor = value => /^[A-Za-z0-9_-]+$/.test(value) ? value : '';
+    // The profile link is canonical; data-author and the visible link text are
+    // fallbacks for compact layouts that omit it. Writes still recheck the
+    // signed-in account and author on a fresh item page before sending.
+    const author = validAuthor(linkedAuthor) || validAuthor(declaredAuthor) || validAuthor(linkAuthor);
     const textArea = own(node, '.usertext-edit textarea[name="text"], textarea[name="text"]');
     const body = own(node, '.usertext-body .md');
     const text = textArea ? textArea.value : body?.textContent?.trim() || '';

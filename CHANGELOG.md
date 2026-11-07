@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Verify the Reddit account automatically after the initial login; keep **Verify account** as a manual fallback.
+- Read classic Reddit author metadata when either the profile link or `data-author` is missing, so own comments remain selectable without weakening pre-write ownership checks.
+- Extend the Electron fixture to log in without clicking **Verify account** and to scan items missing one author source.
+
+Validation: 45 deterministic unit tests and the Electron fixture suite pass.
+
 ## 0.4.0 — 2026-11-06
 
 - Redesign the desktop interface with a warm light theme, a full dark theme and a clearer connection, scan and review flow.

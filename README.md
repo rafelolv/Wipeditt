@@ -58,7 +58,7 @@ Packages are unsigned; macOS builds are not notarized. Verify downloads against 
 ### Ready in four steps
 
 1. **Download and open Wipeditt** from [Releases](https://github.com/rafelolv/Wipeditt/releases/latest).
-2. **Choose Connect Reddit**, sign in on Reddit's own page inside the app, then choose **Verify account**. No Client ID, developer app or API key is needed.
+2. **Choose Connect Reddit** and sign in on Reddit's own page inside the app. Wipeditt verifies the account automatically; **Verify account** remains available as a fallback. No Client ID, developer app or API key is needed.
 3. **Choose what to find** — comments, text posts or both — and add optional filters. Press **Find my comments**.
 4. **Review every match**, select what you approve, enter the replacement, then confirm the exact text. Above 100 selected items, type `ANONYMIZE`.
 
@@ -106,7 +106,7 @@ Screenshots use synthetic fixture data. They do not show a real account, and the
 
 ## Quick start
 
-1. Connect Reddit, sign in on Reddit's page and choose **Verify account**.
+1. Connect Reddit and sign in on Reddit's page. Verification runs automatically when login finishes.
 2. Choose **Comments**, **Text posts** or **Comments & text posts**.
 3. Optionally expand **Filter by community, date or text** and narrow the search.
 4. Press **Find my comments**. This stage is read-only.
@@ -220,8 +220,8 @@ Read the [privacy details](docs/PRIVACY.md) for the complete data-flow descripti
 
 | Problem | What to try |
 | --- | --- |
-| Reddit login does not complete | Use **Open Reddit browser**, finish Reddit's own sign-in flow, then choose **Verify account**. Reddit may require additional verification. |
-| “Verify account” fails | Make sure the page shows your account, then reconnect. A preview from another account is invalid. |
+| Reddit login does not complete | Use **Open Reddit browser** and finish Reddit's own sign-in flow. Wipeditt normally verifies automatically; choose **Verify account** if it does not. Reddit may require additional verification. |
+| “Verify account” fails | Make sure the page shows your account, then choose **Verify account** again or reconnect. A preview from another account is invalid. |
 | No old comments appear | Reddit listings are partial. Import `comments.csv` from your official export. |
 | The import is rejected | Choose the `comments.csv` file from Reddit's archive, not another CSV. The file must include the standard export columns and be under 64 MB. |
 | A scan stops early | Wait for any rate-limit cooldown, try a smaller selection, and keep the activity details for a bug report. |

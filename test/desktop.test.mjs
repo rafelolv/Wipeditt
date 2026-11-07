@@ -32,6 +32,20 @@ test('normalized desktop options keep inclusive date boundaries through engine n
   const options = normalizeOptions({ after: '2024-01-01T00:00:00Z', before: '2025-01-01T00:00:00Z' });
   assert.deepEqual(normalizeOptions(options), options);
 });
+test('desktop tracks the initial login flow for automatic verification', async () => {
+  const { desktop } = controller();
+  assert.equal(desktop.awaitingLogin, false);
+  await desktop.command('connect');
+  assert.equal(desktop.awaitingLogin, true);
+  await desktop.command('verify-account');
+  assert.equal(desktop.awaitingLogin, false);
+  await desktop.command('show-browser');
+  assert.equal(desktop.awaitingLogin, false);
+  await desktop.command('connect');
+  assert.equal(desktop.awaitingLogin, true);
+  await desktop.command('disconnect');
+  assert.equal(desktop.awaitingLogin, false);
+});
 test('desktop requires main-process confirmation token and rejects replay', async () => {
   const { desktop, adapter } = controller();
   await desktop.command('connect'); await desktop.command('verify-account');

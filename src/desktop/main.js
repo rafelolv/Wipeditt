@@ -6,7 +6,7 @@ import { Scheduler } from '../scheduler.js';
 import { RedditBrowser } from './reddit-browser.js';
 import { DesktopController } from './controller.js';
 import { CheckpointStorage } from './storage.js';
-import { REMOTE_PREFERENCES, redditURL, trustedSender, loginNavigation } from './policy.js';
+import { REDDIT_CLASSIC, REMOTE_PREFERENCES, redditURL, trustedSender, loginNavigation } from './policy.js';
 import { parseCommentsCSV } from './import.js';
 import { fail } from '../errors.js';
 
@@ -38,6 +38,43 @@ function safeRemote(contents) {
 }
 
 function sendState(value) { if (window && !window.isDestroyed() && !window.webContents.isDestroyed()) window.webContents.send('wipeditt:state', value); }
+const loginPage = url => url.hostname === 'accounts.reddit.com'
+  || /^\/(?:login|register|signup|account|password|reset|verification|verify|mfa|two-factor|sso)(?:\/|$)/i.test(url.pathname);
+let loginWatch = null;
+let loginProbe = false;
+let loginSettledAt = 0;
+let loginRetryAt = 0;
+function stopLoginWatch() { if (loginWatch) clearInterval(loginWatch); loginWatch = null; loginProbe = false; }
+function startLoginWatch() {
+  stopLoginWatch();
+  loginSettledAt = Date.now();
+  loginRetryAt = 0;
+  loginWatch = setInterval(async () => {
+    if (!controller?.awaitingLogin || controller.busy || controller.account || controller.simulation || !browserVisible) return;
+    if (loginProbe || Date.now() < loginRetryAt) return;
+    if (!redditView || redditView.webContents.isDestroyed()) return;
+    let url;
+    try { url = redditURL(redditView.webContents.getURL()); } catch { return; }
+    // Stay quiet while Reddit is still asking for credentials or a second factor.
+    if (loginPage(url)) { loginSettledAt = Date.now(); return; }
+    if (!['old.reddit.com', 'www.reddit.com', 'reddit.com'].includes(url.hostname)) return;
+    if (Date.now() - loginSettledAt < 1500) return;
+    loginProbe = true;
+    try {
+      if (url.hostname === 'old.reddit.com') {
+        const account = await browser.adapter.account().catch(() => null);
+        if (!account) { loginSettledAt = Date.now(); return; }
+        if (controller.busy || !controller.awaitingLogin) return;
+        controller.status = `Signed in as u/${account.name}. Verifying…`; controller.emit();
+      }
+      await controller.command('verify-account');
+      stopLoginWatch();
+    } catch {
+      loginRetryAt = Date.now() + 15000;
+      loginSettledAt = Date.now();
+    } finally { loginProbe = false; }
+  }, 1200);
+}
 const browser = {
   adapter: null,
   async open({ remember = false } = {}) {
@@ -62,11 +99,16 @@ const browser = {
     window.contentView.addChildView(redditView);
     browser.adapter = new RedditBrowser({ contents: redditView.webContents, scheduler });
     browserVisible = true; layout();
-    await browser.adapter.navigate('https://www.reddit.com/login/');
+    // Ask Reddit to return to the classic overview after sign-in. If the login
+    // flow ignores the destination, the watcher below still verifies once the
+    // embedded page leaves Reddit's credential screens.
+    await browser.adapter.navigate(`https://www.reddit.com/login/?dest=${encodeURIComponent(`${REDDIT_CLASSIC}/user/me/overview/`)}`);
+    startLoginWatch();
   },
   async show() { if (!redditView) return browser.open(); browserVisible = true; layout(); },
   hide() { browserVisible = false; layout(); },
   async clear() {
+    stopLoginWatch();
     browser.hide();
     if (redditView) { window.contentView.removeChildView(redditView); redditView.webContents.close(); redditView = null; }
     for (const partition of ['wipeditt-reddit', 'persist:wipeditt-reddit']) {
@@ -78,14 +120,14 @@ const browser = {
 };
 app.on('second-instance', () => { if (window) { if (window.isMinimized()) window.restore(); window.focus(); } });
 app.on('window-all-closed', () => app.quit());
-app.on('before-quit', () => { controller?.stop(); checkpointStorage?.flush(); });
+app.on('before-quit', () => { stopLoginWatch(); controller?.stop(); checkpointStorage?.flush(); });
 if (acquired) app.whenReady().then(async () => {
   const icon = nativeImage.createFromPath(join(__dirname, 'icon.png'));
   window = new BrowserWindow({ width: 1360, height: 900, minWidth: 1040, minHeight: 720, title: 'Wipeditt', backgroundColor: '#f4f1ea', icon,
     webPreferences: { ...REMOTE_PREFERENCES, preload: join(__dirname, 'preload.cjs') } });
   window.setMenuBarVisibility(false);
   window.on('resize', layout);
-  window.on('close', () => { controller?.stop(); checkpointStorage?.flush(); });
+  window.on('close', () => { stopLoginWatch(); controller?.stop(); checkpointStorage?.flush(); });
   window.webContents.on('will-navigate', event => event.preventDefault());
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   window.webContents.on('will-attach-webview', event => event.preventDefault());

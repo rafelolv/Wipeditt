@@ -2,7 +2,7 @@
 
 ## Connect
 
-Install a desktop package from the official release. Choose **Connect Reddit**; sign in directly on Reddit's page in the embedded browser. Wipeditt never asks for a pasted password, cookie or token. Choose **Verify account** after login. The sidebar shows the verified username; privacy mode masks it.
+Install a desktop package from the official release. Choose **Connect Reddit**; sign in directly on Reddit's page in the embedded browser. Wipeditt never asks for a pasted password, cookie or token. Wipeditt verifies the account automatically after login; **Verify account** remains a manual fallback. The sidebar shows the verified username; privacy mode masks it.
 
 Session memory is off by default. Enable **Keep me signed in on this device** before connecting only if you want Chromium to retain this app's Reddit session on this device. Disconnect clears Wipeditt's own session storage and invalidates the review. It does not sign out your normal browser.
 
@@ -52,6 +52,6 @@ Checkpoints contain expiring IDs and statuses only. They support conservative st
 
 Sample data is local and explicitly labeled; it never proves that your real account supports writes. Switching between simulation and Reddit invalidates the preview.
 
-If login fails, use **Open Reddit browser**, complete Reddit's own sign-in flow, then **Verify account**. If history stops loading or controls cannot be found, stop and report the app version and error code without sharing credentials, cookies, original private text or tokens. The classic website connector may need maintenance after Reddit changes.
+If login fails, use **Open Reddit browser** and complete Reddit's own sign-in flow. Verification normally runs automatically; use **Verify account** if it does not finish. If history stops loading or controls cannot be found, stop and report the app version and error code without sharing credentials, cookies, original private text or tokens. The classic website connector may need maintenance after Reddit changes.
 
 If an import is rejected, choose the `comments.csv` from Reddit's official archive and check that it is under 64 MB. If live history is incomplete, import the export; there is no hidden archive in Reddit's live listing.
