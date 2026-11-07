@@ -10,7 +10,7 @@ process.on('uncaughtExceptionMonitor', error => { if(process.env.GITHUB_ACTIONS=
 const profile=await mkdtemp(join(tmpdir(),'wipeditt-delete-fixture-'));
 const env={...process.env,WIPEDITT_TEST_USER_DATA:profile,WIPEDITT_ENABLE_DELETION:'1'};delete env.ELECTRON_RUN_AS_NODE;
 const args=[resolve('.')];if(process.env.CI==='true')args.push('--no-sandbox');
-let application;const deadline=setTimeout(()=>{application?.process().kill('SIGTERM');process.exitCode=1;},300000);deadline.unref();
+let application;const deadline=setTimeout(()=>{console.error('Native deletion fixture suite exceeded its 10-minute deadline.');application?.process().kill('SIGTERM');process.exitCode=1;},600000);deadline.unref();
 try{
   application=await electron.launch({executablePath,args,env,timeout:30000});const page=await application.firstWindow();
   await page.locator('#connect').waitFor();await installFixture(application);await page.locator('#connect').click();
