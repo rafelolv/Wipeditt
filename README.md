@@ -45,6 +45,8 @@ Wipeditt replaces **body text**; it does not delete live content. Link posts, ti
 
 ## Install
 
+Newer versions appear in the app with a **View release** button. Update checks query public GitHub release metadata without Reddit data; disable automatic checks or use **Check for updates** under **Settings & tools**. Installation stays manual. Versions before 0.6.0 need one manual upgrade to gain this notice.
+
 ### Choose your package
 
 | 🐧 Linux · AppImage | 🐧 Linux · Debian | 🪟 Windows | 🍎 macOS |

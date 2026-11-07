@@ -7,6 +7,7 @@ import { RedditBrowser } from './reddit-browser.js';
 import { DesktopController } from './controller.js';
 import { CheckpointStorage } from './storage.js';
 import { REDDIT_CLASSIC, REMOTE_PREFERENCES, redditURL, trustedSender, loginNavigation } from './policy.js';
+import { UpdateChecker } from './updates.js';
 import { parseCommentsCSV } from './import.js';
 import { fail } from '../errors.js';
 
@@ -155,13 +156,28 @@ if (acquired) app.whenReady().then(async () => {
     },
     openOriginal: async value => { const url = redditURL(value); if (!['www.reddit.com', 'old.reddit.com', 'reddit.com'].includes(url.hostname)) throw new Error('Invalid original link.'); await shell.openExternal(url.href); }
   });
+  const updates = new UpdateChecker({ version: app.getVersion(), settingsPath: join(app.getPath('userData'), 'updates-v1.json'), onChange: () => controller.emit() });
+  controller.updates = updates;
   ipcMain.handle('wipeditt:command', async (event, request) => {
     if (!trustedSender(event, window, appURL)) return { error: { code: 'IPC', message: 'Request origin refused.' } };
     try {
       if (!request || typeof request.name !== 'string' || !request.data || typeof request.data !== 'object') throw new Error('Invalid command.');
+      if (request.name === 'check-updates') return { data: await updates.check({ manual: true }) };
+      if (request.name === 'update-settings') { updates.setEnabled(request.data.enabled); return { data: updates.snapshot() }; }
+      if (request.name === 'open-update') {
+        const release = updates.snapshot().available;
+        if (!release) throw new Error('Check for a new version first.');
+        await shell.openExternal(release.url); return { data: null };
+      }
       const result = await controller.command(request.name, request.data);
       return { data: result ?? null };
     } catch (error) { sendState(controller.snapshot()); return { error: { code: error.code || 'APP', message: error.message || 'Operation failed.' } }; }
   });
   await window.loadFile(join(__dirname, 'index.html'));
+  // Development and fixture runs never contact GitHub automatically.
+  if (app.isPackaged) {
+    void updates.check();
+    const timer = setInterval(() => { if (!controller.busy) void updates.check(); }, 3600000);
+    timer.unref(); app.on('before-quit', () => clearInterval(timer));
+  }
 });

@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import assert from 'node:assert/strict';
 import { installFixture } from './fixture.mjs';
 import { verifyAuthorLayouts } from './ownership.mjs';
+import { verifyUpdateNotice } from './updates.mjs';
 
 process.on('uncaughtExceptionMonitor', error => {
   if (process.env.GITHUB_ACTIONS === 'true') console.error(`::error title=Desktop validation::${String(error.stack || error.message).replaceAll('%', '%25').replaceAll('\n', '%0A').replaceAll('\r', '%0D')}`);
@@ -164,5 +165,6 @@ try {
   await page.locator('#disconnect').click();
   await page.locator('#connect').waitFor();
   assert.equal(await page.locator('#review-section').isVisible(), false);
+  await verifyUpdateNotice(application, page);
   console.log('Electron desktop passed: native login, automatic account verification, isolated session/renderer, author metadata fallbacks, uncapped pagination, row/checkbox selection, safe preview, cancel, pause/resume, native save, fresh-page verification, account-change stop, disconnect and themes. All Reddit pages were local fixtures.');
 } finally { await application?.close(); clearTimeout(deadline); await rm(profile, { recursive: true, force: true }); }

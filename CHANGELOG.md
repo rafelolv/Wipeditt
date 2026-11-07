@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.0 — 2026-11-07
+
+- Notify about newer compatible GitHub releases with an official release-page button.
+- Add automatic metadata checks in packaged apps, a persisted opt-out and manual checks under Settings & tools.
+- Include published previews for preview installations; require uploaded platform packages and checksums, semantic version ordering, bounded responses and throttled requests.
+- Keep all package downloads and installation manual. Send no Reddit credentials, content or identifiers.
+
 ## 0.5.0 — 2026-11-07
 
 - Resolve own authors from profile links, data attributes, author spans and native author-only editing controls, with agreement checks between metadata sources.

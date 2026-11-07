@@ -172,6 +172,12 @@ function renderPreview(preview) {
 
 function render(next) {
   state = next;
+  const update = state.updates;
+  $('update-notice').hidden = !update?.available || !!state.browserVisible;
+  $('update-title').textContent = update?.available ? `Wipeditt ${update.available.version} is available${update.available.preview ? ' · Preview' : ''}` : 'New version available';
+  $('automatic-updates').checked = update?.enabled ?? true;
+  $('update-status').textContent = ({ checking: 'Checking releases…', current: 'You are up to date.', available: `Version ${update?.available?.version || ''} is available.`, error: 'Could not check. Try again later.' })[update?.status] || 'Checks public GitHub releases only.';
+  $('check-updates').textContent = update?.status === 'checking' ? 'Checking…' : 'Check for updates';
   const preview = state.preview;
   const busy = !!state.busy;
   const connected = !!state.account;
@@ -227,11 +233,13 @@ function render(next) {
   $('disconnect').hidden = !connected && !state.browserVisible;
 
   for (const node of document.querySelectorAll('button,input,textarea,select')) node.disabled = busy;
+  $('check-updates').disabled = busy || update?.status === 'checking';
   $('stop').disabled = !busy;
   $('pause').disabled = !busy;
   $('pause').textContent = state.paused ? 'Resume' : 'Pause';
   $('privacy').disabled = false;
   $('theme').disabled = false;
+  if (confirmation) $('accept').disabled = busy || !!confirmation.phrase && $('phrase').value !== confirmation.phrase;
   $('report').disabled = busy || !state.hasReport;
   $('finished-report').disabled = busy || !state.hasReport;
   $('cooldown').textContent = state.wait ? `${state.wait.reason} · ${Math.ceil(state.wait.remaining / 1000)}s` : '';
@@ -390,6 +398,9 @@ action('report', 'export-report');
 action('finished-report', 'export-report');
 action('clear-checkpoint', 'clear-checkpoint');
 action('stop', 'stop');
+action('check-updates', 'check-updates');
+action('open-update', 'open-update');
+$('automatic-updates').addEventListener('change', () => command('update-settings', { enabled: $('automatic-updates').checked }).catch(error));
 $('pause').addEventListener('click', () => command(state?.paused ? 'resume' : 'pause').catch(error));
 
 bridge.onState(render);

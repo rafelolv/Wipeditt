@@ -14,4 +14,10 @@ The minimized checkpoint file in Electron's userData directory contains expiring
 
 JSON reports are saved only where you choose through the native file dialog. They omit original text, usernames and sensitive filter values, but contain content IDs/statuses and the operation source (`live` or `import`) that may still be identifiable. Share them deliberately. Logs contain bounded activity statuses and IDs, not credentials or original text.
 
-Opening an original link uses your OS browser and that browser's separate session. Wipeditt does not submit crash reports or auto-update; Electron/Chromium and the operating system may have their own diagnostics outside the app's reporting.
+Opening an original link uses your OS browser and that browser's separate session. Wipeditt does not submit crash reports or automatically download/install updates; Electron/Chromium and the operating system may have their own diagnostics outside the app's reporting.
+
+## Release availability checks
+
+Packaged apps check the public releases of `rafelolv/Wipeditt` on GitHub at startup and no more than every four hours while idle. Automatic checks can be disabled in Settings & tools; Check for updates remains available manually. The preference is stored as an enabled flag in `updates-v1.json`, independently of Reddit checkpoints. Development builds only check when requested manually.
+
+The checker sends a fixed public GitHub API request with no Reddit credentials, account name, device identifier or content. GitHub sees normal connection metadata such as your IP address. Release responses are bounded and timed out; remote release text is never executed or rendered as HTML. A notification opens only the official release page in your OS browser. No installer is downloaded or executed by Wipeditt.

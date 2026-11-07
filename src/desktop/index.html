@@ -40,6 +40,9 @@
         <button id="demo">Try sample data</button>
         <button id="report" disabled>Save last report</button>
         <button id="clear-checkpoint">Clear local checkpoint</button>
+        <button id="check-updates">Check for updates</button>
+        <label class="checkline update-preference"><input id="automatic-updates" type="checkbox" checked> Check releases automatically</label>
+        <small id="update-status" role="status" aria-live="polite"></small>
       </details>
       <small id="version"></small>
       <small class="credit">By Rafael (rafaelolv)<br>Local only · No telemetry</small>
@@ -54,6 +57,7 @@
 
     <section id="browser-help" class="notice" hidden><strong>Sign in on Reddit below.</strong> Wipeditt verifies the account automatically. Use <b>Verify account</b> only if verification does not finish.</section>
 
+    <div id="update-notice" class="update-notice" hidden role="status"><div><strong id="update-title">New version available</strong><p>Download the installer from the official release. Nothing is installed automatically.</p></div><button id="open-update">View release</button></div>
     <div id="workspace">
       <div id="statusbar"><p id="status" role="status" aria-live="polite">Connect Reddit to get started.</p></div>
 

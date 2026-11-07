@@ -12,6 +12,7 @@ export class DesktopController {
     Object.assign(this, { browser, version, onState, saveReport, openOriginal, importExport, openDataRequest });
     this.checkpoints = new Checkpoints(storage);
     this.options = normalizeOptions({ type: 'comment' });
+    this.updates = null;
     this.account = null;
     this.busy = false;
     this.simulation = false;
@@ -48,7 +49,7 @@ export class DesktopController {
       browserVisible: this.browserVisible, paused: this.scheduler.paused, options: this.options,
       status: this.status, wait: this.busy ? this.wait : null, progress: this.progress,
       activity: this.activity, hasReport: !!this.report,
-      statusError: this.statusError, finished: this.finished,
+      statusError: this.statusError, finished: this.finished, updates: this.updates?.snapshot() || null,
       preview: preview ? { items: preview.items, stats: preview.stats, reason: preview.reason, selected: preview.items.filter(item => item.selected && !item.skip).length, options: preview.options, source: preview.source || 'live', created: preview.created } : null
     };
   }

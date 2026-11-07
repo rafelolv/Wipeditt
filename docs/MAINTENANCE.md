@@ -10,4 +10,4 @@ After runtime changes run `npm run check`, then `npm run test:ui` (under Xvfb fo
 
 Maintain classic website selectors conservatively. Recheck exact author/account binding and native form verification after any selector change. Authentication or access failure is not permission to add cookie extraction, private endpoint replay, a new privileged remote bridge or a sandbox bypass.
 
-Packaging: `npm run package`, then `npm run checksums`. Release CI uses native Linux, Windows and both macOS architectures. Packages are unsigned unless a future explicitly authorized signing setup is introduced. There is no automatic updater.
+Packaging: `npm run package`, then `npm run checksums`. Release CI uses native Linux, Windows and both macOS architectures. Packages are unsigned unless a future explicitly authorized signing setup is introduced. There is no automatic installer/updater. `src/desktop/updates.js` checks fixed public GitHub release metadata, compares versions and identifies compatible uploaded packages; its notice never downloads or executes an installer.

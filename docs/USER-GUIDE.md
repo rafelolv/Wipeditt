@@ -61,3 +61,9 @@ If an import is rejected, choose the `comments.csv` from Reddit's official archi
 A missing author label in a listing does not immediately reject a comment: Wipeditt checks alternate item-local metadata and, when needed, reads the original permalink. Native author-only edit controls can identify an editable own item when labels are absent. Nested context replies are not treated as profile entries. Conflicting, deleted or still-unverifiable authors remain unavailable. Review messages distinguish an unknown author from a known different account.
 
 The interface opens in a black monochrome theme by default. A previously chosen light preference is respected. Use the appearance button in the sidebar to switch.
+
+## New versions
+
+When a compatible newer release is available, a banner shows its version and a View release button. Open it to download the official installer yourself. The app does not interrupt an operation, download packages or install automatically. Install this version once to receive future release notices; older versions without the checker cannot show them.
+
+Settings & tools contains Check for updates and Check releases automatically. Automatic checks run on startup and at most every four hours while idle in packaged apps. Turn them off if you prefer manual checks. Offline and rate-limit failures show an unobtrusive retry message and do not affect Reddit work. Manual retries are limited to one per minute. Preview installations include preview releases; stable 1.x and later installations omit preview builds. Only releases with an uploaded installer for this OS/architecture and checksums are advertised.
