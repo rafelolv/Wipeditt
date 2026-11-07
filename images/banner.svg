@@ -1,77 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="320" viewBox="0 0 1200 320" role="img" aria-labelledby="title description">
   <title id="title">Wipeditt</title>
-  <desc id="description">Your Reddit history. Your control. Scan, review, replace only what you choose.</desc>
-  <defs>
-    <linearGradient id="background" x2="1" y2="1">
-      <stop stop-color="#101813"/>
-      <stop offset=".55" stop-color="#17231b"/>
-      <stop offset="1" stop-color="#202a20"/>
-    </linearGradient>
-    <linearGradient id="accent" x2="1" y2="1">
-      <stop stop-color="#9fddbd"/>
-      <stop offset="1" stop-color="#e5bd8d"/>
-    </linearGradient>
-    <linearGradient id="markBackground" x2="1" y2="1">
-      <stop stop-color="#22382b"/>
-      <stop offset="1" stop-color="#0f1a13"/>
-    </linearGradient>
-    <pattern id="dots" width="24" height="24" patternUnits="userSpaceOnUse">
-      <circle cx="2" cy="2" r="1" fill="#d8cdb9" opacity=".08"/>
-    </pattern>
-    <radialGradient id="sageGlow" cx=".5" cy=".5" r=".5">
-      <stop stop-color="#8fd3b4" stop-opacity=".1"/>
-      <stop offset="1" stop-color="#8fd3b4" stop-opacity="0"/>
-    </radialGradient>
-    <radialGradient id="warmGlow" cx=".5" cy=".5" r=".5">
-      <stop stop-color="#e5bd8d" stop-opacity=".09"/>
-      <stop offset="1" stop-color="#e5bd8d" stop-opacity="0"/>
-    </radialGradient>
-  </defs>
-  <rect width="1200" height="320" rx="24" fill="url(#background)"/>
-  <rect width="1200" height="320" rx="24" fill="url(#dots)"/>
-  <circle cx="1080" cy="20" r="230" fill="url(#sageGlow)"/>
-  <circle cx="760" cy="320" r="260" fill="url(#warmGlow)"/>
-  <circle cx="1068" cy="286" r="100" fill="none" stroke="#8fd3b4" stroke-opacity=".12"/>
-  <!-- BRAND_MARK_START -->
-  <svg x="56" y="56" width="108" height="108" viewBox="0 0 128 128" aria-hidden="true">
-    <rect width="128" height="128" rx="30" fill="url(#markBackground)"/>
-    <rect x="1" y="1" width="126" height="126" rx="29" fill="none" stroke="#d8e7dc" stroke-opacity=".1"/>
-    <path d="M24 39h17l10 36 13-29 13 29 10-36h17L85 94H73l-9-21-9 21H43z" fill="#eef3e8"/>
-    <path d="M77 27h27M87 19h17" stroke="#e5bd8d" stroke-width="5" stroke-linecap="round"/>
-  </svg>
-  <!-- BRAND_MARK_END -->
-  <g font-family="Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">
-    <text x="192" y="98" fill="#8fd3b4" font-size="12" font-weight="700" letter-spacing="3">A FRESH START FOR YOUR COMMENTS</text>
-    <text x="186" y="160" fill="#f1f3ea" font-size="64" font-weight="700" letter-spacing="-2.5">Wipeditt</text>
-    <text x="58" y="222" fill="#c8d4c9" font-size="22">Your Reddit history. Your control.</text>
-    <text x="58" y="254" fill="#8fd3b4" font-size="15">Scan first. Review every match. Replace only what you choose.</text>
-    <g transform="translate(800 58)">
-      <rect width="344" height="204" rx="20" fill="#151f19" stroke="#304138"/>
-      <circle cx="22" cy="23" r="4" fill="#8fd3b4"/>
-      <text x="35" y="27" fill="#d7e2d9" font-size="10.5" font-weight="650" letter-spacing="1.5">YOUR REVIEW</text>
-      <text x="322" y="27" fill="#7e9988" font-size="8.5" font-weight="600" letter-spacing="1" text-anchor="end">LOCAL ONLY</text>
-      <path d="M18 39h308" stroke="#2b3b32"/>
-      <g transform="translate(18 50)">
-        <rect width="308" height="44" rx="11" fill="#1c2921" stroke="#2c3d33"/>
-        <circle cx="23" cy="22" r="10" fill="#3a2e22"/>
-        <text x="23" y="26" fill="#e5bd8d" font-size="10" font-weight="700" text-anchor="middle">u</text>
-        <rect x="42" y="12" width="148" height="7" rx="3.5" fill="#668071"/>
-        <rect x="42" y="26" width="216" height="6" rx="3" fill="#405248"/>
-      </g>
-      <g transform="translate(18 102)">
-        <rect width="308" height="56" rx="11" fill="#21392c" stroke="#47765f"/>
-        <circle cx="23" cy="27" r="10" fill="#2c7a55"/>
-        <path d="m18 27 4 4 6-8" fill="none" stroke="#f3f8f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        <rect x="42" y="12" width="76" height="6" rx="3" fill="#8fd3b4"/>
-        <rect x="42" y="25" width="205" height="6" rx="3" fill="#d2dfd5"/>
-        <rect x="42" y="38" width="160" height="6" rx="3" fill="#91ad9c"/>
-      </g>
-      <g transform="translate(18 170)">
-        <rect width="90" height="22" rx="11" fill="#22382b"/>
-        <text x="45" y="15" fill="#9fddbd" font-size="9" font-weight="650" text-anchor="middle">2 selected</text>
-        <rect x="214" y="0" width="94" height="22" rx="8" fill="#8fd3b4"/>
-        <text x="261" y="15" fill="#11231a" font-size="9" font-weight="750" letter-spacing=".4" text-anchor="middle">REVIEW</text>
-      </g>
+  <desc id="description">Your Reddit history. Your control. Find, review and replace only what you choose.</desc>
+  <rect width="1200" height="320" fill="#090909"/>
+  <path d="M48 48h1104M48 272h1104M800 48v224" stroke="#282828"/>
+  <g font-family="Segoe UI, system-ui, sans-serif">
+    <text x="48" y="86" fill="#999999" font-size="12" letter-spacing="2">PERSONAL REDDIT HISTORY / LOCAL DESKTOP APP</text>
+    <text x="44" y="184" fill="#f4f4f4" font-size="76" font-weight="500" letter-spacing="-4">Wipeditt</text>
+    <text x="48" y="230" fill="#aaaaaa" font-size="19">Your Reddit history. Your control.</text>
+    <g font-size="15" fill="#dddddd">
+      <text x="840" y="106">01</text><text x="900" y="106">Find your history.</text>
+      <text x="840" y="166">02</text><text x="900" y="166">Choose what stays.</text>
+      <text x="840" y="226">03</text><text x="900" y="226">Confirm the change.</text>
     </g>
   </g>
 </svg>

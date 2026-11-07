@@ -3,10 +3,10 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/rafelolv/Wipeditt/releases/latest"><img src="https://img.shields.io/github/v/release/rafelolv/Wipeditt?style=flat-square&amp;color=1F6F54&amp;label=release" alt="Latest release"></a>
+  <a href="https://github.com/rafelolv/Wipeditt/releases/latest"><img src="https://img.shields.io/github/v/release/rafelolv/Wipeditt?style=flat-square&amp;color=333333&amp;label=release" alt="Latest release"></a>
   <a href="https://github.com/rafelolv/Wipeditt/actions/workflows/ci.yml"><img src="https://github.com/rafelolv/Wipeditt/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Proprietary-1D2520?style=flat-square" alt="Proprietary license"></a>
-  <a href="https://www.electronjs.org/"><img src="https://img.shields.io/badge/Electron-45-8FD3B4?style=flat-square&amp;logo=electron&amp;logoColor=white" alt="Built with Electron"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Proprietary-333333?style=flat-square" alt="Proprietary license"></a>
+  <a href="https://www.electronjs.org/"><img src="https://img.shields.io/badge/Electron-45-333333?style=flat-square&amp;logo=electron&amp;logoColor=white" alt="Built with Electron"></a>
 </p>
 
 <p align="center">
@@ -100,7 +100,7 @@ Screenshots use synthetic fixture data. They do not show a real account, and the
 | 🛡️ **Keep control** | Verify the account and author, reload the original before each write, and show the exact replacement. |
 | ⏳ **Respect the pace** | A serial scheduler, configurable delay, bounded retries, Pause and Stop. |
 | 🫥 **Keep it private** | Blur names and previews with privacy mode. No telemetry, no remote logging, no app backend. |
-| ✨ **Feel at home** | Warm light theme, full dark theme, a finished summary and a local JSON report. |
+| ✨ **Feel at home** | Black-first monochrome interface, optional neutral light theme, a finished summary and a local JSON report. |
 
 **No Reddit password collection. No cookie export. No private endpoint replay.** Wipeditt operates Reddit's visible website forms using the session you create in the app.
 

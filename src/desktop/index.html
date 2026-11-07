@@ -8,12 +8,12 @@
   <link rel="stylesheet" href="renderer.css">
   <script src="renderer.js" defer></script>
 </head>
-<body>
+<body class="dark">
   <a class="skip-link" href="#workspace">Skip to content</a>
   <aside class="sidebar">
     <div class="brand">
       <img class="brand-mark" src="icon.png" alt="" width="38" height="38">
-      <div><h1>Wipeditt</h1><p>Your history, in your hands</p></div>
+      <div><h1>Wipeditt</h1><p>REDDIT HISTORY UTILITY</p></div>
     </div>
 
     <div class="connection">
@@ -48,7 +48,7 @@
 
   <main>
     <header>
-      <div><p class="eyebrow" id="eyebrow">YOUR PRIVACY, AT YOUR PACE</p><h2 id="heading">A little less history. A fresh start.</h2></div>
+      <div><p class="eyebrow" id="eyebrow">WIPEDITT / REDDIT</p><h2 id="heading">Your Reddit history.</h2></div>
       <span id="mode-badge" class="badge" hidden>Sample data · nothing changes</span>
     </header>
 
@@ -60,8 +60,8 @@
       <section id="welcome">
         <div class="hero">
           <div class="hero-copy">
-            <p class="kicker">CLEAN UP YOUR OWN COMMENTS</p>
-            <h3>Your words.<br>Your next chapter.</h3>
+            <p class="kicker">YOUR HISTORY IS YOURS</p>
+            <h3>Leave less<br>behind.</h3>
             <p>Find old Reddit comments and text posts, review every match, and replace only what you choose. Nothing changes until you confirm.</p>
             <div class="hero-actions">
               <button id="welcome-connect" class="primary">Connect Reddit</button>
@@ -69,31 +69,18 @@
             </div>
             <p class="fineprint">Sign-in happens on Reddit inside the app. Wipeditt never asks for your password, cookies or an API key.</p>
           </div>
-          <div class="hero-card" aria-hidden="true">
-            <div class="mock-top"><span class="mock-dot"></span><span class="mock-dot"></span><span class="mock-dot"></span><span class="mock-title">Your review</span></div>
-            <div class="mock-item">
-              <span class="mock-avatar">u</span>
-              <div><small>r/privacy · 3 years ago</small><p>An old comment you would rather leave behind.</p></div>
-            </div>
-            <div class="mock-arrow"><span></span></div>
-            <div class="mock-after">
-              <span class="mock-check">✓</span>
-              <div><small>Replacement preview</small><p>This content has been removed for privacy reasons.</p></div>
-            </div>
-            <div class="mock-footer"><span class="mock-chip">1 selected</span><span class="mock-button">Review changes</span></div>
+          <div class="welcome-outline">
+            <div><b>01</b><strong>Find your comments.</strong><p>Search the history available on Reddit, or use your official export.</p></div>
+            <div><b>02</b><strong>Make your selection.</strong><p>Keep what matters. Select the words you want to replace.</p></div>
+            <div><b>03</b><strong>Confirm the change.</strong><p>Review the exact replacement before anything is sent.</p></div>
           </div>
-        </div>
-        <div class="welcome-steps">
-          <div><b>01</b><strong>Find everything</strong><p>Search every page Reddit makes available, or import your official data export.</p></div>
-          <div><b>02</b><strong>Review in control</strong><p>Select individual comments, a whole community, or everything you approve.</p></div>
-          <div><b>03</b><strong>Confirm once</strong><p>See the exact replacement before anything is sent to Reddit.</p></div>
         </div>
       </section>
 
       <section id="scan-section" class="scan-grid" hidden>
         <div class="surface scan-card">
           <div class="card-head"><div><p class="kicker">STEP 2</p><h3>Find your history</h3></div><span class="pill">Read only</span></div>
-          <p class="section-intro">Wipeditt searches every page Reddit makes available. There is no item cap and no hidden sample.</p>
+          <p class="section-intro">Wipeditt searches every page Reddit makes available. You review the results before anything changes.</p>
           <div class="field-row">
             <label>What to search<select id="type"><option value="comment">Comments</option><option value="post">Text posts</option><option value="all">Comments &amp; text posts</option></select></label>
           </div>
@@ -126,7 +113,7 @@
         <div class="review-toolbar"><button id="change-search" class="quiet">← Back to search</button><p id="search-summary"></p></div>
         <div class="review-layout">
           <div class="surface review-card">
-            <div class="stats"><span><strong id="matched-count">0</strong>found</span><span><strong id="eligible-count">0</strong>ready to review</span><span><strong id="selected-count">0</strong>selected</span></div>
+            <div class="stats"><span><strong id="matched-count">0</strong>found</span><span><strong id="eligible-count">0</strong>ready to replace</span><span><strong id="selected-count">0</strong>selected</span></div>
             <div class="selection-actions"><button id="select-all">Select all ready</button><button id="select-none">Clear</button><select id="subreddit-select" class="sensitive" aria-label="Select by community"><option value="">Select a community…</option></select></div>
             <div id="items" aria-label="Content preview"></div>
             <div class="pagination"><button id="previous-page">Previous</button><span id="page-label"></span><button id="next-page">Next</button></div>

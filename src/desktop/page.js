@@ -28,19 +28,23 @@ export function redditPage(operation, input = {}) {
   const normalize = node => {
     const id = node.dataset.fullname;
     if (!/^t[13]_[a-z0-9]+$/.test(id || '')) return null;
-    // Classic Reddit normally exposes the author as a profile link. Older
-    // listings and some compact layouts only keep data-author, so use every
-    // server-provided form before treating ownership as unknown.
-    const authorLink = own(node, 'a.author');
-    const fallbackLink = authorLink || own(node, '.tagline a[href*="/user/"], .tagline a[href*="/u/"]');
-    const linkedAuthor = authorLink ? profileName(authorLink.href) : '';
-    const linkAuthor = (fallbackLink?.textContent || '').trim().replace(/^u\//i, '');
-    const declaredAuthor = String(node.dataset.author || '').trim().replace(/^u\//i, '');
-    const validAuthor = value => /^[A-Za-z0-9_-]+$/.test(value) ? value : '';
-    // The profile link is canonical; data-author and the visible link text are
-    // fallbacks for compact layouts that omit it. Writes still recheck the
-    // signed-in account and author on a fresh item page before sending.
-    const author = validAuthor(linkedAuthor) || validAuthor(declaredAuthor) || validAuthor(linkAuthor);
+    const username = value => {
+      const text = String(value || '').trim().replace(/^\/?u\//i, '');
+      return /^[A-Za-z0-9_-]+$/.test(text) ? text : '';
+    };
+    const authorNode = own(node, '.tagline .author');
+    const authorLink = authorNode?.matches('a[href]') ? authorNode : own(node, '.tagline a[href*="/user/"], .tagline a[href*="/u/"]');
+    const linked = authorLink ? profileName(authorLink.href) : '';
+    const invalidLink = !!authorLink && !linked;
+    const declared = username(node.dataset.author);
+    // A non-link author span is used by some classic layouts. A link must
+    // resolve to Reddit before its text is considered author evidence.
+    const visibleAuthor = authorNode && (!authorNode.matches('a[href]') || linked) ? username(authorNode.textContent) : '';
+    const evidence = [linked, declared, visibleAuthor].filter(Boolean);
+    const conflict = new Set(evidence.map(name => name.toLowerCase())).size > 1;
+    const removedAuthor = /^(?:\[deleted\]|\[removed\])$/i.test(String(node.dataset.author || authorNode?.textContent || '').trim());
+    let author = !conflict && !removedAuthor ? evidence[0] || '' : '';
+    let authorEvidence = author ? (linked ? 'profile-link' : declared ? 'data-author' : 'author-label') : '';
     const textArea = own(node, '.usertext-edit textarea[name="text"], textarea[name="text"]');
     const body = own(node, '.usertext-body .md');
     const text = textArea ? textArea.value : body?.textContent?.trim() || '';
@@ -53,9 +57,16 @@ export function redditPage(operation, input = {}) {
     const score = typeof scoreText === 'string' && /^-?\d+(?:\s+points?)?$/.test(scoreText.trim()) ? Number.parseInt(scoreText, 10) : null;
     const permalink = own(node, 'a.bylink, a[data-event-action="permalink"], a[data-event-action="comments"]')?.href || '';
     const self = id.startsWith('t1_') || node.classList.contains('self') || node.dataset.domain?.startsWith('self.') || !!own(node, '.expando-button.selftext');
-    const edit = own(node, 'a.edit-usertext');
+    const edit = own(node, 'a.edit-usertext, .edit-usertext > a');
+    // Classic Reddit emits this native editing action only for an editable
+    // item owned by the signed-in author. Use it when the author label is
+    // absent, never to override conflicting or explicitly deleted authors.
+    if (!author && !conflict && !invalidLink && !removedAuthor && edit && textArea && !evidence.length && !['[deleted]', '[removed]'].includes(text.trim())) {
+      author = current.name;
+      authorEvidence = 'own-edit-control';
+    }
     return {
-      id, author, authorId: author ? `reddit:${author.toLowerCase()}` : '', subreddit,
+      id, author, authorEvidence, authorConflict: conflict, authorId: author ? `reddit:${author.toLowerCase()}` : '', subreddit,
       type: id.startsWith('t1_') ? 'comment' : 'post', created, score,
       edited: !!own(node, 'time.edited-timestamp, .edited-timestamp'), text, permalink,
       editable: self && !!edit && !!textArea && !node.classList.contains('archived') && !node.classList.contains('locked') && !['[deleted]', '[removed]'].includes(text),
@@ -64,7 +75,11 @@ export function redditPage(operation, input = {}) {
   };
   const find = id => [...document.querySelectorAll('.thing[data-fullname]')].find(node => node.dataset.fullname === id);
   if (operation === 'listing') {
-    const items = [...document.querySelectorAll('#siteTable .thing[data-fullname], .sitetable.linklisting > .thing[data-fullname]')].map(normalize).filter(Boolean);
+    const listing = document.querySelector('#siteTable, .sitetable.linklisting');
+    // Profile context can embed other people's replies beneath a listed item.
+    // Only the listing's own entries belong in this history scan.
+    const nodes = listing ? [...listing.querySelectorAll('.thing[data-fullname]')].filter(node => !node.parentElement.closest('.thing[data-fullname]')) : [];
+    const items = nodes.map(normalize).filter(Boolean);
     const next = document.querySelector('.next-button a')?.href || null;
     const empty = !!document.querySelector('.sitetable .error, #siteTable .error, .sitetable .empty, .empty-page');
     if (!document.querySelector('#siteTable, .sitetable.linklisting')) return result('SITE_CHANGED', 'Reddit history layout is not recognized. Review the browser page before continuing.');
@@ -82,7 +97,7 @@ export function redditPage(operation, input = {}) {
     return { data: item };
   }
   if (operation === 'prepare-edit') {
-    const edit = own(node, 'a.edit-usertext');
+    const edit = own(node, 'a.edit-usertext, .edit-usertext > a');
     if (!edit || !item.editable) return result('INELIGIBLE', 'Reddit does not offer an editable text body for this item.');
     edit.click();
     return { data: item };

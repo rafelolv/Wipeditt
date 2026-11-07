@@ -45,8 +45,7 @@ function applyPrivacy(enabled) {
   $('privacy').checked = enabled;
 }
 const storedTheme = preference('wipeditt.theme');
-const systemDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
-applyTheme(storedTheme ? storedTheme === 'dark' : !!systemDark);
+applyTheme(storedTheme !== 'light');
 applyPrivacy(preference('wipeditt.privacy') === '1');
 
 function rawOptions() {
@@ -204,16 +203,16 @@ function render(next) {
 
   const heading = state.browserVisible ? 'Your Reddit browser'
     : preview ? 'Review before you replace.'
-      : finished ? 'That chapter is closed.'
+      : finished ? 'Operation results.'
         : busy ? (state.progress ? 'Working through your selection.' : 'Finding your history.')
           : connected ? 'Find the history you want to change.'
-            : 'A little less history. A fresh start.';
+            : 'Your Reddit history.';
   const eyebrow = state.browserVisible ? 'SIGN IN ON REDDIT'
     : preview ? 'STEP 3 · REVIEW & CONFIRM'
       : finished ? 'COMPLETE'
         : busy ? 'WORKING'
           : connected ? 'STEP 2 · FIND YOUR HISTORY'
-            : 'YOUR PRIVACY, AT YOUR PACE';
+            : 'WIPEDITT / REDDIT';
   $('heading').textContent = heading;
   $('eyebrow').textContent = eyebrow;
 
@@ -264,7 +263,7 @@ function render(next) {
     const counts = state.finished.counts || {};
     const countText = Object.entries(counts).map(([key, count]) => `${count} ${key}`).join(' · ') || 'No changes';
     const prefix = state.finished.simulation ? 'Sample only — no Reddit content changed. ' : '';
-    $('finished-title').textContent = state.finished.stopped ? 'Stopped safely.' : state.finished.simulation ? 'Sample finished.' : 'All done.';
+    $('finished-title').textContent = state.finished.stopped ? 'Operation stopped.' : state.finished.simulation ? 'Sample finished.' : 'Operation finished.';
     $('finished-summary').textContent = `${prefix}${countText} · ${Math.max(1, Math.round((state.finished.elapsedMs || 0) / 1000))}s`;
   }
 

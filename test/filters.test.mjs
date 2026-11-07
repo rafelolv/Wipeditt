@@ -18,3 +18,9 @@ test('ownership, IDs and editable capabilities fail closed', () => {
   for (const changes of [{ authorId: 't2_other' }, { author: 'other' }, { id: '<script>' }, { editable: false }, { deleted: true }]) assert.ok(eligibility(item(changes), account, 'anonymize'));
   assert.equal(eligibility(item({ editable: false }), account, 'delete'), '');
 });
+
+test('missing authors and different authors have distinct review reasons', () => {
+  const account = { id: 't2_demo', name: 'demo_user' };
+  assert.match(eligibility(item({ author: '', authorId: '' }), account, 'anonymize'), /did not expose enough/);
+  assert.match(eligibility(item({ author: 'other', authorId: 't2_other' }), account, 'anonymize'), /another Reddit account/);
+});

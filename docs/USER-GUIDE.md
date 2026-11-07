@@ -55,3 +55,9 @@ Sample data is local and explicitly labeled; it never proves that your real acco
 If login fails, use **Open Reddit browser** and complete Reddit's own sign-in flow. Verification normally runs automatically; use **Verify account** if it does not finish. If history stops loading or controls cannot be found, stop and report the app version and error code without sharing credentials, cookies, original private text or tokens. The classic website connector may need maintenance after Reddit changes.
 
 If an import is rejected, choose the `comments.csv` from Reddit's official archive and check that it is under 64 MB. If live history is incomplete, import the export; there is no hidden archive in Reddit's live listing.
+
+## Author checks
+
+A missing author label in a listing does not immediately reject a comment: Wipeditt checks alternate item-local metadata and, when needed, reads the original permalink. Native author-only edit controls can identify an editable own item when labels are absent. Nested context replies are not treated as profile entries. Conflicting, deleted or still-unverifiable authors remain unavailable. Review messages distinguish an unknown author from a known different account.
+
+The interface opens in a black monochrome theme by default. A previously chosen light preference is respected. Use the appearance button in the sidebar to switch.

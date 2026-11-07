@@ -123,7 +123,7 @@ app.on('window-all-closed', () => app.quit());
 app.on('before-quit', () => { stopLoginWatch(); controller?.stop(); checkpointStorage?.flush(); });
 if (acquired) app.whenReady().then(async () => {
   const icon = nativeImage.createFromPath(join(__dirname, 'icon.png'));
-  window = new BrowserWindow({ width: 1360, height: 900, minWidth: 1040, minHeight: 720, title: 'Wipeditt', backgroundColor: '#f4f1ea', icon,
+  window = new BrowserWindow({ width: 1360, height: 900, minWidth: 1040, minHeight: 720, title: 'Wipeditt', backgroundColor: '#090909', icon,
     webPreferences: { ...REMOTE_PREFERENCES, preload: join(__dirname, 'preload.cjs') } });
   window.setMenuBarVisibility(false);
   window.on('resize', layout);

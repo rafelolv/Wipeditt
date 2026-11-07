@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.0 — 2026-11-07
+
+- Resolve own authors from profile links, data attributes, author spans and native author-only editing controls, with agreement checks between metadata sources.
+- Recheck unknown listing authors on their original permalink instead of permanently rejecting incomplete listing metadata. Exclude nested context replies from profile results.
+- Distinguish unknown authors from known foreign content; keep independent fresh ownership checks before each write.
+- Replace the warm card-heavy interface with a black-first monochrome layout, flat review rows and neutral branding. Preserve optional light appearance.
+- Add Electron regressions for 65 own comments, conflicting/deleted/external authors, nested context and original-permalink recovery.
+
 ## 0.4.1 — 2026-11-06
 
 - Verify the Reddit account automatically after the initial login; keep **Verify account** as a manual fallback.

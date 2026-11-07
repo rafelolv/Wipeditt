@@ -51,7 +51,8 @@ export function makeMatcher(o) {
     && (o.edited === 'all' || (typeof item.edited === 'boolean' && item.edited === (o.edited === 'yes')));
 }
 export function eligibility(item, account, mode) {
-  if (!account?.id || typeof account?.name !== 'string' || typeof item?.author !== 'string' || item.authorId !== account.id || item.author.toLowerCase() !== account.name.toLowerCase()) return 'Ownership could not be verified';
+  if (!account?.id || typeof account?.name !== 'string' || typeof item?.author !== 'string' || !item.author || !item.authorId) return 'Reddit did not expose enough information to verify the author';
+  if (item.authorId !== account.id || item.author.toLowerCase() !== account.name.toLowerCase()) return 'This item belongs to another Reddit account';
   if (!/^t[13]_[a-z0-9]+$/.test(item.id)) return 'Invalid content ID';
   if (item.deleted) return 'Already deleted';
   if (mode !== 'delete' && !item.editable) return 'Content cannot be edited; no deletion fallback';

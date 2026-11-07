@@ -13,13 +13,14 @@ export async function installFixture(application) {
     };
     const escape = value => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
     const permalink = item => item.type === 'post' ? '/r/privacy/comments/post/fixture/' : `/r/privacy/comments/post/fixture/${item.id.slice(3)}/`;
-    const itemHTML = item => {
+    const itemHTML = (item, listing = false) => {
       const author = escape(item.author);
-      const declared = item.dataAuthor === false ? '' : ` data-author="${author}"`;
-      const profile = item.authorLink === false
+      const missing = listing && item.id === 't1_next';
+      const declared = missing || item.dataAuthor === false ? '' : ` data-author="${author}"`;
+      const profile = missing ? '' : item.authorLink === false
         ? `<span class="author">${author}</span>`
         : `<a class="author" href="https://old.reddit.com/user/${author}/">${author}</a>`;
-      return `<div class="thing ${item.type === 'post' ? 'link self' : 'comment'}" data-fullname="${item.id}"${declared} data-subreddit="privacy" data-score="8"><div class="entry"><p class="tagline">${profile} · <time datetime="2024-06-01T12:00:00Z">a while ago</time><span class="score" title="8">8 points</span><a class="subreddit" href="/r/privacy/">r/privacy</a></p><form class="usertext"><div class="usertext-body"><div class="md">${escape(item.text)}</div></div><div class="usertext-edit" style="display:none"><textarea name="text">${escape(item.text)}</textarea><button type="submit" class="save">save</button><p class="error" style="display:none"></p></div></form><ul class="flat-list buttons"><li><a class="bylink" href="${permalink(item)}">permalink</a></li>${item.author === globalThis.fixture.username ? '<li><a class="edit-usertext" href="#">edit</a></li>' : ''}</ul></div></div>`;
+      return `<div class="thing ${item.type === 'post' ? 'link self' : 'comment'}" data-fullname="${item.id}"${declared} data-subreddit="privacy" data-score="8"><div class="entry"><p class="tagline">${profile} · <time datetime="2024-06-01T12:00:00Z">a while ago</time><span class="score" title="8">8 points</span><a class="subreddit" href="/r/privacy/">r/privacy</a></p><form class="usertext"><div class="usertext-body"><div class="md">${escape(item.text)}</div></div><div class="usertext-edit" style="display:none"><textarea name="text">${escape(item.text)}</textarea><button type="submit" class="save">save</button><p class="error" style="display:none"></p></div></form><ul class="flat-list buttons"><li><a class="bylink" href="${permalink(item)}">permalink</a></li>${!missing && item.author === globalThis.fixture.username ? '<li><a class="edit-usertext" href="#">edit</a></li>' : ''}</ul></div></div>`;
     };
     const page = body => `<!doctype html><html><head><meta charset="utf-8"><title>Reddit native UI fixture</title><style>body{font:14px system-ui;background:#fff;color:#202020;padding:18px}.thing{padding:15px;border-bottom:1px solid #ccc}.buttons{display:flex;gap:20px}.usertext-edit textarea{display:block;width:500px;height:100px}#header-bottom-right{text-align:right}.error{color:#a00}</style></head><body><div id="header-bottom-right"><span class="user">${globalThis.fixture.signedIn ? `<a href="https://old.reddit.com/user/${globalThis.fixture.username}/">${globalThis.fixture.username}</a>` : '<a href="https://www.reddit.com/login/">log in</a>'}</span></div>${body}<script>document.querySelectorAll('.edit-usertext').forEach(button=>button.addEventListener('click',event=>{event.preventDefault();const node=button.closest('.thing');node.querySelector('.usertext-edit').style.display='block';node.querySelector('.usertext-body').style.display='none';}));document.querySelectorAll('form.usertext').forEach(form=>form.addEventListener('submit',async event=>{event.preventDefault();const node=form.closest('.thing');const text=form.querySelector('textarea').value;const response=await fetch('/fixture-save',{method:'POST',body:new URLSearchParams({id:node.dataset.fullname,text})});if(!response.ok){const error=form.querySelector('.error');error.style.display='block';error.textContent='This edit was rejected.';return;}form.querySelector('.md').textContent=text;form.querySelector('.usertext-edit').style.display='none';form.querySelector('.usertext-body').style.display='block';}));document.querySelector('#fixture-login')?.addEventListener('click',async()=>{await fetch('/fixture-login',{method:'POST'});location.href='https://www.reddit.com/';});</script></body></html>`;
     const ownSession = session.fromPartition('wipeditt-reddit');
@@ -45,7 +46,7 @@ export async function installFixture(application) {
       else if (url.searchParams.has('after')) items = [globalThis.fixture.items.t1_abc, globalThis.fixture.items.t1_next];
       else items = [globalThis.fixture.items.t1_abc, globalThis.fixture.items.t1_other];
       const next = !comment && !post && !url.searchParams.has('after') && !url.pathname.includes('/submitted') ? '<span class="next-button"><a href="https://old.reddit.com/user/fixture_user/comments/?after=t1_other">next</a></span>' : '';
-      return new Response(page(`<div id="siteTable" class="sitetable linklisting">${items.map(itemHTML).join('')}</div>${next}`), { headers: { 'content-type': 'text/html' } });
+      return new Response(page(`<div id="siteTable" class="sitetable linklisting">${items.map(item => itemHTML(item, !comment && !post)).join('')}</div>${next}`), { headers: { 'content-type': 'text/html' } });
     });
   });
 }

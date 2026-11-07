@@ -1,8 +1,8 @@
-# Validation record — 0.4.1
+# Validation record — 0.5.0
 
 ## Automated
 
-`npm run check` checks source syntax/restricted APIs, 45 deterministic unit tests, the bundled desktop artifact, version alignment and CSP. Engine tests cover ownership, preview confirmation/expiry, replacement verification, interrupted/uncertain writes, cancellation, throttling, pagination, filters, reports and checkpoint minimization. Import tests cover RFC 4180 quoting, Reddit export mapping, account filtering, stale/invalid rows and the same confirmation path as a live scan.
+`npm run check` checks source syntax/restricted APIs, 46 deterministic unit tests, the bundled desktop artifact, version alignment and CSP. Engine tests cover ownership, preview confirmation/expiry, replacement verification, interrupted/uncertain writes, cancellation, throttling, pagination, filters, reports and checkpoint minimization. Import tests cover RFC 4180 quoting, Reddit export mapping, account filtering, stale/invalid rows and the same confirmation path as a live scan.
 
 `npm run test:ui` launches the actual Electron runtime with a fresh temporary profile. A session-local HTTPS protocol handler serves synthetic Reddit pages; no real Reddit network/account is used. Coverage includes isolated native login, automatic account verification without clicking **Verify account**, bridge absence in remote content, sandbox preferences, comment discovery across every available fixture page without an item cap, author metadata with only a profile link or only `data-author`, review pagination, row and checkbox selection, select-all/clear, no writes during scan/cancel, exact replacement text, light/dark/privacy UI, pause/resume, native form save and fresh reread, duplicate pagination, foreign authors, explicit server rejection, text posts, account changes before writes and disconnect.
 
@@ -19,3 +19,9 @@ No real-account edit or deletion was performed as part of automated validation. 
 ## Installer builds
 
 Native branch CI successfully generated Linux x64 AppImage/deb, Windows x64 installer and macOS arm64/x64 disk images for the 0.3.x series. The initial v0.3.0 tagged run failed during macOS Intel packaging and published nothing; the same target passed on the subsequent diagnostic CI run. This does not establish the cause of that initial failure. Installer checks run before tagging as well as in release CI.
+
+## 0.5.0 author regression and monochrome interface
+
+The Electron DOM regression checks 65 own comments using profile links or plain author spans, missing labels with native own edit controls, foreign authors, conflicting evidence, deleted authors and invalid external profile links. Nested context is excluded. The native scan fixture omits all author/edit metadata on a listing row, then verifies that the adapter resolves it by loading its original permalink. A known foreign item remains disabled. Unit tests distinguish unknown authors from another account's content.
+
+The user reported the ownership failure in the current live release during a normal website scan. These regression fixes are verified on synthetic pages; the affected real account has not yet been revalidated with 0.5.0. Screenshots are actual Electron captures using synthetic fixtures, in both monochrome themes.

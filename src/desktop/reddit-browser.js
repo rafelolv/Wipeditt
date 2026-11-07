@@ -75,8 +75,15 @@ export class RedditBrowser {
     }, { signal });
     for (let index = 0; index < page.items.length; index++) {
       const item = page.items[index];
-      if (item.needsBody && item.authorId === account.id && this.links.has(item.id)) {
-        page.items[index] = await this.get(item.id, { signal });
+      const missingAuthor = !item.authorId;
+      if (this.links.has(item.id) && (missingAuthor || (item.needsBody && item.authorId === account.id))) {
+        // Listing metadata is sometimes incomplete. Verify the actual item,
+        // rather than infer authorship merely from the account profile URL.
+        try { page.items[index] = await this.get(item.id, { signal }); }
+        catch (error) {
+          if (!['CONTENT_UNAVAILABLE', 'INELIGIBLE'].includes(error.code)) throw error;
+          item.editable = false;
+        }
       }
     }
     return page;

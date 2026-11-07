@@ -10,7 +10,9 @@ The browser session naturally manages its own authentication cookies. Wipeditt d
 
 ## Ownership and execution
 
-Account identity is derived from the authenticated page header and validated username links. Internal adapter IDs use `reddit:<normalized username>` and are not represented as Reddit API account IDs. Author profile links are canonical; when a classic layout omits one, `data-author` and the visible author-link text are validated fallbacks. Every candidate must still match the signed-in account before it can be selected or written. Nested things are excluded when locating an item's controls/body.
+Account identity is derived from the authenticated page header and validated username links. Internal adapter IDs use `reddit:<normalized username>` and are not represented as Reddit API account IDs. Author evidence is read from an item-local profile link, `data-author` or an author span. Available sources must agree; contradictory or deleted authors remain blocked. When no author label is present, a native own edit action together with its own textarea supplies evidence from Reddit's author-only controls. It cannot override another author or conflicting metadata.
+
+Unknown listing authors are rechecked on their original permalink through the same serial scheduler. The scanner does not assume ownership from a profile URL, a matching filter, or merely finding an item. Nested context replies are excluded from profile history results. Each write still checks the fresh original independently.
 
 Every item is bound to a validated original Reddit URL. Immediately before saving, Wipeditt freshly loads the original and verifies the account, author, content and editable control. The main-process engine owns preview expiry, explicit confirmation, selected IDs and cancellation. The renderer cannot submit arbitrary URLs or scripts.
 
