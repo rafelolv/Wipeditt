@@ -4,4 +4,4 @@ Rafael (rafaelolv) owns Wipeditt's original code, documentation and artwork unde
 
 The license reserves rights in original expression and branding. It expressly does not claim ownership of abstract ideas, functionality, Reddit or independently developed implementations. Mandatory legal rights and applicable hosting-platform permissions remain intact.
 
-Electron, Chromium, Node.js, build tools and other third-party components retain their independent licenses. Preserve their original notices; Wipeditt's proprietary terms do not replace those rights. See [third-party notices](THIRD-PARTY.md). Packaged distributions include WIPEDITT-LICENSE plus Electron's LICENSE and LICENSES.chromium.html.
+Electron, Chromium, Node.js, build tools and other third-party components retain their independent licenses. Preserve their original notices; Wipeditt's proprietary terms do not replace those rights. See [third-party notices](THIRD-PARTY.md). Packaged distributions include WIPEDITT-LICENSE plus Electron's LICENSE.electron.txt and LICENSES.chromium.html.

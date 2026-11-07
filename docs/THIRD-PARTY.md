@@ -2,7 +2,7 @@
 
 Original Wipeditt code, documentation and artwork are proprietary to Rafael (rafaelolv); see WIPEDITT-LICENSE in packaged distributions or LICENSE in source.
 
-The desktop runtime includes Electron (MIT), Chromium and its independently licensed components, and Node.js and its dependencies. Preserve Electron's distributed LICENSE and LICENSES.chromium.html and the notices included in its official distribution. Wipeditt's proprietary license does not replace or restrict those independent licenses.
+The desktop runtime includes Electron (MIT), Chromium and its independently licensed components, and Node.js and its dependencies. Preserve Electron's distributed license (packaged as LICENSE.electron.txt) and LICENSES.chromium.html and the notices included in its official distribution. Wipeditt's proprietary license does not replace or restrict those independent licenses.
 
 Build/test tools are not part of Wipeditt's original material: esbuild (MIT), Playwright (Apache-2.0), electron-builder (MIT), @resvg/resvg-js (MPL-2.0), and their dependencies retain their own licenses. The locked npm packages contain their notices. The resvg library is used only to generate original Wipeditt PNG icons and is not bundled into application code.
 
