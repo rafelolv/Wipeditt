@@ -177,7 +177,7 @@ export class Engine {
               await write((expected, settings) => this.adapter.edit(item.id, preview.options.replacement, expected, settings));
             }
             const verified = await this.read(() => this.adapter.get(item.id, { signal }), signal);
-            if (!verified || verified.text !== preview.options.replacement) { record.steps.anonymize = 'uncertain'; if (run.mode === 'combined') record.steps.delete = 'skipped'; state('uncertain', 'EDIT_UNVERIFIED'); continue; }
+            if (!verified || verified.text !== preview.options.replacement) { record.steps.anonymize = 'uncertain'; if (run.mode === 'combined') record.steps.delete = 'skipped'; state('uncertain', 'EDIT_UNVERIFIED'); run.stopped = true; break; }
             record.steps.anonymize = 'verified';
             state('anonymized');
             item.text = preview.options.replacement;
@@ -198,7 +198,7 @@ export class Engine {
             state('deleting');
             await write((expected, settings) => this.adapter.delete(item.id, expected, run.mode === 'combined' ? preview.options.replacement : undefined, settings));
             const verified = await this.read(() => this.adapter.get(item.id, { signal }), signal);
-            if (!verified?.deleted) { record.steps.delete = 'uncertain'; state('uncertain', 'DELETE_UNVERIFIED'); continue; }
+            if (!verified?.deleted) { record.steps.delete = 'uncertain'; state('uncertain', 'DELETE_UNVERIFIED'); run.stopped = true; break; }
             record.steps.delete = 'verified';
             state('deleted');
             item.text = '';
@@ -209,7 +209,7 @@ export class Engine {
           const uncertain = error.code === 'UNCERTAIN' || ambiguous;
           record.steps[stage] = uncertain ? 'uncertain' : error.code === 'STOPPED' ? 'skipped' : 'failed';
           state(uncertain ? 'uncertain' : record.steps.anonymize === 'verified' && stage === 'delete' ? 'partial' : error.code === 'STOPPED' ? 'skipped' : 'failed', error.code || 'API');
-          if (['STOPPED', 'ACCOUNT_CHANGED', 'AUTH', 'PERMISSION', 'OWNERSHIP', 'STALE'].includes(error.code) || error.fatal) {
+          if (uncertain || ['STOPPED', 'ACCOUNT_CHANGED', 'AUTH', 'PERMISSION', 'OWNERSHIP', 'STALE'].includes(error.code) || error.fatal) {
             run.stopped = true;
             break;
           }

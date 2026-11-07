@@ -81,3 +81,11 @@ test('combined edit failures skip deletion explicitly in stage reports',async()=
   const result=await run(engine,{mode:'combined'});
   assert.deepEqual(result.records[0].steps,{anonymize:'failed',delete:'skipped'});
 });
+
+test('an uncertain edit halts the combined batch before any later item or deletion',async()=>{
+  const {engine,adapter}=setup([item(),item({id:'t1_later'})]);let deletions=0;
+  adapter.edit=async()=>{};adapter.delete=async()=>{deletions++;};
+  const result=await run(engine,{mode:'combined'});
+  assert.equal(result.stopped,true);assert.equal(result.records.length,1);assert.equal(result.records[0].state,'uncertain');assert.equal(deletions,0);
+  assert.deepEqual(result.records[0].steps,{anonymize:'uncertain',delete:'skipped'});
+});

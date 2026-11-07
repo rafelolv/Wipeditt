@@ -2,7 +2,7 @@
 
 ## Automated checks
 
-Local Linux x64 validation passed: 63 unit tests, source/build/license checks, the baseline Electron suite and the separate native deletion Electron suite. Native Windows CI is required before publication.
+Local Linux x64 validation passed: 64 unit tests, source/build/license checks, the baseline Electron suite and the separate native deletion Electron suite. Native Windows CI is required before publication.
 
 Run `npm run check` for source restrictions, unit tests, desktop build, license/version alignment and sandbox/CSP checks. Run `npm run test:ui` for the existing Electron fixture suite plus the native deletion suite. Both use isolated temporary profiles and local intercepted HTTPS pages, never real Reddit mutations.
 
