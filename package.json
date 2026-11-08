@@ -1,6 +1,6 @@
 {
   "name": "wipeditt",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "private": true,
   "type": "module",
   "description": "Local desktop app for reviewing, anonymizing and deleting your own Reddit history",

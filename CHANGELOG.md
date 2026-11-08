@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.5 — 2026-11-08
+
+- Keep app animations active regardless of the system reduced-motion preference.
+- Verify update-check animation under both motion preferences in Electron.
+- Align dependency version metadata with existing locked tarballs.
+
 ## 1.0.4 — 2026-11-08
 
 - Isolate uncertain items while continuing confirmed batches; retain fatal stops for account changes, pending requests and prolonged network failure.
