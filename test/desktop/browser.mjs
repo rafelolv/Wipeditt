@@ -28,6 +28,9 @@ const darkNow = page => page.evaluate(() => document.body.classList.contains('da
 const setTheme = async (page, dark) => {
   if (await darkNow(page) !== dark) await page.locator('#theme').click();
   assert.equal(await darkNow(page), dark);
+  assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).colorScheme), dark ? 'dark' : 'light');
+  const optionColors=await page.locator('select option').evaluateAll(nodes=>nodes.map(node=>getComputedStyle(node).backgroundColor));
+  for(const color of optionColors){const channels=color.match(/\d+/g).slice(0,3).map(Number);assert.ok(dark?Math.max(...channels)<100:Math.min(...channels)>180,color);}
   await page.waitForTimeout(220);
 };
 try {
@@ -81,6 +84,16 @@ try {
   assert.match(await page.locator('#counts').textContent(), /1 found · 1 selected/);
   assert.equal(await application.evaluate(() => globalThis.fixture.writes.length), 0);
 
+  // Preview expiry is visible and refresh performs only a new read/review.
+  await page.evaluate(()=>{globalThis.fixtureRealNow=Date.now;Date.now=()=>globalThis.fixtureRealNow()+300001;});
+  await page.locator('#status').filter({hasText:'Results expired'}).waitFor({timeout:5000});
+  assert.equal(await page.locator('#refresh-results').isVisible(),true);
+  await page.evaluate(()=>{Date.now=globalThis.fixtureRealNow;delete globalThis.fixtureRealNow;});
+  await page.locator('#refresh-results').click();
+  await page.locator('#review-section').waitFor({timeout:15000});
+  assert.equal(await application.evaluate(()=>globalThis.fixture.writes.length),0);
+  assert.equal(await page.locator('#confirmation').evaluate(node=>node.open),false);
+
   // Selection works from both the row and the checkbox, including after rerenders.
   await page.locator('.item[data-id="t1_abc"]').click();
   await selected(page, 0);
@@ -122,6 +135,15 @@ try {
   assert.equal(await application.evaluate(() => globalThis.fixture.items.t1_abc.text), 'A fresh start.');
   assert.equal(await page.locator('#finished').isVisible(), true);
   assert.equal(await page.locator('#finished').getAttribute('data-tone'), 'success');
+  await page.locator('#finished').scrollIntoViewIfNeeded();
+  const alignment=await page.locator('#finished').evaluate(node=>{
+    const mark=node.querySelector('.finished-mark').getBoundingClientRect(),copy=node.querySelector('.finished-copy').getBoundingClientRect(),actions=node.querySelector('.result-actions').getBoundingClientRect();
+    return {markTop:mark.top,copyTop:copy.top,actionsTop:actions.top,copyRight:copy.right,actionsLeft:actions.left};
+  });
+  assert.ok(Math.abs(alignment.markTop-alignment.copyTop)<2);
+  assert.ok(Math.abs(alignment.actionsTop-alignment.copyTop)<2);
+  assert.ok(alignment.actionsLeft>alignment.copyRight);
+  assert.equal(await page.locator('#finished-deleted').textContent(),'Not requested');
   await capture('desktop-success');
   const navigations = await application.evaluate(() => globalThis.fixture.navigations);
   assert.ok(navigations.filter(path => path === '/r/privacy/comments/post/fixture/abc/').length >= 2, 'verified replacement must reload native item page');

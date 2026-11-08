@@ -29,3 +29,7 @@ On November 7, 2026 the maintainer reported that Reddit removed the disposable c
 ## RC3 combined-comment pass
 
 On November 7, 2026, the maintainer confirmed both anonymization and deletion verified for one new disposable comment using the Linux x64 RC3 validation app (runtime source `2caa579`). This confirms the reported comment regression in a real-account combined operation. Direct deletion, post cases and Stop still await explicit results; production deletion remains gated.
+
+## 1.0.3 regression coverage
+
+The edit regression is reproduced with Markdown whose rendered link label differs from its raw textarea source. Unit cases cover completed native requests, delayed fresh reads, stale editor UI and unchanged source without replay. Electron cases use the default Markdown replacement for combined comment/text-post operations and reject non-persisted edits without deleting. UI coverage adds five-minute expiry/refresh without writes, last-report retention, account-bound inspection after preview disposal, dark/light dropdown options and result-card alignment. All automatic mutations remain confined to isolated synthetic HTTPS fixtures.

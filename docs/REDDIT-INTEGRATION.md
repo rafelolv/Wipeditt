@@ -27,3 +27,7 @@ References: [Electron security](https://www.electronjs.org/docs/latest/tutorial/
 Native delete controls can update optimistically. The connector waits for POST/XHR completion metadata from the owned WebContents before navigating to the verification page. Only IDs/method/resource type/status are observed; upload data, credentials and response bodies are never inspected. HTTP success alone is not deletion proof. Bounded fresh reads can accommodate propagation delays; neither a hidden row nor a missing page is promoted to success.
 
 The explicit classic empty-list marker (`p#noresults.error`) was checked against Reddit's [archived listing template](https://github.com/reddit-archive/reddit/blob/master/r2/r2/templates/listing.html). Its presence alone is insufficient: the scoped native receipt and independent original-page checks remain mandatory.
+
+## Edit verification and Markdown
+
+A native editor closing is acknowledgement, not proof of persistence. The connector observes the owned native POST completing, reads native errors and then reloads the focused original. It compares the textarea's raw saved Markdown with the requested replacement; rendered labels/links are never compared with Markdown source. Bounded fresh reads accommodate delayed propagation without resending a write. A stale editor does not prevent a fresh-source proof; unchanged, unavailable or mismatched source remains uncertain and stops combined deletion. Diagnostic categories omit private text.

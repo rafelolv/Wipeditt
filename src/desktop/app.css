@@ -618,32 +618,29 @@ progress::-webkit-progress-value {
   min-height: 18px;
 }
 .finished-card {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  padding: 20px 0;
-  margin-bottom: 25px;
-  background: none;
-  border: 0;
-  border-bottom: 1px solid var(--border);
-  border-radius: 0;
+  display:grid;
+  grid-template-columns:36px minmax(0,1fr) auto;
+  align-items:start;
+  gap:16px;
+  padding:20px;
+  margin-bottom:25px;
+  border:1px solid var(--border);
+  border-radius:8px;
 }
-.finished-mark {
-  font-size: 20px;
-  color: var(--result-color, var(--text));
-}
-.finished-copy h3 {
-  font-size: 18px;
-  margin-bottom: 6px;
-}
-.finished-copy p {
-  color: var(--muted);
-  font-size: 12px;
-  margin: 0;
-}
-.finished-card > button {
-  margin-left: auto;
-}
+.finished-mark { display:grid; place-items:center; width:36px; height:36px; border-radius:8px; background:color-mix(in srgb,var(--result-color,var(--text)) 12%,transparent); color:var(--result-color,var(--text)); font-size:20px; line-height:1; }
+.finished-copy { min-width:0; }
+.finished-copy .kicker { margin:0 0 6px; line-height:1.2; }
+.finished-copy h3 { font-size:18px; margin:0 0 10px; line-height:1.4; }
+.finished-copy p { color:var(--muted); font-size:12px; margin:0; overflow-wrap:anywhere; }
+.result-stages { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; margin-top:16px; padding-top:12px; border-top:1px solid var(--border); }
+.result-stages span, .result-stages strong { display:block; font-size:11px; line-height:1.6; }
+.result-stages span { color:var(--muted); }
+.result-stages strong { font-weight:550; color:var(--text-soft); }
+.result-stages strong[data-tone="success"] { color:var(--success); }
+.finished-copy #finished-help { margin-top:14px; line-height:1.6; }
+.result-actions { display:flex; flex-direction:column; align-items:stretch; gap:8px; }
+.result-actions .quiet { justify-content:center; }
+@media (max-width:1000px) { .result-card { grid-template-columns:36px minmax(0,1fr); } .result-actions { grid-column:2; flex-direction:row; flex-wrap:wrap; } }
 .review-toolbar {
   display: flex;
   align-items: center;
@@ -1021,7 +1018,7 @@ body.browser-visible header {
 [data-tone="warning"] { --result-color:var(--warning); color:var(--warning); }
 [data-tone="info"] { --result-color:var(--info); color:var(--info); }
 #status[data-tone]:not([data-tone="neutral"]), #status.error { padding:10px 14px; background:color-mix(in srgb,currentColor 8%,var(--panel)); border-radius:4px; font-weight:550; }
-.finished-card[data-tone]:not([data-tone="neutral"]) { border-left:4px solid var(--result-color); background:color-mix(in srgb,var(--result-color) 7%,var(--panel)); }
+.finished-card[data-tone]:not([data-tone="neutral"]) { border-color:color-mix(in srgb,var(--result-color) 35%,var(--border)); background:color-mix(in srgb,var(--result-color) 5%,var(--panel)); }
 .finished-card[data-tone] h3, .finished-card[data-tone] .kicker { color:var(--result-color,var(--text)); }
 #activity li[data-tone]:not([data-tone="neutral"]) { border-left:2px solid currentColor; padding-left:8px; margin:5px 0; font-weight:550; }
 .updates-panel { border:1px solid var(--border-strong); border-radius:6px; padding:12px; margin-top:14px; background:var(--panel); }
@@ -1055,4 +1052,22 @@ dialog[open]::backdrop { animation:backdrop-enter 160ms ease-out; }
   button:hover:not(:disabled), button:active:not(:disabled) { transform:none; }
   #check-updates::after { display:none; }
   dialog::backdrop { animation:none !important; }
+}
+
+:root[data-theme="dark"], body.dark { color-scheme:dark; }
+:root[data-theme="light"] { color-scheme:light; }
+input, select, textarea { color-scheme:inherit; }
+select option, select optgroup { background-color:var(--input); color:var(--text); }
+#statusbar { display:flex; align-items:flex-start; gap:12px; }
+#statusbar #status { flex:1; min-width:0; }
+#refresh-results { flex:none; margin-bottom:18px; }
+@media (max-width:1000px) { #statusbar { flex-wrap:wrap; } #statusbar #status { flex-basis:100%; } }
+@media (max-height:800px) {
+  .sidebar { padding-top:18px; padding-bottom:12px; }
+  .brand { margin-bottom:18px; }
+  .connection { padding-bottom:16px; }
+  .sidebar nav { margin-top:14px; }
+  .step { padding-top:8px; padding-bottom:8px; }
+  .sidebar-bottom { padding-top:16px; gap:8px; }
+  .updates-panel { margin-top:4px; padding:10px; }
 }

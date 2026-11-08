@@ -19,6 +19,7 @@ export class DesktopController {
     this.simulation = false;
     this.browserVisible = false;
     this.report = null;
+    this.lastUncertainOriginal = null;
     this.finished = null;
     this.statusError = false;
     this.awaitingLogin = false;
@@ -53,7 +54,7 @@ export class DesktopController {
       deletionValidated: this.deletionValidated, deletionTesting: this.deletionTesting,
       deletionEnabled: this.simulation || this.browser.adapter.deletionEnabled === true,
       statusError: this.statusError, finished: this.finished, updates: this.updates?.snapshot() || null,
-      preview: preview ? { items: preview.items, stats: preview.stats, reason: preview.reason, selected: preview.items.filter(item => item.selected && !item.skip).length, options: preview.options, source: preview.source || 'live', created: preview.created } : null
+      preview: preview ? { items: preview.items, stats: preview.stats, reason: preview.reason, selected: preview.items.filter(item => item.selected && !item.skip).length, options: preview.options, source: preview.source || 'live', created: preview.created, expiresAt: preview.created + 300000 } : null
     };
   }
   emit() { this.onState(this.snapshot()); }
@@ -81,6 +82,7 @@ export class DesktopController {
       const imported = await this.importExport({ account: this.account, signal });
       if (!imported) { this.status = 'Import canceled. Nothing changed.'; return; }
       if (!imported.items?.length) fail('IMPORT', 'No comments were found in that file.');
+      this.finished = null; this.progress = null;
       this.options = normalizeOptions({ ...data.options, type: 'comment', limit: 0 });
       if (!this.simulation && !this.browser.adapter.deletionEnabled && this.options.mode !== 'anonymize') fail('DELETION_UNVERIFIED', 'Real-account deletion is not enabled.');
       this.browser.adapter.register?.(imported.items);
@@ -92,7 +94,7 @@ export class DesktopController {
     if (name === 'open-data-request') { await this.openDataRequest(); return; }
     if (name === 'scan') return this.work(async signal => {
       if (!this.account) fail('AUTH', 'Connect and verify your Reddit account first.');
-      this.browser.hide(); this.browserVisible = false; this.progress = null; this.report = null; this.finished = null;
+      this.browser.hide(); this.browserVisible = false; this.progress = null; this.finished = null;
       this.options = normalizeOptions(data.options);
       if (!this.simulation && !this.browser.adapter.deletionEnabled && this.options.mode !== 'anonymize') fail('DELETION_UNVERIFIED', 'Real-account deletion is not enabled.');
       this.status = 'Scanning your Reddit history…';
@@ -104,16 +106,20 @@ export class DesktopController {
       if (!this.confirmation || data.token !== this.confirmation) fail('CONFIRM', 'Open a new confirmation before running.');
       this.confirmation = null;
       this.browser.hide(); this.browserVisible = false;
+      const reviewed = this.engine.preview;
       const run = await this.engine.execute(this.options, { confirmed: true, phrase: data.phrase || '', signal });
       this.report = makeReport(run, this.version, this.scheduler.stats);
       this.report.integration = this.simulation ? 'simulation' : 'native-browser';
-      this.finished = { stopped: run.stopped, simulation: this.simulation, counts: this.report.counts, total: run.records.length, elapsedMs: this.report.elapsedMs, anonymized: this.report.stages.filter(record => record.steps?.anonymize === 'verified').length, deleted: this.report.stages.filter(record => record.steps?.delete === 'verified').length };
+      const uncertain = this.report.issues.find(issue => issue.state === 'uncertain');
+      const original = reviewed?.items.find(item => item.id === uncertain?.id);
+      this.lastUncertainOriginal = original?.permalink ? { id: original.id, permalink: original.permalink, accountId: reviewed.account.id } : null;
+      this.finished = { mode: run.mode, uncertainId: this.lastUncertainOriginal?.id || null, stopped: run.stopped, simulation: this.simulation, counts: this.report.counts, total: run.records.length, elapsedMs: this.report.elapsedMs, anonymized: this.report.stages.filter(record => record.steps?.anonymize === 'verified').length, deleted: this.report.stages.filter(record => record.steps?.delete === 'verified').length };
       this.status = `${this.simulation ? 'DEMO · No Reddit content changed. ' : ''}${run.stopped ? 'Stopped' : 'Finished'} · ${Object.entries(this.report.counts).map(([state, count]) => `${count} ${state}`).join(' · ') || 'No changes'}`;
     });
     this.requireIdle();
     if (name === 'connect') {
       return this.work(async () => {
-        this.invalidate(); this.account = null; this.simulation = false; this.report = null; this.finished = null; this.activity = [];
+        this.invalidate(); this.account = null; this.simulation = false; this.report = null; this.lastUncertainOriginal = null; this.finished = null; this.activity = [];
         this.awaitingLogin = true;
         this.browserVisible = true; this.status = 'Opening your isolated Reddit browser…'; this.emit();
         try { await this.browser.open({ remember: data.remember === true }); }
@@ -122,7 +128,7 @@ export class DesktopController {
       });
     } else if (name === 'verify-account') {
       return this.work(async signal => {
-        this.invalidate(); this.finished = null;
+        this.invalidate(); this.finished = null; this.report = null; this.lastUncertainOriginal = null;
         this.account = await this.browser.adapter.connect({ signal });
         this.awaitingLogin = false;
         this.browser.hide(); this.browserVisible = false; this.simulation = false;
@@ -136,10 +142,10 @@ export class DesktopController {
     } else if (name === 'hide-browser') {
       this.browser.hide(); this.browserVisible = false;
     } else if (name === 'disconnect') {
-      this.invalidate(); await this.browser.clear(); this.account = null; this.browserVisible = false; this.awaitingLogin = false; this.report = null; this.finished = null; this.activity = []; this.progress = null;
+      this.invalidate(); await this.browser.clear(); this.account = null; this.browserVisible = false; this.awaitingLogin = false; this.report = null; this.lastUncertainOriginal = null; this.finished = null; this.activity = []; this.progress = null;
       this.checkpoints.clear(); this.status = 'Disconnected. Wipeditt’s Reddit session data was cleared.';
     } else if (name === 'invalidate') {
-      this.invalidate(); this.status = 'Filters changed. Scan again to update your selection.';
+      this.invalidate(); this.finished = null; this.progress = null; this.status = 'Filters changed. Scan again to update your selection.';
     } else if (name === 'options') {
       const next = normalizeOptions(data.options);
       if (!this.simulation && !this.browser.adapter.deletionEnabled && next.mode !== 'anonymize') fail('DELETION_UNVERIFIED', 'Real-account deletion is not enabled.');
@@ -158,7 +164,8 @@ export class DesktopController {
       if (!this.report) fail('REPORT', 'Run an operation before exporting its report.');
       await this.saveReport(this.report);
     } else if (name === 'open-original') {
-      const item = this.engine.preview?.items.find(item => item.id === data.id);
+      const previous = this.lastUncertainOriginal;
+      const item = this.engine.preview?.items.find(item => item.id === data.id) || (previous?.id === data.id && this.account?.id === previous.accountId ? previous : null);
       if (!item) fail('STALE', 'Scan again before opening this item.');
       await this.openOriginal(item.permalink);
     } else if (name === 'clear-checkpoint') {

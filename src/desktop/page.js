@@ -175,7 +175,7 @@ export function redditPage(operation, input = {}) {
   if (operation === 'submit-edit') {
     const area = own(node, '.usertext-edit textarea[name="text"]');
     const save = own(node, '.usertext-edit button.save, .usertext-edit button[type="submit"]');
-    if (!area || !save || !visible(area) || !visible(save) || save.disabled || !item.editable) return result('SITE_CHANGED', 'Reddit edit controls are unavailable. No change was sent.');
+    if (!area || !save || !visible(area) || !visible(save) || save.disabled || !item.editable) return result('SITE_CHANGED', 'Reddit edit controls are unavailable. No change was sent.', { status: 400 });
     if (typeof input.text !== 'string' || !input.text.trim() || input.text.length > 10000) return result('FILTER', 'Invalid replacement text.');
     const nativeSetter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set;
     nativeSetter.call(area, input.text);
@@ -197,7 +197,10 @@ export function redditPage(operation, input = {}) {
     if (errors.length) return result('REDDIT_REJECTED', 'Reddit rejected this edit. Review the item in the browser.', { status: 400 });
     const area = own(node, '.usertext-edit textarea[name="text"]');
     const body = own(node, '.usertext-body .md');
-    return { data: { settled: !!area && !visible(area) && body?.textContent?.trim() === input.text.trim() } };
+    // Rendered Markdown is not the submitted source (links lose their URL,
+    // for example). This is only acknowledgement; a fresh raw-text read is
+    // mandatory in the browser connector before an edit can be verified.
+    return { data: { settled: !!area && !visible(area) && !!body } };
   }
   return result('COMMAND', 'Unsupported browser action.');
 }

@@ -58,7 +58,7 @@
 
     <div id="update-notice" class="update-notice" hidden role="status"><div><strong id="update-title">New version available</strong><p>Download the installer from the official release. Nothing is installed automatically.</p></div><button id="open-update">View release</button></div>
     <div id="workspace">
-      <div id="statusbar"><p id="status" role="status" aria-live="polite">Connect Reddit to get started.</p></div>
+      <div id="statusbar"><p id="status" role="status" aria-live="polite">Connect Reddit to get started.</p><button id="refresh-results" class="quiet" hidden>Refresh results</button></div>
 
       <section id="welcome">
         <div class="hero">
@@ -77,6 +77,12 @@
             <div><b>03</b><strong>Confirm the change.</strong><p>Review the exact replacement before anything is sent.</p></div>
           </div>
         </div>
+      </section>
+
+      <section id="finished" class="surface finished-card result-card" hidden role="status">
+        <div id="finished-mark" class="finished-mark" aria-hidden="true">✓</div>
+        <div class="finished-copy"><p id="finished-label" class="kicker">FINISHED</p><h3 id="finished-title">All done.</h3><p id="finished-summary"></p><div class="result-stages"><div><span>Anonymization</span><strong id="finished-anonymized"></strong></div><div><span>Deletion</span><strong id="finished-deleted"></strong></div></div><p id="finished-help" hidden>A submitted action may have completed. Inspect its original before repeating it.</p></div>
+        <div class="result-actions"><button id="finished-report">Save report</button><button id="inspect-original" class="quiet" hidden>Inspect original</button></div>
       </section>
 
       <section id="operation-section" class="operation-section" hidden><label id="mode-label">Operation<select id="mode"><option value="anonymize">Anonymize</option><option value="delete">Delete</option><option value="combined">Anonymize &amp; Delete</option></select></label><div><p id="mode-description">Replace your Reddit content with a custom message.</p><small id="mode-availability"></small></div></section>
@@ -106,11 +112,7 @@
         <p id="progress-counts"></p><p id="cooldown" class="muted"></p>
       </section>
 
-      <section id="finished" class="surface finished-card" hidden role="status">
-        <div id="finished-mark" class="finished-mark" aria-hidden="true">✓</div>
-        <div class="finished-copy"><p id="finished-label" class="kicker">FINISHED</p><h3 id="finished-title">All done.</h3><p id="finished-summary"></p><p id="finished-help" hidden>A submitted action may have completed. Inspect its original before repeating it.</p></div>
-        <button id="finished-report">Save report</button>
-      </section>
+
 
       <section id="review-section" hidden>
         <div class="review-toolbar"><button id="change-search" class="quiet">← Back to search</button><p id="search-summary"></p></div>
@@ -126,7 +128,7 @@
             <h3 id="operation-heading">Choose the replacement</h3>
             <p id="operation-copy">Selected items keep their place. Their body text becomes your message.</p>
             <div id="replacement-content"><label class="replacement-label">Replacement message<textarea id="replacement" class="sensitive" maxlength="10000" rows="4"></textarea></label>
-            <label>Quick message<select id="replacement-preset"><option value="default">Removed for privacy</option><option value="short">[Deleted for privacy]</option><option value="removed">[Content removed]</option><option value="custom">Custom message</option></select></label></div>
+            <label>Quick message<select id="replacement-preset"><option value="default">Wipeditt default</option><option value="short">[Deleted for privacy]</option><option value="removed">[Content removed]</option><option value="custom">Custom message</option></select></label></div>
             <details><summary>Timing &amp; advanced options</summary><div class="grid"><label>Minimum action interval (ms)<input id="interval" type="number" value="1500" min="1500" max="3600000"></label><label id="delete-delay-label">Delay after anonymization (ms)<input id="deleteDelay" type="number" value="0" min="0" max="86400000"></label></div></details>
             <button id="review" class="primary block">Review changes</button>
             <p class="review-note">You will see the exact text next. Titles, media and external copies are not changed.</p>

@@ -13,6 +13,7 @@ const presets = {
   removed: '[Content removed]'
 };
 let state, confirmation, initialized = false, operationTimer, page = 0, previewStamp = '';
+let needsRefresh = false, lastSearchSource = 'live', lastPreviewCreated = null;
 
 function command(name, data = {}) {
   return bridge.command(name, data).then(result => {
@@ -21,9 +22,11 @@ function command(name, data = {}) {
   });
 }
 function error(failure) {
+  if (failure.code === 'STALE') needsRefresh = true;
   $('status').textContent = failure.message || 'Operation failed.';
   $('status').classList.add('error');
   $('status').dataset.tone = 'danger';
+  updateRefreshControl();
 }
 function action(id, name, data = () => ({})) {
   $(id).addEventListener('click', async () => {
@@ -38,6 +41,7 @@ function remember(key, value) {
 }
 function applyTheme(dark) {
   document.body.classList.toggle('dark', dark);
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
   $('theme').textContent = dark ? 'Light appearance' : 'Dark appearance';
   $('theme').setAttribute('aria-pressed', String(dark));
 }
@@ -90,6 +94,27 @@ function setStatus(message, failure = false) {
   $('status').textContent = message;
   $('status').classList.toggle('error', failure);
   $('status').dataset.tone = failure ? 'danger' : 'neutral';
+}
+function previewExpired() {
+  return !!state?.preview && Date.now() > state.preview.expiresAt;
+}
+function updateRefreshControl() {
+  const available = !!state?.account && !state.busy && !state.browserVisible;
+  $('refresh-results').hidden = !available || !(state.preview || state.finished || needsRefresh);
+  $('refresh-results').disabled = !available;
+  $('refresh-results').textContent = lastSearchSource === 'import' ? 'Re-import export' : 'Refresh results';
+}
+function showPreviewExpiry() {
+  if (state?.busy || state?.finished || state?.statusError || !previewExpired()) return;
+  needsRefresh = true;
+  setStatus('Results expired. Refresh them before confirming changes.');
+  $('status').dataset.tone = 'warning';
+  updateRefreshControl();
+  if (confirmation) {
+    $('confirmation').close(); confirmation = null;
+    command('cancel-confirmation').catch(() => {});
+    $('refresh-results').focus();
+  }
 }
 
 function syncPreset() {
@@ -198,6 +223,11 @@ function render(next) {
   const busy = !!state.busy;
   const connected = !!state.account;
   const finished = !!state.finished;
+  if (!connected) { needsRefresh = false; lastSearchSource = 'live'; lastPreviewCreated = null; }
+  if (preview && preview.created !== lastPreviewCreated) {
+    needsRefresh = false; lastPreviewCreated = preview.created; lastSearchSource = preview.source;
+    if (preview.source === 'import') $('type').value = 'comment';
+  }
   if (preview) {
     const stamp = `${preview.created}:${preview.source}:${preview.items.length}`;
     if (stamp !== previewStamp) { previewStamp = stamp; page = 0; }
@@ -295,7 +325,12 @@ function render(next) {
     $('finished-label').textContent = tone === 'warning' || tone === 'danger' ? 'REVIEW NEEDED' : 'FINISHED';
     $('finished-help').hidden = !counts.uncertain;
     $('finished-title').textContent = counts.uncertain ? 'Verification incomplete. Operation stopped.' : state.finished.stopped ? 'Operation stopped.' : counts.failed ? 'Finished with errors.' : counts.partial ? 'Partially completed.' : 'Operation finished.';
-    $('finished-summary').replaceChildren(Object.keys(counts).length ? '' : 'No changes', ...Object.entries(counts).flatMap(([outcome, count], index) => [index ? ' · ' : '', el('span', { 'data-tone': outcomeTone(outcome), text: `${count} ${outcome}` })]), ` · ${Math.max(1, Math.round((state.finished.elapsedMs || 0) / 1000))}s · ${state.finished.anonymized || 0} anonymizations verified · ${state.finished.deleted || 0} deletions verified`);
+    $('finished-summary').replaceChildren(Object.keys(counts).length ? '' : 'No changes', ...Object.entries(counts).flatMap(([outcome, count], index) => [index ? ' · ' : '', el('span', { 'data-tone': outcomeTone(outcome), text: `${count} ${outcome}` })]), ` · ${Math.max(1, Math.round((state.finished.elapsedMs || 0) / 1000))}s`);
+    for (const [id, count, requested] of [['finished-anonymized', state.finished.anonymized, state.finished.mode !== 'delete'], ['finished-deleted', state.finished.deleted, state.finished.mode !== 'anonymize']]) {
+      $(id).textContent = requested ? `${count || 0} verified` : 'Not requested';
+      $(id).dataset.tone = requested && count ? 'success' : 'neutral';
+    }
+    $('inspect-original').hidden = !state.finished.uncertainId;
   }
 
   if (!initialized) {
@@ -321,7 +356,13 @@ function render(next) {
     $('subreddit-select').replaceChildren(el('option', { value: '', text: 'Select a community…' }));
   }
   $('activity').replaceChildren(...state.activity.map(item => el('li', { 'data-tone': outcomeTone(item.outcome), text: item.message })));
+  updateRefreshControl();
+  showPreviewExpiry();
 }
+
+setInterval(() => {
+  if (!needsRefresh) showPreviewExpiry();
+}, 1000);
 
 async function cancelConfirmation() {
   $('confirmation').close();
@@ -425,6 +466,16 @@ action('scan', 'scan', () => ({ options: rawOptions() }));
 action('import-export', 'import-export', () => ({ options: rawOptions() }));
 action('report', 'export-report');
 action('finished-report', 'export-report');
+action('inspect-original', 'open-original', () => ({ id: state.finished.uncertainId }));
+$('refresh-results').addEventListener('click', async () => {
+  clearTimeout(operationTimer);
+  const source = state.preview?.source || lastSearchSource;
+  $('confirmation').close(); confirmation = null;
+  try {
+    await command('cancel-confirmation');
+    await command(source === 'import' ? 'import-export' : 'scan', { options: rawOptions() });
+  } catch (failure) { error(failure); }
+});
 action('clear-checkpoint', 'clear-checkpoint');
 action('stop', 'stop');
 action('check-updates', 'check-updates');

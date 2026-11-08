@@ -29,3 +29,7 @@ Neither mode removes external archives, backups, screenshots, quotes or caches.
 Black-first appearance and optional light mode, privacy masking, reports and checkpoints live in the sidebar. License & source shows GPLv3, copyright, the warranty disclaimer and the source link. New-release checks use fixed public GitHub metadata without Reddit data, can be disabled, and never install updates automatically.
 
 Results use green for verified success, red for failures, amber for uncertain/partial/stopped outcomes and blue for actions in progress. Labels and stage counts remain visible alongside the colors. App updates has a visible sidebar button; automatic release checks remain optional in Settings. The default replacement credits Wipeditt with a Reddit Markdown link; you can edit it before confirmation.
+
+Previews expire after five minutes. Use Refresh results to run a new read and review before confirming again. An imported preview offers Re-import export so it keeps the same source. Expiry cancels an open confirmation and never authorizes writes. Save last report remains available after refreshing. If verification is uncertain, Inspect original opens the reviewed item; do not repeat an uncertain action without checking it.
+
+Result cards use the same aligned icon, heading, actions and separate stage counters. A deletion-only run labels anonymization Not requested. Native dropdowns and their options follow the selected dark/light theme.

@@ -4,6 +4,7 @@ import { DesktopController } from '../src/desktop/controller.js';
 import { REMOTE_PREFERENCES, contentURL, historyURL, redditURL, trustedSender } from '../src/desktop/policy.js';
 import { normalizeOptions } from '../src/filters.js';
 import { setup, item } from './helpers.mjs';
+import { AppError } from '../src/errors.js';
 function controller(overrides = {}) {
   const { adapter, scheduler } = setup([item()]);
   adapter.scheduler = scheduler;
@@ -93,4 +94,40 @@ test('desktop imports a local comments.csv through the main-process hook', async
   await desktop.command('run', { token: confirmation.token, phrase: confirmation.phrase });
   assert.equal(desktop.report.source, 'import');
   assert.equal(desktop.snapshot().finished.counts.anonymized, 1);
+  const savedReport = desktop.report;
+  await desktop.command('scan', { options: {} });
+  assert.equal(desktop.report, savedReport, 'A new read must preserve the last operation report.');
+  assert.equal(desktop.finished, null);
+});
+
+test('desktop exposes preview expiry without extending it when replacement settings change', async () => {
+  const { desktop } = controller();
+  await desktop.command('connect'); await desktop.command('verify-account');
+  await desktop.command('scan', { options: {} });
+  const created = Date.now() - 300001;
+  desktop.engine.preview.created = created;
+  assert.equal(desktop.snapshot().preview.expiresAt, created + 300000);
+  await assert.rejects(desktop.command('confirm'), { code: 'STALE' });
+  await desktop.command('options', { options: { replacement: 'A different replacement.' } });
+  assert.equal(desktop.engine.preview.created, created);
+  await assert.rejects(desktop.command('confirm'), { code: 'STALE' });
+});
+
+test('an uncertain original remains inspectable after preview disposal, only for the verified account', async () => {
+  const opened = [];
+  const { desktop, adapter } = controller({ openOriginal: async link => opened.push(link) });
+  adapter.items[0].permalink = 'https://www.reddit.com/r/privacy/comments/post/fixture/demo1/';
+  adapter.edit = async () => { throw new AppError('UNCERTAIN', 'Unconfirmed edit', { fatal: true }); };
+  await desktop.command('connect'); await desktop.command('verify-account');
+  await desktop.command('scan', { options: {} });
+  const original = desktop.engine.preview.items[0];
+  const confirmation = await desktop.command('confirm');
+  await desktop.command('run', { token: confirmation.token });
+  assert.equal(desktop.engine.preview, null);
+  assert.equal(desktop.finished.uncertainId, original.id);
+  await desktop.command('open-original', { id: original.id });
+  assert.deepEqual(opened, [original.permalink]);
+  await assert.rejects(desktop.command('open-original', { id: 't1_foreign' }), { code: 'STALE' });
+  await desktop.command('disconnect');
+  await assert.rejects(desktop.command('open-original', { id: original.id }), { code: 'STALE' });
 });
