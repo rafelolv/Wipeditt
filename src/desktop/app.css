@@ -1013,7 +1013,7 @@ body.browser-visible header {
 [data-tone="danger"] { --result-color:var(--danger); color:var(--danger); }
 [data-tone="warning"] { --result-color:var(--warning); color:var(--warning); }
 [data-tone="info"] { --result-color:var(--info); color:var(--info); }
-#status[data-tone]:not([data-tone="neutral"]), #status.error { padding:10px 14px; border-left:3px solid currentColor; background:color-mix(in srgb,currentColor 8%,var(--panel)); border-radius:4px; font-weight:550; }
+#status[data-tone]:not([data-tone="neutral"]), #status.error { padding:10px 14px; background:color-mix(in srgb,currentColor 8%,var(--panel)); border-radius:4px; font-weight:550; }
 .finished-card[data-tone]:not([data-tone="neutral"]) { border-left:4px solid var(--result-color); background:color-mix(in srgb,var(--result-color) 7%,var(--panel)); }
 .finished-card[data-tone] h3, .finished-card[data-tone] .kicker { color:var(--result-color,var(--text)); }
 #activity li[data-tone]:not([data-tone="neutral"]) { border-left:2px solid currentColor; padding-left:8px; margin:5px 0; font-weight:550; }
