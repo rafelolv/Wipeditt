@@ -37,3 +37,7 @@ The edit regression is reproduced with Markdown whose rendered link label differ
 ## Version 1.0.4 recovery and batch isolation
 
 Synthetic coverage includes a 300-item confirmed combined batch with one uncertain edit, 299 verified deletions, no deletion of the uncertain item and no repeated edit. Additional cases cover fatal uncertainty stopping later writes, offline read recovery and exhaustion, failed navigation retaining its URL, completed transport failure reconciled by fresh source, and stale deletion UI followed by original verification. Native request observation allows 30 seconds; local account checks stay serial without consuming network pacing. Existing live evidence remains unchanged; no real account was accessed for this change.
+
+## Version 1.0.4 maintainer-confirmed combined comments
+
+On November 8, 2026, the maintainer confirmed the requested real-account test of v1.0.4: two new disposable comments processed with Anonymize & Delete and the default replacement, with both stages passing for both comments. This records maintainer-confirmed live writes, separately from the automated synthetic tests. It does not establish live passes for post types, prolonged connection recovery or continuation after an intermittent uncertain item.
