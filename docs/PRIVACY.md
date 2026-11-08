@@ -10,7 +10,7 @@ Original text, author and subreddit information are read into memory to review a
 
 The optional Reddit export import is handled by the Electron main process. Wipeditt reads the selected `comments.csv` file locally, keeps it in memory for the review, and does not upload it or copy it into a Wipeditt service. Imported rows are filtered by the verified account and rechecked against Reddit before any write.
 
-The minimized checkpoint file in Electron's userData directory contains expiring IDs and item/stage statuses only, not original text, account names, replacement text or sensitive filters. Writes use a private atomic file. Interrupted writes become uncertain. Clear local checkpoints through the app; removing them does not undo Reddit changes.
+The minimized checkpoint file in Electron's userData directory contains expiring IDs and item/stage statuses only, not original text, account names, replacement text or sensitive filters. Writes use a private atomic file. Interrupted writes become uncertain. Real deletions verified by Wipeditt are remembered as expiring IDs for 24 hours to exclude those rows from repeated CSV imports; uncertain or unavailable originals are never treated as verified deletions. Clear local checkpoints through the app; removing them does not undo Reddit changes.
 
 JSON reports are saved only where you choose through the native file dialog. They omit original text, usernames and sensitive filter values, but contain content IDs/statuses and the operation source (`live` or `import`) that may still be identifiable. Share them deliberately. Logs contain bounded activity statuses and IDs, not credentials or original text.
 

@@ -12,6 +12,7 @@ export async function verifyAuthorLayouts(application) {
       function candidate(id, mode) {
         const node = prototype.cloneNode(true);
         node.dataset.fullname = id;
+        if (mode === 'archived') node.classList.add('archived', 'locked');
         delete node.dataset.author;
         node.querySelectorAll('.author').forEach(author => author.remove());
         const tagline = node.querySelector('.tagline');
@@ -35,7 +36,7 @@ export async function verifyAuthorLayouts(application) {
       // own comments expose an ordinary author span instead.
       nodes.push(candidate('t1_link', 'link'));
       for (let index = 0; index < 64; index++) nodes.push(candidate(`t1_span${index}`, 'span'));
-      for (const mode of ['controls', 'foreign', 'unknown', 'nested', 'conflict', 'deleted', 'external']) nodes.push(candidate(`t1_${mode}`, mode));
+      for (const mode of ['archived', 'controls', 'foreign', 'unknown', 'nested', 'conflict', 'deleted', 'external']) nodes.push(candidate(`t1_${mode}`, mode));
       table.replaceChildren(...nodes);
     };
     await remote.executeJavaScript(`(${prepare.toString()})()`);
@@ -47,7 +48,7 @@ export async function verifyAuthorLayouts(application) {
   }, redditPage.toString());
   assert.ok(!result.error, JSON.stringify(result.error));
   const items = new Map(result.data.items.map(item => [item.id, item]));
-  for (const id of ['t1_link', ...Array.from({ length: 64 }, (_, index) => `t1_span${index}`), 't1_controls']) {
+  for (const id of ['t1_link', ...Array.from({ length: 64 }, (_, index) => `t1_span${index}`), 't1_controls', 't1_archived']) {
     assert.equal(items.get(id).authorId, 'reddit:fixture_user', `own author not resolved for ${id}`);
     assert.equal(items.get(id).editable, true);
   }

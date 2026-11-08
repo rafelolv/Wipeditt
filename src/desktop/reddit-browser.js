@@ -15,11 +15,13 @@ export class RedditBrowser {
     checkAbort(signal);
     const url = redditURL(value).href;
     if (!force && !this.needsReload && this.contents.getURL() === url && !this.contents.isLoadingMainFrame()) return;
-    let timer;
-    const stop = () => this.contents.stop();
+    let timer, rejectAbort;
+    const canceled = new Promise((_, reject) => { rejectAbort = reject; });
+    const stop = () => { this.contents.stop(); rejectAbort(new AppError('STOPPED', 'Connection canceled.')); };
     signal?.addEventListener('abort', stop, { once: true });
     try {
       await Promise.race([
+        canceled,
         this.contents.loadURL(url, { extraHeaders: 'Cache-Control: no-cache\r\n' }),
         new Promise((_, reject) => { timer = setTimeout(() => { this.contents.stop(); reject(new AppError('TIMEOUT', 'Reddit page did not finish loading.')); }, 45000); })
       ]);

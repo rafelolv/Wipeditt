@@ -41,7 +41,8 @@ export class DesktopController {
       if (event.type === 'progress') {
         this.progress = { total: event.total, elapsed: event.elapsed, counts: {} };
         for (const record of event.records) this.progress.counts[record.state] = (this.progress.counts[record.state] || 0) + 1;
-        this.log(`${event.records.at(-1)?.id}: ${event.records.at(-1)?.state}${event.records.at(-1)?.reason ? ` · ${event.records.at(-1).reason}` : ''}`, event.records.at(-1)?.state);
+        const record = event.records.at(-1);
+        if (record) this.log(`${record.id}: ${record.state}${record.code ? ` · ${record.code}` : ''}${record.reason ? ` · ${record.reason}` : ''}`, record.state);
       }
       this.emit();
     } });
@@ -51,7 +52,7 @@ export class DesktopController {
     const preview = this.engine.preview;
     return {
       version: this.version, account: this.account, busy: this.busy,
-      browserVisible: this.browserVisible, verifyingLogin: this.awaitingLogin && !this.browserVisible, paused: this.scheduler.paused, options: this.options,
+      browserVisible: this.browserVisible, verifyingLogin: !!this.verifyingAccount, connecting: !!this.connecting, paused: this.scheduler.paused, options: this.options,
       status: this.status, wait: this.busy ? this.wait : null, progress: this.progress,
       activity: this.activity, hasReport: !!this.report,
       deletionValidated: this.deletionValidated, deletionTesting: this.deletionTesting,
@@ -84,7 +85,7 @@ export class DesktopController {
       const imported = await this.importExport({ account: this.account, signal });
       if (!imported) { this.status = 'Import canceled. Nothing changed.'; return; }
       if (!imported.items?.length) fail('IMPORT', 'No comments were found in that file.');
-      this.finished = null; this.progress = null;
+      this.finished = null; this.progress = null; this.activity = [];
       this.options = normalizeOptions({ ...data.options, type: 'comment', limit: 0 });
       if (!this.browser.adapter.deletionEnabled && this.options.mode !== 'anonymize') fail('DELETION_UNVERIFIED', 'Real-account deletion is not enabled.');
       this.browser.adapter.register?.(imported.items);
@@ -96,7 +97,7 @@ export class DesktopController {
     if (name === 'open-data-request') { await this.openDataRequest(); return; }
     if (name === 'scan') return this.work(async signal => {
       if (!this.account) fail('AUTH', 'Connect and verify your Reddit account first.');
-      this.browser.hide(); this.browserVisible = false; this.progress = null; this.finished = null;
+      this.browser.hide(); this.browserVisible = false; this.progress = null; this.finished = null; this.activity = [];
       this.options = normalizeOptions(data.options);
       if (!this.browser.adapter.deletionEnabled && this.options.mode !== 'anonymize') fail('DELETION_UNVERIFIED', 'Real-account deletion is not enabled.');
       this.status = 'Scanning your Reddit history…';
@@ -109,6 +110,8 @@ export class DesktopController {
       this.confirmation = null;
       this.browser.hide(); this.browserVisible = false;
       const reviewed = this.engine.preview;
+      this.activity = [];
+      this.log(`Processing ${reviewed?.items.filter(item => item.selected && !item.skip).length || 0} selected items only. Unselected originals will not be opened.`);
       const run = await this.engine.execute(this.options, { confirmed: true, phrase: data.phrase || '', signal });
       this.report = makeReport(run, this.version, this.scheduler.stats);
       this.report.integration = 'native-browser';
@@ -120,18 +123,23 @@ export class DesktopController {
     });
     this.requireIdle();
     if (name === 'connect') {
-      return this.work(async () => {
+      return this.work(async signal => {
         this.invalidate(); this.account = null; this.report = null; this.lastUncertainOriginal = null; this.finished = null; this.activity = [];
         this.awaitingLogin = true;
+        this.connecting = true;
         this.browserVisible = true; this.status = 'Opening your isolated Reddit browser…'; this.emit();
-        try { await this.browser.open({ remember: data.remember === true }); }
-        finally { this.useAdapter(this.browser.adapter); }
+        try { await this.browser.open({ remember: data.remember === true, signal }); }
+        catch (error) { this.awaitingLogin = false; this.browserVisible = true; await this.browser.show(); throw error; }
+        finally { this.connecting = false; this.useAdapter(this.browser.adapter); }
         this.status = 'Sign in on Reddit. Wipeditt will verify the account automatically.';
       });
     } else if (name === 'verify-account') {
       return this.work(async signal => {
         this.invalidate(); this.finished = null; this.report = null; this.lastUncertainOriginal = null;
-        this.account = await this.browser.adapter.connect({ signal });
+        this.verifyingAccount = true; this.connecting = true; this.emit();
+        try { this.account = await this.browser.adapter.connect({ signal }); }
+        catch (error) { this.awaitingLogin = false; this.browserVisible = true; await this.browser.show(); throw error; }
+        finally { this.verifyingAccount = false; this.connecting = false; }
         this.awaitingLogin = false;
         this.browser.hide(); this.browserVisible = false;
         this.status = `Connected as u/${this.account.name}. Choose what to scan.`;
@@ -156,7 +164,8 @@ export class DesktopController {
       this.engine.updateOperation(next);
     } else if (name === 'select') {
       if (!Array.isArray(data.ids) || data.ids.length > 100000 || typeof data.selected !== 'boolean') fail('SELECTION', 'Invalid content selection.');
-      for (const id of data.ids) this.engine.select(id, data.selected);
+      if (data.replace !== undefined && typeof data.replace !== 'boolean') fail('SELECTION', 'Invalid content selection.');
+      this.engine.selectMany(data.ids, data.selected, data.replace === true);
       this.confirmation = null;
     } else if (name === 'confirm') {
       const confirmation = this.engine.confirmationFor(this.options);

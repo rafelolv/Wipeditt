@@ -87,8 +87,8 @@ function filterCount(options) {
   if (options.edited !== 'all') count++;
   return count;
 }
-function select(ids, selected) {
-  return command('select', { ids, selected }).catch(error);
+function select(ids, selected, replace = false) {
+  return command('select', { ids, selected, replace }).catch(error);
 }
 function setStatus(message, failure = false) {
   $('status').textContent = message;
@@ -189,7 +189,7 @@ function renderPreview(preview) {
   const filters = filterCount(preview.options);
   $('search-summary').textContent = `${source} · ${typeLabel(preview.options?.type)}${filters ? ` · ${filters} filter${filters === 1 ? '' : 's'}` : ''}`;
   const detail = preview.source === 'import'
-    ? 'This export is a snapshot. Current text and ownership are checked on Reddit before any change.'
+    ? `${preview.reason}. This export is a snapshot. Current ownership is checked before any change.`
     : preview.reason || 'Reddit listings may stop before your oldest history. Import your official export to include older comments.';
   $('coverage-note').textContent = detail;
   $('coverage-actions').hidden = preview.source === 'import';
@@ -201,7 +201,7 @@ function renderPreview(preview) {
   const chosen = $('subreddit-select').value;
   const communities = [...new Set(preview.items.map(item => item.subreddit))].sort((a, b) => a.localeCompare(b));
   $('subreddit-select').replaceChildren(
-    el('option', { value: '', text: 'Select a community…' }),
+    el('option', { value: '', text: 'Select only a community…' }),
     ...communities.map(name => el('option', { value: name, text: communityLabel(name) }))
   );
   $('subreddit-select').value = communities.includes(chosen) ? chosen : '';
@@ -297,6 +297,8 @@ function render(next) {
   $('install-update').disabled = busy || !!state.browserVisible;
   $('download-update').setAttribute('aria-busy', String(updating));
   $('stop').disabled = !state.busy;
+  $('cancel-connect').hidden = !state.connecting;
+  $('cancel-connect').disabled = !state.connecting;
   $('pause').disabled = !state.busy;
   $('pause').textContent = state.paused ? 'Resume' : 'Pause';
   $('privacy').disabled = false;
@@ -365,7 +367,7 @@ function render(next) {
     $('items').replaceChildren();
     $('counts').textContent = '';
     $('scan-details').textContent = '';
-    $('subreddit-select').replaceChildren(el('option', { value: '', text: 'Select a community…' }));
+    $('subreddit-select').replaceChildren(el('option', { value: '', text: 'Select only a community…' }));
   }
   $('activity').replaceChildren(...state.activity.map(item => el('li', { 'data-tone': outcomeTone(item.outcome), text: item.message })));
   updateRefreshControl();
@@ -439,7 +441,7 @@ $('subreddit-select').addEventListener('change', () => {
   const name = $('subreddit-select').value;
   if (!name || !state?.preview || state.busy) return;
   const items = state.preview.items.filter(item => item.subreddit === name && !item.skip);
-  select(items.map(item => item.id), !items.every(item => item.selected));
+  select(items.map(item => item.id), true, true);
   $('subreddit-select').value = '';
 });
 $('previous-page').addEventListener('click', () => { if (page > 0) { page--; render(state); } });
@@ -491,6 +493,7 @@ $('refresh-results').addEventListener('click', async () => {
 });
 action('clear-checkpoint', 'clear-checkpoint');
 action('stop', 'stop');
+action('cancel-connect', 'stop');
 action('check-updates', 'check-updates');
 action('open-update', 'open-update');
 action('download-update', 'download-update');

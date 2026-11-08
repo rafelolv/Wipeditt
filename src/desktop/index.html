@@ -21,6 +21,7 @@
       <label class="checkline remember"><input id="remember" type="checkbox"> Keep me signed in on this device</label>
       <button id="connect" class="primary block">Connect Reddit</button>
       <button id="verify" class="primary block" hidden>Verify account</button>
+      <button id="cancel-connect" class="block" hidden>Cancel connection</button>
       <button id="show-browser" class="quiet block" hidden>Open Reddit browser</button>
       <button id="hide-browser" class="quiet block" hidden>Back to Wipeditt</button>
       <button id="disconnect" class="quiet block" hidden>Disconnect</button>
@@ -119,7 +120,7 @@
         <div class="review-layout">
           <div class="surface review-card">
             <div class="stats"><span><strong id="matched-count">0</strong>found</span><span><strong id="eligible-count">0</strong>ready to replace</span><span><strong id="selected-count">0</strong>selected</span></div>
-            <div class="selection-actions"><button id="select-all">Select all ready</button><button id="select-none">Clear</button><select id="subreddit-select" class="sensitive" aria-label="Select by community"><option value="">Select a community…</option></select></div>
+            <div class="selection-actions"><button id="select-all">Select all ready</button><button id="select-none">Clear</button><select id="subreddit-select" class="sensitive" aria-label="Select only a community"><option value="">Select only a community…</option></select></div>
             <div id="items" aria-label="Content preview"></div>
             <div class="pagination"><button id="previous-page">Previous</button><span id="page-label"></span><button id="next-page">Next</button></div>
           </div>

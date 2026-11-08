@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.1.2 — 2026-11-08
+
+- Select only the chosen community, replacing the previous selection; batch selection uses one pass.
+- Exclude previously verified real deletions from CSV imports for 24 hours, storing only expiring IDs.
+- Skip unavailable originals before submission with a clear reason; preserve uncertainty after submitted actions.
+- Allow editing owned comments with native controls on archived/locked threads.
+- Recover failed account verification and permit canceling stalled login navigation.
+- Reset activity for each batch and initialize progress with the selected count.
+- Read packaged Linux dependency notices from their distributed location.
+
 ## 1.1.1 — 2026-11-08
 
 - Add GitHub-hosted in-app update downloads and explicit install/restart for Windows x64 and Linux AppImage; keep Debian/manual fallback.

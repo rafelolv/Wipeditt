@@ -131,3 +131,29 @@ test('an uncertain original remains inspectable after preview disposal, only for
   await desktop.command('disconnect');
   await assert.rejects(desktop.command('open-original', { id: original.id }), { code: 'STALE' });
 });
+
+test('failed or canceled login verification restores controls instead of permanent verifying state', async () => {
+  const { desktop, adapter } = controller();
+  await desktop.command('connect');
+  let shown = 0;
+  desktop.browser.show = async () => { shown++; };
+  adapter.connect = async () => { throw new AppError('TIMEOUT', 'Page did not load'); };
+  await assert.rejects(desktop.command('verify-account'), { code: 'TIMEOUT' });
+  assert.equal(desktop.snapshot().verifyingLogin, false);
+  assert.equal(desktop.snapshot().connecting, false);
+  assert.equal(desktop.busy, false);
+  assert.equal(desktop.browserVisible, true);
+  assert.equal(desktop.awaitingLogin, false);
+  assert.equal(shown, 1);
+  desktop.browser.open = ({ signal }) => new Promise((_, reject) => signal.addEventListener('abort', () => reject(new AppError('STOPPED', 'Canceled')), { once: true }));
+  const pending = desktop.command('connect');
+  assert.equal(desktop.snapshot().connecting, true);
+  desktop.stop();
+  await assert.rejects(pending, { code: 'STOPPED' });
+  assert.equal(desktop.busy, false);
+  assert.equal(desktop.snapshot().connecting, false);
+  assert.equal(desktop.awaitingLogin, false);
+  adapter.connect = () => adapter.account();
+  await desktop.command('verify-account');
+  assert.ok(desktop.account);
+});

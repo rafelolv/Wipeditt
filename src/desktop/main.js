@@ -84,7 +84,7 @@ function startLoginWatch() {
 }
 const browser = {
   adapter: null,
-  async open({ remember = false } = {}) {
+  async open({ remember = false, signal } = {}) {
     if (redditView) { window.contentView.removeChildView(redditView); redditView.webContents.close(); }
     activeSession = session.fromPartition(remember ? 'persist:wipeditt-reddit' : 'wipeditt-reddit');
     if (!configuredSessions.has(activeSession)) {
@@ -108,8 +108,7 @@ const browser = {
       let target;
       try { target = redditURL(value); } catch { return; }
       if (target.hostname !== 'old.reddit.com' || loginPage(target)) return;
-      browser.hide(); controller.browserVisible = false;
-      controller.status = 'Verifying your Reddit account…'; controller.emit();
+      loginSettledAt = Date.now();
     });
     const writeTracker = new NativeWriteTracker({ contentsId: redditView.webContents.id });
     const nativeRequests = { urls: ['https://*.reddit.com/*'] };
@@ -122,7 +121,7 @@ const browser = {
     // Ask Reddit to return to the classic overview after sign-in. If the login
     // flow ignores the destination, the watcher below still verifies once the
     // embedded page leaves Reddit's credential screens.
-    await browser.adapter.navigate(`https://www.reddit.com/login/?dest=${encodeURIComponent(`${REDDIT_CLASSIC}/user/me/overview/`)}`);
+    await browser.adapter.navigate(`https://www.reddit.com/login/?dest=${encodeURIComponent(`${REDDIT_CLASSIC}/user/me/overview/`)}`, signal);
     startLoginWatch();
   },
   async show() { if (!redditView) return browser.open(); browserVisible = true; layout(); },
@@ -194,7 +193,7 @@ if (acquired) app.whenReady().then(async () => {
       if (installer.snapshot().status === 'installing') throw new Error('Update installation is in progress.');
       if (request.name === 'download-update') { await installer.download(updates.snapshot().available); return { data: null }; }
       if (request.name === 'install-update') { await installer.install(); return { data: null }; }
-      if (request.name === 'read-license') return { data: { license: await readFile(join(__dirname, 'LICENSE'), 'utf8'), notice: await readFile(join(__dirname, 'NOTICE'), 'utf8') + '\n\n' + await readFile(join(__dirname, 'UPDATER-NOTICES.txt'), 'utf8') } };
+      if (request.name === 'read-license') return { data: { license: await readFile(join(__dirname, 'LICENSE'), 'utf8'), notice: await readFile(join(__dirname, 'NOTICE'), 'utf8') + '\n\n' + await readFile(join(app.isPackaged ? join(process.resourcesPath, '..') : __dirname, 'UPDATER-NOTICES.txt'), 'utf8') } };
       if (request.name === 'open-source') { await shell.openExternal('https://github.com/rafelolv/Wipeditt'); return { data: null }; }
       if (request.name === 'check-updates') return { data: await updates.check({ manual: true }) };
       if (request.name === 'update-settings') { updates.setEnabled(request.data.enabled); return { data: updates.snapshot() }; }

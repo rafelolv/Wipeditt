@@ -72,7 +72,7 @@ export function redditPage(operation, input = {}) {
       id, author, authorEvidence, authorConflict: conflict, authorId: author ? `reddit:${author.toLowerCase()}` : '', subreddit,
       type: id.startsWith('t1_') ? 'comment' : 'post', title: own(node, 'a.title')?.textContent?.trim() || '', created, score,
       edited: !!own(node, 'time.edited-timestamp, .edited-timestamp'), text, permalink,
-      editable: self && !!edit && !!textArea && !node.classList.contains('archived') && !node.classList.contains('locked') && !['[deleted]', '[removed]'].includes(text),
+      editable: self && !!edit && !!textArea && !['[deleted]', '[removed]'].includes(text),
       deletable: !!deletion && !!own(node, 'form.del-button a.togglebutton[data-event-action="delete"]'),
       deleted: deletedAuthor && !edit && !deletion && (/^\[deleted\]$/i.test(text.trim()) || node.classList.contains('deleted') || /^\[deleted\]$/i.test(own(node, 'a.title')?.textContent?.trim() || '')),
       needsBody: self && !textArea && !!edit

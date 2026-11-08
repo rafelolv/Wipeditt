@@ -62,3 +62,18 @@ test('failed navigation is retried even if Chromium keeps the target URL', async
   await browser.navigate(target);
   assert.equal(calls, 2);
 });
+
+test('canceling navigation rejects promptly even when Chromium loadURL never settles', async () => {
+  const { scheduler } = setup();
+  let stopped = 0;
+  const browser = new RedditBrowser({ scheduler, contents: {
+    getURL: () => 'https://old.reddit.com/', isLoadingMainFrame: () => true,
+    loadURL: () => new Promise(() => {}), stop: () => { stopped++; }
+  } });
+  const abort = new AbortController();
+  const pending = browser.navigate('https://old.reddit.com/user/fixture/comments/', abort.signal);
+  abort.abort();
+  await assert.rejects(pending, { code: 'STOPPED' });
+  assert.equal(stopped, 1);
+  assert.equal(browser.needsReload, true);
+});

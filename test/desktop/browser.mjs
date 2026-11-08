@@ -52,6 +52,16 @@ try {
   await page.waitForFunction(() => document.getElementById('legal-dialog').getAnimations().every(animation => animation.playState !== 'running'));
   await page.locator('#close-legal').click();
   await page.locator('.tools').evaluate(node => { node.open = false; });
+  // A stalled login must remain cancelable even while its embedded view is visible.
+  await application.evaluate(() => { globalThis.fixture.holdLogin = true; });
+  await page.locator('#connect').click();
+  await page.locator('#cancel-connect').waitFor();
+  assert.equal(await page.locator('#cancel-connect').isEnabled(), true);
+  await page.locator('#cancel-connect').click();
+  await page.waitForFunction(() => !document.getElementById('verify').disabled);
+  assert.equal(await page.locator('#cancel-connect').isVisible(), false);
+  await application.evaluate(() => { globalThis.fixture.holdLogin = false; globalThis.fixture.releaseLogin?.(); });
+  await page.locator('#disconnect').click();
   await page.locator('#connect').click();
   await page.getByRole('button', { name: 'Verify account', exact: true }).waitFor();
   const browserBounds = await application.evaluate(({ BrowserWindow, session }) => BrowserWindow.getAllWindows()[0].contentView.children.find(view => view.webContents?.session === session.fromPartition('wipeditt-reddit')).getBounds());
@@ -110,6 +120,8 @@ try {
   await checkbox.uncheck();
   await selected(page, 0);
   await checkbox.check();
+  await selected(page, 1);
+  await page.locator('#subreddit-select').selectOption('privacy');
   await selected(page, 1);
   await page.locator('#select-all').click();
   await selected(page, 1);

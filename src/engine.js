@@ -41,6 +41,7 @@ export class Engine {
           if (typeof item.text !== 'string' || typeof item.subreddit !== 'string' || typeof item.author !== 'string' || !Number.isFinite(item.created)) continue;
           if (!matches(item)) continue;
           const skip = eligibility(item, account, options.mode);
+          if (!skip) this.checkpoints?.forgetDeleted?.(item.id);
           items.push({ ...item, skip, selected: !skip });
           if (options.limit && items.length >= options.limit) { reason = 'Item limit reached; scan is partial'; break outer; }
         }
@@ -68,11 +69,12 @@ export class Engine {
       const account = await this.account(null, signal);
       const seen = new Set();
       const matched = [];
-      let inspected = 0;
+      let inspected = 0, knownDeleted = 0;
       for (const item of Array.isArray(items) ? items : []) {
         inspected++;
         if (!item || !/^t[13]_[a-z0-9]+$/.test(item.id) || seen.has(item.id)) continue;
         seen.add(item.id);
+        if (this.checkpoints?.wasDeleted?.(item.id, this.adapter.simulation)) { knownDeleted++; continue; }
         if (typeof item.text !== 'string' || typeof item.subreddit !== 'string' || typeof item.author !== 'string' || !Number.isFinite(item.created)) continue;
         if (!matches(item)) continue;
         const skip = eligibility(item, account, options.mode);
@@ -84,7 +86,7 @@ export class Engine {
       const partial = options.limit && matched.length >= options.limit;
       this.preview = {
         account, options, key: fingerprint(options), created: this.now(), revision, items: matched, source: 'import',
-        reason: partial ? 'Import limit reached; preview is partial' : `Imported ${inspected} rows from comments.csv; every item is rechecked before a change`,
+        reason: partial ? 'Import limit reached; preview is partial' : `Imported ${inspected} rows from comments.csv locally; ${knownDeleted} previously verified deletions excluded. Only selected originals will be opened`,
         completeHistory: false,
         stats: { inspected, unique: seen.size, matched: matched.length, eligible: matched.filter(item => !item.skip).length }
       };
@@ -111,10 +113,15 @@ export class Engine {
     preview.stats.eligible = preview.items.filter(item => !item.skip).length;
     return preview;
   }
-  select(id, selected) {
+  select(id, selected) { this.selectMany([id], selected); }
+  selectMany(ids, selected, replace = false) {
     if (this.running) fail('BUSY', 'Selection is locked during an operation.');
-    const item = this.preview?.items.find(i => i.id === id);
-    if (item && !item.skip) { item.selected = Boolean(selected); this.confirmation = null; }
+    const wanted = new Set(ids);
+    for (const item of this.preview?.items || []) {
+      if (wanted.has(item.id) && !item.skip) item.selected = Boolean(selected);
+      else if (replace) item.selected = false;
+    }
+    this.confirmation = null;
   }
   validate(raw) {
     const preview = this.preview;
@@ -144,6 +151,7 @@ export class Engine {
       this.checkpoints?.save(run.records, run.simulation);
       this.onEvent({ type: 'progress', records: structuredClone(run.records), total: selected.length, elapsed: this.now() - run.started });
     };
+    emit();
     try {
       for (const item of selected) {
         checkAbort(signal);
@@ -156,7 +164,11 @@ export class Engine {
           await this.account(preview.account, signal);
           let current = await this.read(() => this.adapter.get(item.id, { signal }), signal);
           const skip = current && eligibility(current, preview.account, run.mode);
-          if (!current || skip) { for (const step of ['anonymize', 'delete']) if (record.steps[step] === 'pending') record.steps[step] = 'skipped'; state('skipped', 'INELIGIBLE'); continue; }
+          if (!current || skip) {
+            for (const step of ['anonymize', 'delete']) if (record.steps[step] === 'pending') record.steps[step] = 'skipped';
+            record.reason = !current ? 'Original is unavailable; no change submitted.' : current.deleted ? 'Already deleted.' : skip;
+            state('skipped', current?.deleted ? 'ALREADY_DELETED' : 'INELIGIBLE'); continue;
+          }
           // Identity and ownership reads are scheduled separately; no adapter networking in UI.
           const write = async task => {
             writeSubmitted = false;
@@ -204,6 +216,11 @@ export class Engine {
             item.text = '';
           }
         } catch (error) {
+          if (!writeSubmitted && error.code === 'CONTENT_UNAVAILABLE' && record.steps.anonymize !== 'verified') {
+            for (const step of ['anonymize', 'delete']) if (record.steps[step] === 'pending') record.steps[step] = 'skipped';
+            record.reason = 'Original is unavailable; no change submitted. Absence does not prove deletion.';
+            state('skipped', 'ORIGINAL_UNAVAILABLE'); continue;
+          }
           const ambiguous = writeSubmitted && !(error.status >= 400 && error.status < 500) && !['ACCOUNT_CHANGED', 'OWNERSHIP', 'PERMISSION'].includes(error.code);
           if (stage === 'anonymize' && run.mode === 'combined') record.steps.delete = 'skipped';
           if (typeof error.reason === 'string' && /^[A-Z_]{1,80}$/.test(error.reason)) record.reason = error.reason;

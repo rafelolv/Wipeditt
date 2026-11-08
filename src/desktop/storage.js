@@ -3,7 +3,7 @@ import { dirname } from 'node:path';
 // Only the minimized checkpoint schema reaches this private application file.
 export class CheckpointStorage {
   constructor(path) { this.path = path; this.pending = null; this.timer = null; }
-  getItem() { try { return readFileSync(this.path, 'utf8'); } catch { return null; } }
+  getItem() { if (this.pending !== null) return this.pending; try { return readFileSync(this.path, 'utf8'); } catch { return null; } }
   setItem(_key, value) {
     this.pending = value;
     clearTimeout(this.timer);

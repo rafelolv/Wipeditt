@@ -253,3 +253,36 @@ test('an imported ownership claim never authorizes changes to a foreign live com
   assert.equal(writes, 0);
   assert.equal(result.records[0].state, 'skipped');
 });
+
+test('a 3887-row import processes exactly the 47 explicitly selected community items', async () => {
+  const items = Array.from({ length: 3887 }, (_, index) => item({ id: `t1_batch${index}`, subreddit: index < 47 ? 'chosen' : 'other' }));
+  const { engine, adapter } = setup(items);
+  const options = { type: 'comment', mode: 'delete' };
+  await engine.import(items, options);
+  const ids = items.slice(0, 47).map(item => item.id);
+  engine.selectMany(ids, true, true);
+  assert.equal(engine.confirmationFor(options).count, 47);
+  const reads = [], writes = [];
+  const get = adapter.get.bind(adapter), remove = adapter.delete.bind(adapter);
+  adapter.get = async id => { reads.push(id); return get(id); };
+  adapter.delete = async (...args) => { writes.push(args[0]); return remove(...args); };
+  const result = await engine.execute(options, { confirmed: true });
+  assert.deepEqual(writes, ids);
+  assert.deepEqual([...new Set(reads)], ids);
+  assert.equal(result.records.length, 47);
+  assert.ok(result.records.every(record => record.state === 'deleted'));
+});
+
+test('unavailable originals before submission are skipped with a reason and do not stop the batch', async () => {
+  const { engine, adapter } = setup([item(), item({ id: 't1_remaining' })]);
+  const get = adapter.get.bind(adapter);
+  adapter.get = async id => {
+    if (id === item().id) throw new AppError('CONTENT_UNAVAILABLE', 'Original missing', { reason: 'DELETE_EMPTY_THREAD_UNPROVEN' });
+    return get(id);
+  };
+  const result = await run(engine, { mode: 'combined' });
+  assert.deepEqual(result.records.map(record => record.state), ['skipped', 'deleted']);
+  assert.equal(result.records[0].code, 'ORIGINAL_UNAVAILABLE');
+  assert.deepEqual(result.records[0].steps, { anonymize: 'skipped', delete: 'skipped' });
+  assert.equal(result.stopped, false);
+});

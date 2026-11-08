@@ -40,6 +40,7 @@ export async function installFixture(application) {
         else{await new Promise(resolve=>setTimeout(resolve,globalThis.fixture.editLag));if(globalThis.fixture.editPersists)item.text=body.get('text');globalThis.fixture.writes.push({id:item.id,text:body.get('text')});}
         return new Response('ok');
       }
+      if(url.pathname.startsWith('/login')&&globalThis.fixture.holdLogin)await new Promise(resolve=>{globalThis.fixture.releaseLogin=resolve;});
       if(url.pathname.startsWith('/login')||!globalThis.fixture.signedIn)return new Response(page('<h1>Reddit login fixture</h1><p>No real credentials.</p><button id="fixture-login">Sign in to fixture account</button>'),{headers:{'content-type':'text/html'}});
       const path=url.pathname.split('/').filter(Boolean);
       const content=path[0]==='r'&&path[2]==='comments';
