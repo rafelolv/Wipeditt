@@ -14,7 +14,7 @@ A local desktop app for reviewing and processing your own Reddit comments and po
 | Delete | Use Reddit's native delete action and confirmation, then independently verify the original's deleted state. | Owned comments/posts with a native delete control, including non-editable posts. |
 | Anonymize & Delete | Verify the replacement first, then independently recheck ownership and delete. | Owned items supporting both actions. Never falls back to deletion when editing fails. |
 
-**Deletion is implemented but remains behind an explicit unpackaged development/testing gate until independently live-validated.** Official candidate packages preserve normal anonymization; deletion modes cannot be activated by an environment flag in a packaged app. Sample mode exercises all modes with synthetic data. See [the validation procedure](docs/DELETION-VALIDATION.md) and [validation record](docs/VALIDATION.md). Stable v1 publication is blocked until that record is complete.
+All three modes are enabled in official builds after maintainer-confirmed live anonymization/deletion and release approval. The detailed live post/interruption matrix remains incomplete; see [the evidence and remaining checks](docs/DELETION-VALIDATION.md). Automated fixtures are kept for development; production has no sample-data mode.
 
 A failed delete after verified anonymization is reported as partial. An ambiguous submitted action is uncertain and is never replayed automatically. Stop prevents new actions; submitted actions may finish. Neither operation can erase external copies, caches, archives or quotations.
 

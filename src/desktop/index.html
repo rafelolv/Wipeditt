@@ -38,13 +38,11 @@
       <details class="tools">
         <summary>Settings &amp; tools</summary>
         <button id="show-license">License &amp; source</button>
-        <button id="demo">Try sample data</button>
         <button id="report" disabled>Save last report</button>
         <button id="clear-checkpoint">Clear local checkpoint</button>
-        <button id="check-updates">Check for updates</button>
         <label class="checkline update-preference"><input id="automatic-updates" type="checkbox" checked> Check releases automatically</label>
-        <small id="update-status" role="status" aria-live="polite"></small>
       </details>
+      <section class="updates-panel" aria-label="App updates"><strong>App updates</strong><button id="check-updates" class="block">Check for updates</button><small id="update-status" role="status" aria-live="polite"></small></section>
       <small id="version"></small>
       <small class="credit">By Rafael (rafaelolv)<br>GPLv3 · No warranty</small>
     </div>
@@ -53,7 +51,7 @@
   <main>
     <header>
       <div><p class="eyebrow" id="eyebrow">WIPEDITT / REDDIT</p><h2 id="heading">Your Reddit history.</h2></div>
-      <span id="mode-badge" class="badge" hidden>Sample data · nothing changes</span>
+      <span id="mode-badge" class="badge" hidden></span>
     </header>
 
     <section id="browser-help" class="notice" hidden><strong>Sign in on Reddit below.</strong> Wipeditt verifies the account automatically. Use <b>Verify account</b> only if verification does not finish.</section>
@@ -67,10 +65,9 @@
           <div class="hero-copy">
             <p class="kicker">YOUR HISTORY IS YOURS</p>
             <h3>Leave less<br>behind.</h3>
-            <p>Find old Reddit comments and text posts, review every match, and replace only what you choose. Nothing changes until you confirm.</p>
+            <p>Find your Reddit history, review every match, then anonymize or delete what you choose. Nothing changes until you confirm.</p>
             <div class="hero-actions">
               <button id="welcome-connect" class="primary">Connect Reddit</button>
-              <button id="welcome-demo" class="quiet">See a sample first</button>
             </div>
             <p class="fineprint">Sign-in happens on Reddit inside the app. Wipeditt never asks for your password, cookies or an API key.</p>
           </div>

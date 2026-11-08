@@ -4,7 +4,7 @@
 
 Connect Reddit and sign in on its own page. Verification is automatic with a manual fallback. Session memory is opt-in; Disconnect clears only Wipeditt's own sessions. macOS/ARM are unsupported; official packages are Linux x64 and Windows x64.
 
-Choose an operation before searching: Anonymize, Delete, or Anonymize & Delete. Anonymize is the default. In candidate packages, deletion remains unavailable pending independent live validation. Sample mode enables all operations on synthetic content. The explicit unpackaged testing procedure is in DELETION-VALIDATION.md.
+Choose an operation before searching: Anonymize, Delete, or Anonymize & Delete. Anonymize is the default. All three modes are available in production. Review the operation and selected items before confirming; deletion is irreversible. Simulation is used only by development tests.
 
 Choose comments, posts or both and optional filters. Live listings can omit old history even after every available page is followed. Import comments.csv from Reddit's own export to include comments in that snapshot. Score/edited filters require metadata actually present in the source. No search starts editing or deletion.
 
@@ -27,3 +27,5 @@ Neither mode removes external archives, backups, screenshots, quotes or caches.
 ## Settings
 
 Black-first appearance and optional light mode, privacy masking, reports and checkpoints live in the sidebar. License & source shows GPLv3, copyright, the warranty disclaimer and the source link. New-release checks use fixed public GitHub metadata without Reddit data, can be disabled, and never install updates automatically.
+
+Results use green for verified success, red for failures, amber for uncertain/partial/stopped outcomes and blue for actions in progress. Labels and stage counts remain visible alongside the colors. App updates has a visible sidebar button; automatic release checks remain optional in Settings. The default replacement credits Wipeditt with a Reddit Markdown link; you can edit it before confirmation.

@@ -1,9 +1,9 @@
 {
   "name": "wipeditt",
-  "version": "1.0.0-rc.3",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Local desktop browser for reviewing and anonymizing your own Reddit history",
+  "description": "Local desktop app for reviewing, anonymizing and deleting your own Reddit history",
   "author": "Rafael (rafaelolv)",
   "license": "GPL-3.0-only",
   "repository": {

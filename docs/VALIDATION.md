@@ -1,8 +1,8 @@
-# Validation record — 1.0.0 release candidate
+# Validation record — 1.0.0
 
 ## Automated checks
 
-Local Linux x64 validation passed: 69 unit tests, source/build/license checks, the baseline Electron suite and the separate native deletion Electron suite. RC2 Linux x64 and Windows x64 CI both passed; RC3 must repeat those checks before publication.
+RC3 Linux x64 and Windows x64 checks, Electron fixtures and packaging passed. Version 1.0.0 repeats the required checks for the final source; release CI must pass on both supported platforms.
 
 Run `npm run check` for source restrictions, unit tests, desktop build, license/version alignment and sandbox/CSP checks. Run `npm run test:ui` for the existing Electron fixture suite plus the native deletion suite. Both use isolated temporary profiles and local intercepted HTTPS pages, never real Reddit mutations.
 
@@ -14,9 +14,9 @@ Official CI now runs only Linux x64 and Windows x64. Packaging validates GPLv3/N
 
 ## Real-account evidence
 
-The maintainer previously confirmed real login, history reading and working anonymization. The maintainer has now confirmed the RC3 combined-comment case with both stages verified; the remaining independent live cases are pending. The validation record in DELETION-VALIDATION.md is **incomplete**. Production deletion therefore remains gated; only the explicit unpackaged testing command enables it.
+The maintainer previously confirmed real login, history reading and working anonymization. The maintainer has now confirmed the RC3 combined-comment case with both stages verified; the remaining independent live cases are pending. The detailed live matrix in DELETION-VALIDATION.md remains **incomplete**. On November 8, 2026 the maintainer confirmed edit/delete use was working and explicitly approved production release without those finer tests. Production modes are enabled on that reviewed basis; remaining cases are not represented as live passes.
 
-Synthetic successes are not substituted for real observations. A stable v1 tag is blocked automatically until the manual record is completed and the capability flag is reviewed. Do not describe this candidate as a fully live-validated three-mode stable release.
+Synthetic successes are not substituted for real observations. A stable v1 tag requires the reviewed capability flag. Do not describe this release as fully live-tested on every content type or on Windows.
 
 ## First independent deletion attempt
 

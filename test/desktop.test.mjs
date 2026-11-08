@@ -71,11 +71,11 @@ test('changing selection, replacement or filters invalidates desktop authorizati
     await assert.rejects(desktop.command('run', { token: confirmation.token }), { code: 'CONFIRM' });
   }
 });
-test('desktop keeps deletion unavailable for real-account mode and demo isolated', async () => {
+test('desktop respects adapter capabilities and exposes no demo command', async () => {
   const { desktop } = controller();
   await desktop.command('connect'); await desktop.command('verify-account');
   await assert.rejects(desktop.command('scan', { options: { mode: 'delete' } }), { code: 'DELETION_UNVERIFIED' });
-  await desktop.command('demo'); assert.equal(desktop.simulation, true);
+  await assert.rejects(desktop.command('demo'), { code: 'COMMAND' }); assert.equal(desktop.simulation, false);
   await desktop.command('disconnect'); assert.equal(desktop.account, null);
   assert.equal(desktop.snapshot().preview, null);
 });

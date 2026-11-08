@@ -18,6 +18,8 @@ assert.match(main, /nodeIntegration: false/);
 assert.match(main, /contextIsolation: true/);
 assert.match(main, /sandbox: true/);
 assert.ok(!main.includes('GM_xmlhttpRequest'));
+assert.ok(!main.includes('demo_user'), 'Production must not bundle the sample dataset.');
+assert.ok(!(await readFile('app/index.html', 'utf8')).includes('Try sample data'));
 assert.ok(!main.includes('api/v1/access_token'));
 assert.deepEqual(await readFile('app/NOTICE'), await readFile('NOTICE'));
 await readFile('app/icon.png');

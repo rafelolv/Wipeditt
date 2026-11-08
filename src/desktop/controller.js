@@ -2,7 +2,6 @@ import { randomUUID } from 'node:crypto';
 import { Engine } from '../engine.js';
 import { Scheduler } from '../scheduler.js';
 import { Checkpoints } from '../checkpoint.js';
-import { SimulationAdapter } from '../adapters/simulation.js';
 import { normalizeOptions } from '../filters.js';
 import { makeReport } from '../report.js';
 import { fail } from '../errors.js';
@@ -38,12 +37,12 @@ export class DesktopController {
       if (event.type === 'progress') {
         this.progress = { total: event.total, elapsed: event.elapsed, counts: {} };
         for (const record of event.records) this.progress.counts[record.state] = (this.progress.counts[record.state] || 0) + 1;
-        this.log(`${event.records.at(-1)?.id}: ${event.records.at(-1)?.state}${event.records.at(-1)?.reason ? ` · ${event.records.at(-1).reason}` : ''}`);
+        this.log(`${event.records.at(-1)?.id}: ${event.records.at(-1)?.state}${event.records.at(-1)?.reason ? ` · ${event.records.at(-1).reason}` : ''}`, event.records.at(-1)?.state);
       }
       this.emit();
     } });
   }
-  log(message) { this.activity.unshift({ at: Date.now(), message }); this.activity = this.activity.slice(0, 30); }
+  log(message, outcome = '') { this.activity.unshift({ at: Date.now(), message, outcome }); this.activity = this.activity.slice(0, 30); }
   snapshot() {
     const preview = this.engine.preview;
     return {
@@ -65,7 +64,7 @@ export class DesktopController {
     this.requireIdle(); this.scheduler.resume(); this.busy = true; this.wait = null; this.statusError = false; this.abort = new AbortController();
     this.emit();
     try { return await action(this.abort.signal); }
-    catch (error) { this.status = error.message || 'Operation failed.'; this.statusError = true; this.log(error.code || 'ERROR'); throw error; }
+    catch (error) { this.status = error.message || 'Operation failed.'; this.statusError = true; this.log(error.code || 'ERROR', 'failed'); throw error; }
     finally { this.busy = false; this.wait = null; this.emit(); }
   }
   async command(name, data = {}) {
@@ -164,11 +163,6 @@ export class DesktopController {
       await this.openOriginal(item.permalink);
     } else if (name === 'clear-checkpoint') {
       this.checkpoints.clear(); this.status = 'Local checkpoint cleared.';
-    } else if (name === 'demo') {
-      this.invalidate(); await this.browser.clear(); this.browserVisible = false; this.awaitingLogin = false;
-      const adapter = new SimulationAdapter();
-      this.useAdapter(adapter); this.finished = null; this.account = await adapter.account(); this.simulation = true;
-      this.status = 'DEMO · Synthetic content. No Reddit account is connected.';
     } else fail('COMMAND', 'Unknown application command.');
     this.statusError = false;
     this.emit();

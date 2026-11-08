@@ -23,6 +23,7 @@ function command(name, data = {}) {
 function error(failure) {
   $('status').textContent = failure.message || 'Operation failed.';
   $('status').classList.add('error');
+  $('status').dataset.tone = 'danger';
 }
 function action(id, name, data = () => ({})) {
   $(id).addEventListener('click', async () => {
@@ -62,6 +63,16 @@ function communityLabel(value) {
 function modeLabel(mode) {
   return { anonymize: 'Anonymize', delete: 'Delete', combined: 'Anonymize & Delete' }[mode] || mode;
 }
+function outcomeTone(outcome) {
+  if (['failed', 'error'].includes(outcome)) return 'danger';
+  if (['uncertain', 'partial', 'skipped', 'waiting', 'stopped'].includes(outcome)) return 'warning';
+  if (['anonymized', 'deleted', 'success', 'current', 'available'].includes(outcome)) return 'success';
+  if (['editing', 'deleting', 'checking'].includes(outcome)) return 'info';
+  return 'neutral';
+}
+function resultTone(counts = {}, stopped = false) {
+  return counts.failed ? 'danger' : counts.uncertain || counts.partial || counts.skipped || stopped ? 'warning' : counts.anonymized || counts.deleted ? 'success' : 'neutral';
+}
 function filterCount(options) {
   if (!options) return 0;
   let count = 0;
@@ -78,6 +89,7 @@ function select(ids, selected) {
 function setStatus(message, failure = false) {
   $('status').textContent = message;
   $('status').classList.toggle('error', failure);
+  $('status').dataset.tone = failure ? 'danger' : 'neutral';
 }
 
 function syncPreset() {
@@ -178,6 +190,8 @@ function render(next) {
   $('automatic-updates').checked = update?.enabled ?? true;
   $('update-status').textContent = ({ checking: 'Checking releases…', current: 'You are up to date.', available: `Version ${update?.available?.version || ''} is available.`, error: 'Could not check. Try again later.' })[update?.status] || 'Checks public GitHub releases only.';
   $('check-updates').textContent = update?.status === 'checking' ? 'Checking…' : 'Check for updates';
+  $('update-status').dataset.tone = outcomeTone(update?.status);
+  $('check-updates').classList.toggle('update-available', !!update?.available);
   const preview = state.preview;
   const busy = !!state.busy;
   const connected = !!state.account;
@@ -194,10 +208,11 @@ function render(next) {
   document.body.classList.toggle('browser-visible', !!state.browserVisible);
   $('status').textContent = state.status || '';
   $('status').classList.toggle('error', !!state.statusError);
-  $('account').textContent = state.account ? (state.simulation ? 'Sample data · synthetic' : `u/${state.account.name}`) : 'Not connected';
+  $('status').dataset.tone = state.statusError ? 'danger' : busy ? 'info' : state.finished ? resultTone(state.finished.counts, state.finished.stopped) : 'neutral';
+  $('account').textContent = state.account ? `u/${state.account.name}` : 'Not connected';
   $('version').textContent = `Version ${state.version}`;
-  $('mode-badge').hidden = !state.simulation && !state.deletionTesting;
-  $('mode-badge').textContent = state.simulation ? 'Sample data · nothing changes' : 'DELETION VALIDATION · Disposable content only';
+  $('mode-badge').hidden = !state.deletionTesting;
+  $('mode-badge').textContent = 'DELETION VALIDATION · Disposable content only';
   document.title = state.deletionTesting ? `Wipeditt — Deletion validation ${state.version}` : 'Wipeditt';
   $('browser-help').hidden = !state.browserVisible;
   $('workspace').hidden = !!state.browserVisible;
@@ -249,7 +264,7 @@ function render(next) {
 
   if (busy) {
     const progress = state.progress;
-    $('progress-title').textContent = progress ? (state.simulation ? 'Running your sample' : 'Applying your changes') : 'Finding your history';
+    $('progress-title').textContent = progress ? 'Applying your changes' : 'Finding your history';
     $('progress-help').textContent = progress
       ? 'Pause waits between actions. Stop prevents new actions; edits already sent may finish.'
       : 'Searching is read only. You will review the results next.';
@@ -261,7 +276,7 @@ function render(next) {
       $('progress').value = total ? completed : 0;
       const percent = total ? Math.round(completed / total * 100) : 0;
       $('progress-percent').textContent = `${percent}%`;
-      $('progress-counts').textContent = `${completed}/${total} complete · ${Object.entries(counts).map(([key, count]) => `${count} ${key}`).join(' · ')} · ${Math.round(progress.elapsed / 1000)}s elapsed`;
+      $('progress-counts').replaceChildren(`${completed}/${total} complete`, ...Object.entries(counts).flatMap(([outcome, count]) => [' · ', el('span', { 'data-tone': outcomeTone(outcome), text: `${count} ${outcome}` })]), ` · ${Math.round(progress.elapsed / 1000)}s elapsed`);
     } else {
       $('progress').max = 1;
       $('progress').value = 0;
@@ -272,13 +287,13 @@ function render(next) {
 
   if (finished) {
     const counts = state.finished.counts || {};
-    const countText = Object.entries(counts).map(([key, count]) => `${count} ${key}`).join(' · ') || 'No changes';
-    const prefix = state.finished.simulation ? 'Sample only — no Reddit content changed. ' : '';
-    $('finished-mark').textContent = counts.uncertain ? '!' : '✓';
-    $('finished-label').textContent = counts.uncertain ? 'REVIEW NEEDED' : 'FINISHED';
+    const tone = resultTone(counts, state.finished.stopped);
+    $('finished').dataset.tone = tone;
+    $('finished-mark').textContent = tone === 'success' ? '✓' : tone === 'neutral' ? '—' : '!';
+    $('finished-label').textContent = tone === 'warning' || tone === 'danger' ? 'REVIEW NEEDED' : 'FINISHED';
     $('finished-help').hidden = !counts.uncertain;
-    $('finished-title').textContent = counts.uncertain ? 'Verification incomplete. Operation stopped.' : state.finished.stopped ? 'Operation stopped.' : state.finished.simulation ? 'Sample finished.' : 'Operation finished.';
-    $('finished-summary').textContent = `${prefix}${countText} · ${Math.max(1, Math.round((state.finished.elapsedMs || 0) / 1000))}s · ${state.finished.anonymized || 0} anonymizations verified · ${state.finished.deleted || 0} deletions verified`;
+    $('finished-title').textContent = counts.uncertain ? 'Verification incomplete. Operation stopped.' : state.finished.stopped ? 'Operation stopped.' : counts.failed ? 'Finished with errors.' : counts.partial ? 'Partially completed.' : 'Operation finished.';
+    $('finished-summary').replaceChildren(Object.keys(counts).length ? '' : 'No changes', ...Object.entries(counts).flatMap(([outcome, count], index) => [index ? ' · ' : '', el('span', { 'data-tone': outcomeTone(outcome), text: `${count} ${outcome}` })]), ` · ${Math.max(1, Math.round((state.finished.elapsedMs || 0) / 1000))}s · ${state.finished.anonymized || 0} anonymizations verified · ${state.finished.deleted || 0} deletions verified`);
   }
 
   if (!initialized) {
@@ -290,7 +305,7 @@ function render(next) {
   for (const option of $('mode').options) option.disabled = !state.deletionEnabled && option.value !== 'anonymize';
   const mode = $('mode').value;
   $('mode-description').textContent = { anonymize: 'Replace your Reddit content with a custom message.', delete: 'Permanently delete your selected Reddit content.', combined: 'Replace your content with a custom message, then delete it.' }[mode];
-  $('mode-availability').textContent = state.simulation ? 'Sample data only. No Reddit content changes.' : state.deletionEnabled ? state.deletionValidated ? 'Live deletion enabled.' : 'Deletion testing enabled. Use disposable content only.' : 'Deletion is awaiting independent live validation.';
+  $('mode-availability').textContent = state.deletionEnabled ? state.deletionValidated ? 'Changes require review and confirmation.' : 'Deletion testing enabled. Use disposable content only.' : 'Deletion is awaiting independent live validation.';
   $('replacement-content').hidden = mode === 'delete';
   $('operation-heading').textContent = mode === 'delete' ? 'Permanently delete' : 'Choose the replacement';
   $('operation-copy').textContent = mode === 'delete' ? 'Selected items will be deleted through Reddit. This cannot be undone.' : mode === 'combined' ? 'Each replacement is verified before its item can be deleted.' : 'Selected items keep their place. Their body text becomes your message.';
@@ -303,7 +318,7 @@ function render(next) {
     $('scan-details').textContent = '';
     $('subreddit-select').replaceChildren(el('option', { value: '', text: 'Select a community…' }));
   }
-  $('activity').replaceChildren(...state.activity.map(item => el('li', { text: item.message })));
+  $('activity').replaceChildren(...state.activity.map(item => el('li', { 'data-tone': outcomeTone(item.outcome), text: item.message })));
 }
 
 async function cancelConfirmation() {
@@ -317,7 +332,7 @@ $('review').addEventListener('click', async () => {
     clearTimeout(operationTimer);
     await command('options', { options: rawOptions() });
     confirmation = await command('confirm');
-    $('confirmation-summary').textContent = `${confirmation.count} ${confirmation.count === 1 ? 'item' : 'items'} · ${modeLabel(confirmation.mode)} · ${confirmation.simulation ? 'sample data' : `u/${confirmation.account}`}`;
+    $('confirmation-summary').textContent = `${confirmation.count} ${confirmation.count === 1 ? 'item' : 'items'} · ${modeLabel(confirmation.mode)} · u/${confirmation.account}`;
     $('confirmation-summary').textContent += ` · ${confirmation.eligible} eligible · ${confirmation.ineligible} ineligible`;
     $('confirmation-title').textContent = confirmation.mode === 'delete' ? 'Permanently delete these items?' : confirmation.mode === 'combined' ? 'Anonymize, then permanently delete?' : 'Replace this text?';
     $('confirmation-replacement').hidden = confirmation.mode === 'delete';
@@ -327,9 +342,7 @@ $('review').addEventListener('click', async () => {
     $('phrase-prompt').textContent = `Type ${confirmation.phrase}`;
     $('phrase').value = '';
     $('accept').disabled = !!confirmation.phrase;
-    $('accept').textContent = confirmation.simulation
-      ? (confirmation.mode === 'anonymize' ? 'Run sample replacement' : 'Run sample operation')
-      : confirmation.mode === 'anonymize' ? 'Confirm & anonymize' : confirmation.mode === 'delete' ? 'Confirm & delete' : 'Confirm both steps';
+    $('accept').textContent = confirmation.mode === 'anonymize' ? 'Confirm & anonymize' : confirmation.mode === 'delete' ? 'Confirm & delete' : 'Confirm both steps';
     $('confirmation').showModal();
     $('cancel-confirmation').focus();
   } catch (failure) { error(failure); }
@@ -402,14 +415,12 @@ $('export-help').addEventListener('cancel', event => { event.preventDefault(); $
 
 action('connect', 'connect', () => ({ remember: $('remember').checked }));
 action('welcome-connect', 'connect', () => ({ remember: $('remember').checked }));
-action('welcome-demo', 'demo');
 action('verify', 'verify-account');
 action('show-browser', 'show-browser');
 action('hide-browser', 'hide-browser');
 action('disconnect', 'disconnect');
 action('scan', 'scan', () => ({ options: rawOptions() }));
 action('import-export', 'import-export', () => ({ options: rawOptions() }));
-action('demo', 'demo');
 action('report', 'export-report');
 action('finished-report', 'export-report');
 action('clear-checkpoint', 'clear-checkpoint');

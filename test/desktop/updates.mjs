@@ -20,6 +20,8 @@ export async function verifyUpdateNotice(application, page) {
   });
   await page.locator('.tools').evaluate(node=>{node.open=true;});
   await page.locator('#automatic-updates').uncheck();
+  await page.locator('.tools').evaluate(node=>{node.open=false;});
+  assert.equal(await page.locator('#check-updates').isVisible(),true);
   await page.locator('#check-updates').click();
   await page.locator('#update-title').filter({hasText:'9.0.0'}).waitFor();
   assert.equal(await page.locator('#update-notice').isVisible(),true);

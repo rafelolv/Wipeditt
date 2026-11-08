@@ -1,5 +1,5 @@
 const { contextBridge, ipcRenderer } = require('electron');
-const COMMANDS = new Set(['read-license', 'open-source', 'check-updates', 'update-settings', 'open-update', 'state', 'invalidate', 'connect', 'verify-account', 'show-browser', 'hide-browser', 'disconnect', 'scan', 'import-export', 'open-data-request', 'options', 'select', 'confirm', 'cancel-confirmation', 'run', 'pause', 'resume', 'stop', 'export-report', 'open-original', 'clear-checkpoint', 'demo']);
+const COMMANDS = new Set(['read-license', 'open-source', 'check-updates', 'update-settings', 'open-update', 'state', 'invalidate', 'connect', 'verify-account', 'show-browser', 'hide-browser', 'disconnect', 'scan', 'import-export', 'open-data-request', 'options', 'select', 'confirm', 'cancel-confirmation', 'run', 'pause', 'resume', 'stop', 'export-report', 'open-original', 'clear-checkpoint']);
 contextBridge.exposeInMainWorld('wipeditt', {
   command(name, data = {}) {
     if (!COMMANDS.has(name)) return Promise.reject(new Error('Unknown application command.'));

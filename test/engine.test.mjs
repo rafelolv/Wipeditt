@@ -196,5 +196,5 @@ test('imported comments use the same filters, ownership checks and confirmation 
   const result = await engine.execute({ type: 'comment', contains: 'imported' }, { confirmed: true, phrase: confirmation.phrase });
   assert.equal(result.records[0].state, 'anonymized');
   assert.equal(result.source, 'import');
-  assert.equal(adapter.items[0].text, 'This content has been removed for privacy reasons.');
+  assert.equal(adapter.items[0].text, 'This comment was anonymized using Wipeditt, a free and open-source tool.\n\n[Wipeditt](https://github.com/rafelolv/Wipeditt)');
 });

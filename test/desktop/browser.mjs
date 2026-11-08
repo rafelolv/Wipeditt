@@ -38,6 +38,9 @@ try {
   console.log('Electron window and isolated fixture session ready.');
   const capture = name => process.env.WIPEDITT_TEST_SCREENSHOTS === '1' ? page.screenshot({ path: `artifacts/${name}.png`, timeout: 15000 }) : Promise.resolve();
   await capture('desktop-welcome');
+  assert.equal(await page.locator('#demo, #welcome-demo').count(), 0);
+  assert.equal(await page.locator('#check-updates').isVisible(), true);
+  assert.match(await page.evaluate(() => window.wipeditt.command('demo').catch(error => error.message)), /Unknown application command/);
   assert.equal(await page.locator('#scan-section').isVisible(), false);
   await page.locator('.tools').evaluate(node => { node.open = true; });
   await page.locator('#show-license').click();
@@ -96,6 +99,8 @@ try {
   await selected(page, 1);
 
   const navigationCount = await application.evaluate(() => globalThis.fixture.navigations.length);
+  assert.match(await page.locator('#replacement').inputValue(), /This comment was anonymized using Wipeditt/);
+  assert.match(await page.locator('#replacement').inputValue(), /\[Wipeditt\]\(https:\/\/github.com\/rafelolv\/Wipeditt\)/);
   const replacement = '<img src=x onerror="window.INJECTED=true">';
   await page.locator('#replacement').fill(replacement);
   await page.locator('#review').click();
@@ -116,6 +121,8 @@ try {
   assert.equal(await application.evaluate(() => globalThis.fixture.writes.length), 1);
   assert.equal(await application.evaluate(() => globalThis.fixture.items.t1_abc.text), 'A fresh start.');
   assert.equal(await page.locator('#finished').isVisible(), true);
+  assert.equal(await page.locator('#finished').getAttribute('data-tone'), 'success');
+  await capture('desktop-success');
   const navigations = await application.evaluate(() => globalThis.fixture.navigations);
   assert.ok(navigations.filter(path => path === '/r/privacy/comments/post/fixture/abc/').length >= 2, 'verified replacement must reload native item page');
   assert.ok(!navigations.some(path => path.startsWith('/api/')), 'app must not replay a private API');
@@ -154,6 +161,9 @@ try {
   await page.locator('#replacement').fill('Rejected fixture replacement.');
   await page.locator('#review').click(); await page.locator('#accept').click();
   await page.locator('#status').filter({ hasText: '1 failed' }).waitFor({ timeout: 30000 });
+  assert.equal(await page.locator('#finished').getAttribute('data-tone'), 'danger');
+  assert.equal(await page.locator('#status').getAttribute('data-tone'), 'danger');
+  await capture('desktop-error');
   assert.equal(await application.evaluate(() => globalThis.fixture.writes.length), 1);
   await application.evaluate(() => { globalThis.fixture.failWrite = false; });
 

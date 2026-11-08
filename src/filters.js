@@ -1,5 +1,5 @@
 import { fail } from './errors.js';
-export const DEFAULT_REPLACEMENT = 'This content has been removed for privacy reasons.';
+export const DEFAULT_REPLACEMENT = 'This comment was anonymized using Wipeditt, a free and open-source tool.\n\n[Wipeditt](https://github.com/rafelolv/Wipeditt)';
 const list = value => [...new Set(String(value || '').split(/[\s,]+/).filter(Boolean).map(s => s.replace(/^r\//i, '').toLowerCase()))].sort();
 function date(value) {
   if (value === null || value === undefined || value === '') return null;
