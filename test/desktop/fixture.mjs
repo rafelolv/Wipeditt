@@ -2,7 +2,7 @@
 export async function installFixture(application) {
   await application.evaluate(({ session }) => {
     globalThis.fixture = {
-      signedIn:false, username:'fixture_user', writes:[], deletions:[], navigations:[], failWrite:false, failDelete:false, deletionOutcome:'placeholder', deletionLag:250, editLag:250, editPersists:true,
+      signedIn:false, username:'fixture_user', writes:[], deletions:[], navigations:[], historyPages:[], failWrite:false, failDelete:false, deletionOutcome:'placeholder', deletionLag:250, editLag:250, editPersists:true,
       items:{
         t1_abc:{id:'t1_abc',author:'fixture_user',text:'A synthetic comment. Wipeditt should change only selected own content.',type:'comment',dataAuthor:false},
         t1_other:{id:'t1_other',author:'another_user',text:'Someone else wrote this fixture. Never edit it.',type:'comment'},
@@ -29,7 +29,7 @@ export async function installFixture(application) {
     document.querySelectorAll('form.del-button').forEach(form=>{form.querySelector('.togglebutton').addEventListener('click',event=>{event.preventDefault();form.querySelector('.main').style.display='none';form.querySelector('.option.error').style.display='inline';});form.querySelector('.yes').addEventListener('click',async event=>{event.preventDefault();const node=form.closest('.thing');node.remove();const response=await fetch('/fixture-delete',{method:'POST',body:new URLSearchParams({id:node.dataset.fullname})});if(!response.ok){const error=form.querySelector('.deletion-error');error.style.display='block';error.textContent='This deletion was rejected.';return;}node.remove();});});
     document.querySelector('#fixture-login')?.addEventListener('click',async()=>{await fetch('/fixture-login',{method:'POST'});location.href='https://www.reddit.com/';});</script></body></html>`;
     session.fromPartition('wipeditt-reddit').protocol.handle('https',async request=>{
-      const url=new URL(request.url);globalThis.fixture.navigations.push(url.pathname);
+      const url=new URL(request.url);globalThis.fixture.navigations.push(url.pathname);if(url.pathname.startsWith('/user/'))globalThis.fixture.historyPages.push(url.href);
       if(!['www.reddit.com','old.reddit.com'].includes(url.hostname))return new Response('Unexpected host',{status:403});
       if(url.pathname==='/fixture-login'){globalThis.fixture.signedIn=true;return new Response('ok');}
       if(url.pathname==='/fixture-save'||url.pathname==='/fixture-delete'){
@@ -48,7 +48,7 @@ export async function installFixture(application) {
       let items=content?(original?[original]:[]):url.pathname.includes('/submitted')?Object.values(globalThis.fixture.items).filter(item=>item.type==='post'&&!item.deleted):url.searchParams.has('after')?[globalThis.fixture.items.t1_abc,globalThis.fixture.items.t1_next]:[globalThis.fixture.items.t1_abc,globalThis.fixture.items.t1_other];
       if(!content)items=items.filter(item=>!item.deleted);
       if(original?.deleted&&['missing','empty'].includes(globalThis.fixture.deletionOutcome))items=[];
-      const next=!content&&!url.searchParams.has('after')&&!url.pathname.includes('/submitted')?'<span class="next-button"><a href="https://old.reddit.com/user/fixture_user/comments/?after=t1_other">next</a></span>':'';
+      const next=!content&&!url.searchParams.has('after')&&!url.pathname.includes('/submitted')?'<span class="nextprev"><a rel="next" href="https://old.reddit.com/user/fixture_user/comments/?after=t1_other">next</a></span>':'';
       const commentPage=content&&id?.startsWith('t1_');
       const parent=commentPage?`<div class="sitetable linklisting">${itemHTML(globalThis.fixture.items.t3_post)}</div>`:'';
       const empty=commentPage&&!items.length&&globalThis.fixture.deletionOutcome==='empty'?'<p id="noresults" class="error">there does not seem to be anything here</p>':'';

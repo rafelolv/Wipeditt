@@ -35,3 +35,7 @@ Previews expire after five minutes. Use Refresh results to run a new read and re
 Result cards use the same aligned icon, heading, actions and separate stage counters. A deletion-only run labels anonymization Not requested. Native dropdowns and their options follow the selected dark/light theme.
 
 Isolated uncertain items remain in the report while the confirmed batch continues. Inspect their originals before considering another attempt. Account/permission changes, pending native requests and prolonged connection failures stop the batch. Short connection outages retry safe reads with bounded backoff; writes with unknown outcomes are never replayed. Routine short request countdowns are hidden.
+
+History is read from Reddit profile pages, following the next-page links Reddit actually supplies. There is no eight-month cutoff in Wipeditt, and a scan is not a complete-account archive. If Reddit ends the listing early, use Import older comments below the results or request your official export. Extract comments.csv from Reddit's ZIP; author-less exports and relative Reddit permalinks are accepted. Importing is local and does not establish ownership: the live Reddit account and author are checked again before writes.
+
+Repeated reads of the same loaded original now inspect the live DOM without spending another network interval. Navigation, expansion, fresh write preflights and mutation verification remain scheduled, with Reddit cooldowns preserved. No item text is cached by this optimization.

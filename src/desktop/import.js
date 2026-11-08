@@ -1,4 +1,5 @@
 import { fail } from '../errors.js';
+import { contentURL, REDDIT_CLASSIC } from './policy.js';
 
 const MAX_ROWS = 100000;
 const MAX_ITEMS = 100000;
@@ -72,21 +73,26 @@ export function parseCommentsCSV(source, accountName) {
   const authorIndex = column(header, 'author');
   const scoreIndex = column(header, 'score');
   const editedIndex = column(header, 'edited');
-  if (idIndex === -1 || permalinkIndex === -1 || bodyIndex === -1 || subredditIndex === -1 || dateIndex === -1 || authorIndex === -1) {
+  if (idIndex === -1 || permalinkIndex === -1 || bodyIndex === -1 || subredditIndex === -1 || dateIndex === -1) {
     fail('IMPORT', 'Choose comments.csv from your Reddit data export. Required columns are missing.');
   }
-  const expected = accountName?.toLowerCase();
+  if (typeof accountName !== 'string' || !/^[A-Za-z0-9_-]+$/.test(accountName)) fail('IMPORT', 'Verify your Reddit account before importing comments.');
+  const expected = accountName.toLowerCase();
   const items = [];
   let skipped = 0;
   for (const row of rows) {
     if (!row.length || (row.length === 1 && !row[0].trim())) continue;
     const rawId = String(row[idIndex] ?? '').trim().replace(/^t1_/i, '');
-    const permalink = String(row[permalinkIndex] ?? '').trim();
+    let permalink = String(row[permalinkIndex] ?? '').trim();
     const body = String(row[bodyIndex] ?? '');
     const subreddit = String(row[subredditIndex] ?? '').trim();
-    const author = String(row[authorIndex] ?? '').trim();
+    // An export without an author column belongs to the selected account only
+    // as a preview claim. Native preflight independently checks actual ownership.
+    const author = authorIndex === -1 ? accountName : String(row[authorIndex] ?? '').trim();
     const created = timestamp(row[dateIndex]);
     if (!/^[a-z0-9]+$/i.test(rawId) || !permalink || !body.trim() || !subreddit || !Number.isFinite(created) || !author || author === '[deleted]') { skipped++; continue; }
+    try { permalink = contentURL(new URL(permalink, REDDIT_CLASSIC).href, `t1_${rawId.toLowerCase()}`); }
+    catch { skipped++; continue; }
     if (expected && author.toLowerCase() !== expected) { skipped++; continue; }
     if (['[deleted]', '[removed]'].includes(body.trim().toLowerCase())) { skipped++; continue; }
     const score = scoreIndex === -1 ? null : Number(row[scoreIndex]);

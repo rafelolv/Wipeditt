@@ -63,7 +63,7 @@ export class RedditBrowser {
   account({ signal } = {}) { return this.scheduler.request(() => this.dom('account'), { signal, local: true }); }
   async page({ account, after, type, mode = 'anonymize', signal }) {
     const listing = type === 'comment' ? 'comments' : type === 'post' ? 'submitted' : 'overview';
-    const url = after ? historyURL(after, account) : `${REDDIT_CLASSIC}/user/${encodeURIComponent(account.name)}/${listing}/?sort=new`;
+    const url = after ? historyURL(after, account) : `${REDDIT_CLASSIC}/user/${encodeURIComponent(account.name)}/${listing}/?sort=new&limit=100`;
     const page = await this.scheduler.request(async () => {
       await this.navigate(url, signal);
       const page = await this.dom('listing', { expected: account });
@@ -105,13 +105,28 @@ export class RedditBrowser {
     }
     return item;
   }
-  get(id, { signal } = {}) {
-    return this.scheduler.request(() => {
+  currentOriginal(id) {
+    if (this.contents.isDestroyed?.()) fail('BROWSER_CLOSED', 'Reddit browser closed. Connect again.');
+    if (this.needsReload || !this.contents.getURL || !this.contents.isLoadingMainFrame || this.contents.isLoadingMainFrame()) return false;
+    const link = this.links.get(id);
+    if (!link) return false;
+    const target = new URL(link);
+    target.searchParams.set('context', '0');
+    return this.contents.getURL() === target.href;
+  }
+  async get(id, { signal } = {}) {
+    const receipt = () => {
       const proof = this.emptyDeletionProofs.get(id);
-      const nativeDeleteReceipt = !!proof && proof.account === this.identity?.id && proof.link === this.links.get(id) && this.now() - proof.at < 300000;
-      if (!nativeDeleteReceipt) this.emptyDeletionProofs.delete(id);
-      return this.getRaw(id, signal, { focused: true, nativeDeleteReceipt });
-    }, { signal });
+      const valid = !!proof && proof.account === this.identity?.id && proof.link === this.links.get(id) && this.now() - proof.at < 300000;
+      if (!valid) this.emptyDeletionProofs.delete(id);
+      return valid;
+    };
+    // Re-read the live DOM, never a cached item. Recheck the URL inside the
+    // serial queue because another queued operation may have navigated first.
+    const local = await this.scheduler.request(() => this.currentOriginal(id)
+      ? this.dom('get', { id, expected: this.identity, nativeDeleteReceipt: receipt() }) : null, { signal, local: true });
+    if (local && !local.needsBody) return local;
+    return this.scheduler.request(() => this.getRaw(id, signal, { focused: true, nativeDeleteReceipt: receipt() }), { signal });
   }
   async edit(id, text, expected, { signal, beforeDispatch } = {}) {
     if (!this.writeTracker) fail('EDIT_UNVERIFIED', 'Native request observation is unavailable.');

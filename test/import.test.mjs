@@ -30,6 +30,28 @@ test('comments export imports own live comments and skips unusable rows', () => 
 
 test('comments export requires the columns from Reddit comments.csv', () => {
   assert.throws(() => parseCommentsCSV('id,body\nabc,text', 'demo_user'), { code: 'IMPORT' });
-  assert.throws(() => parseCommentsCSV('id,permalink,date,subreddit,body,score\nabc,https://www.reddit.com/r/privacy/comments/p/title/abc/,2024-01-02T03:04:05Z,privacy,text,1', 'demo_user'), { code: 'IMPORT' });
   assert.throws(() => parseCommentsCSV('', 'demo_user'), { code: 'IMPORT' });
+});
+
+
+test('account exports without author columns preserve older comments for native rechecking', () => {
+  const csv = 'id,permalink,date,ip,subreddit,gildings,link,parent,body\nabc,https://www.reddit.com/r/privacy/comments/p/title/abc/,2015-01-02T03:04:05Z,,privacy,0,p,p,Older comment';
+  const result = parseCommentsCSV(csv, 'demo_user');
+  assert.equal(result.items.length, 1);
+  assert.equal(result.items[0].authorId, 'reddit:demo_user');
+  assert.equal(result.items[0].created, Date.parse('2015-01-02T03:04:05Z'));
+  assert.equal(result.items[0].imported, true);
+  assert.throws(() => parseCommentsCSV(csv), { code: 'IMPORT' });
+});
+
+
+test('relative export permalinks resolve only to validated HTTPS Reddit originals', () => {
+  const header = 'id,permalink,date,subreddit,body';
+  const row = link => `abc,${link},2015-01-02T03:04:05Z,privacy,Older comment`;
+  const valid = parseCommentsCSV(`${header}\n${row('/r/privacy/comments/p/title/abc/')}`, 'demo_user');
+  assert.equal(valid.items[0].permalink, 'https://old.reddit.com/r/privacy/comments/p/title/abc/');
+  for (const link of ['//evil.test/r/privacy/comments/p/title/abc/', 'javascript:alert(1)', 'https://evil@www.reddit.com/r/privacy/comments/p/title/abc/']) {
+    const invalid = parseCommentsCSV(`${header}\n${row(link)}`, 'demo_user');
+    assert.equal(invalid.items.length, 0); assert.equal(invalid.skipped, 1);
+  }
 });

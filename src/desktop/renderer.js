@@ -185,13 +185,14 @@ function renderPreview(preview) {
   $('matched-count').textContent = preview.stats.matched;
   $('eligible-count').textContent = preview.stats.eligible;
   $('selected-count').textContent = preview.selected;
-  const source = preview.source === 'import' ? 'Imported from Reddit export' : 'All available history';
+  const source = preview.source === 'import' ? 'Imported from Reddit export' : 'Reddit profile listing';
   const filters = filterCount(preview.options);
   $('search-summary').textContent = `${source} · ${typeLabel(preview.options?.type)}${filters ? ` · ${filters} filter${filters === 1 ? '' : 's'}` : ''}`;
   const detail = preview.source === 'import'
-    ? 'This export is a snapshot. Comments edited or deleted since then are skipped before any change, and ownership is checked again.'
+    ? 'This export is a snapshot. Current text and ownership are checked on Reddit before any change.'
     : preview.reason || 'Reddit listings may stop before your oldest history. Import your official export to include older comments.';
   $('coverage-note').textContent = detail;
+  $('coverage-actions').hidden = preview.source === 'import';
   $('review').textContent = preview.selected ? `Review ${preview.selected} selected` : 'Review changes';
   $('review').disabled = !!state.busy || !preview.selected;
   $('select-all').disabled = !!state.busy || !preview.stats.eligible;
@@ -449,7 +450,7 @@ $('theme').addEventListener('click', () => {
   applyTheme(dark);
   remember('wipeditt.theme', dark ? 'dark' : 'light');
 });
-$('request-export').addEventListener('click', () => { $('export-help').showModal(); $('close-export-help').focus(); });
+for (const id of ['request-export', 'request-older']) $(id).addEventListener('click', () => { $('export-help').showModal(); $('close-export-help').focus(); });
 $('close-export-help').addEventListener('click', () => $('export-help').close());
 $('open-data-request').addEventListener('click', async () => {
   try { await command('open-data-request'); $('export-help').close(); } catch (failure) { error(failure); }
@@ -463,7 +464,7 @@ action('show-browser', 'show-browser');
 action('hide-browser', 'hide-browser');
 action('disconnect', 'disconnect');
 action('scan', 'scan', () => ({ options: rawOptions() }));
-action('import-export', 'import-export', () => ({ options: rawOptions() }));
+for (const id of ['import-export', 'import-older']) action(id, 'import-export', () => ({ options: rawOptions() }));
 action('report', 'export-report');
 action('finished-report', 'export-report');
 action('inspect-original', 'open-original', () => ({ id: state.finished.uncertainId }));

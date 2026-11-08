@@ -31,3 +31,11 @@ The explicit classic empty-list marker (`p#noresults.error`) was checked against
 ## Edit verification and Markdown
 
 A native editor closing is acknowledgement, not proof of persistence. The connector observes the owned native POST completing, reads native errors and then reloads the focused original. It compares the textarea's raw saved Markdown with the requested replacement; rendered labels/links are never compared with Markdown source. Bounded fresh reads accommodate delayed propagation without resending a write. A stale editor does not prevent a fresh-source proof; unchanged, unavailable or mismatched source remains uncertain and stops combined deletion. Diagnostic categories omit private text.
+
+## History coverage and read pacing
+
+Profile scans request 100 items on the initial normal HTML listing and follow Reddit-provided pagination, including next links marked with rel=next. They never invent cursors or infer a complete archive. Reddit's [profile-history announcement](https://www.reddit.com/r/help/comments/1gae6uo/update_enabling_easier_access_to_your_content_on/) describes expanded history but its rollout notes and classic-layout discussion differ; this is not proof that every current classic profile exposes all history. The [official data request](https://support.reddithelp.com/hc/en-us/articles/360043483511-Where-and-how-can-I-access-my-Reddit-data-and-information) is the complementary user-directed export path.
+
+Exports without an author column are bound to the currently verified account only as preview claims. Explicit foreign authors are rejected. Relative links are resolved against Reddit and validated through the same original-link policy. Imported labels never authorize a native write: actual account, author and controls are independently checked.
+
+A read may bypass network pacing only inside the serial scheduler after checking that the exact focused original is still loaded, no navigation failed and no main-frame load is active. It re-runs the DOM reader with account validation, never returns cached item text, and sends body expansion back through network pacing. Native writes retain fresh original preflights and independent verification.

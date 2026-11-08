@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.6 — 2026-11-08
+
+- Avoid network interval waits for uncached DOM reads of the same loaded original, retaining serial execution and fresh write preflights.
+- Request larger HTML history pages and follow rel=next pagination as well as classic next buttons.
+- Expose older-comment import after searches; support author-less CSVs and validated relative Reddit links.
+- Keep live ownership checks mandatory for imported content and document profile-list coverage limits.
+
 ## 1.0.5 — 2026-11-08
 
 - Keep app animations active regardless of the system reduced-motion preference.

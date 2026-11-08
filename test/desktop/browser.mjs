@@ -84,6 +84,12 @@ try {
   assert.match(await page.locator('#counts').textContent(), /1 found · 1 selected/);
   assert.equal(await application.evaluate(() => globalThis.fixture.writes.length), 0);
 
+  assert.equal(await page.locator('#import-older').isVisible(), true);
+  await page.locator('#request-older').click();
+  assert.equal(await page.locator('#export-help').evaluate(node => node.open), true);
+  await page.locator('#close-export-help').click();
+  assert.equal(await application.evaluate(() => globalThis.fixture.historyPages.some(value => value.includes('after=t1_other'))), true);
+
   // Preview expiry is visible and refresh performs only a new read/review.
   await page.evaluate(()=>{globalThis.fixtureRealNow=Date.now;Date.now=()=>globalThis.fixtureRealNow()+300001;});
   await page.locator('#status').filter({hasText:'Results expired'}).waitFor({timeout:5000});

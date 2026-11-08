@@ -226,3 +226,30 @@ test('a 300-item confirmed batch isolates one uncertain item and finishes the re
   assert.equal(edits.length, 300); assert.equal(new Set(edits).size, 300);
   assert.equal(deletes.length, 299); assert.ok(!deletes.includes('t1_batch47'));
 });
+
+
+test('history scanning crosses 1000 comments and preserves decade-old items without a date filter', async () => {
+  const { engine, adapter } = setup();
+  let page = 0;
+  adapter.page = async () => {
+    const offset = page++ * 100;
+    return { items: Array.from({ length: Math.min(100, 1205 - offset) }, (_, index) => item({ id: `t1_history${offset + index}`, created: Date.parse('2012-01-01T00:00:00Z') })), after: page < 13 ? `page${page}` : null };
+  };
+  const preview = await engine.scan({ limit: 0 });
+  assert.equal(preview.stats.unique, 1205);
+  assert.equal(preview.items.at(-1).created, Date.parse('2012-01-01T00:00:00Z'));
+  assert.equal(preview.completeHistory, false);
+});
+
+test('an imported ownership claim never authorizes changes to a foreign live comment', async () => {
+  const { engine, adapter } = setup([item({ authorId: 't2_other', author: 'other' })]);
+  const options = { type: 'comment', mode: 'combined' };
+  await engine.import([item({ imported: true })], options);
+  engine.confirmationFor(options);
+  let writes = 0;
+  adapter.edit = async () => { writes++; };
+  adapter.delete = async () => { writes++; };
+  const result = await engine.execute(options, { confirmed: true });
+  assert.equal(writes, 0);
+  assert.equal(result.records[0].state, 'skipped');
+});

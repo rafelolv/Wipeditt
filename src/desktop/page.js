@@ -120,7 +120,7 @@ export function redditPage(operation, input = {}) {
     // Only the listing's own entries belong in this history scan.
     const nodes = listing ? [...listing.querySelectorAll('.thing[data-fullname]')].filter(node => !node.parentElement.closest('.thing[data-fullname]')) : [];
     const items = nodes.map(normalize).filter(Boolean);
-    const next = document.querySelector('.next-button a')?.href || null;
+    const next = document.querySelector('.next-button a, .nextprev a[rel~="next"]')?.href || null;
     const empty = !!document.querySelector('.sitetable .error, #siteTable .error, .sitetable .empty, .empty-page');
     if (!document.querySelector('#siteTable, .sitetable.linklisting')) return result('SITE_CHANGED', 'Reddit history layout is not recognized. Review the browser page before continuing.');
     return { data: { items, after: next, empty } };
