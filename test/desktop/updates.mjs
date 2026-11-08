@@ -30,7 +30,7 @@ export async function verifyUpdateNotice(application, page) {
   const spinner=()=>page.locator('#check-updates').evaluate(node=>getComputedStyle(node,'::before').animationName);
   assert.equal(await spinner(),'update-spin');
   await page.emulateMedia({reducedMotion:'reduce'});
-  assert.equal(await spinner(),'none');
+  assert.equal(await spinner(),'update-spin');
   await page.emulateMedia({reducedMotion:'no-preference'});
   assert.equal(await spinner(),'update-spin');
   await application.evaluate(()=>globalThis.updateFixture.respond());

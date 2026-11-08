@@ -992,15 +992,6 @@ body.browser-visible header {
     font-size: 48px;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    scroll-behavior: auto !important;
-    transition: none !important;
-    animation: none !important;
-  }
-}
 
 .update-notice { display:flex; align-items:center; justify-content:space-between; gap:20px; border:1px solid var(--border-strong); border-left:3px solid var(--text); padding:16px 20px; margin:0 0 24px; background:var(--panel); border-radius:5px; }
 .update-notice strong { font-size:13px; font-weight:550; }
@@ -1048,11 +1039,6 @@ dialog[open]::backdrop { animation:backdrop-enter 160ms ease-out; }
 @keyframes update-confirm { from { box-shadow:0 0 0 3px color-mix(in srgb,var(--success) 28%,transparent); } to { box-shadow:0 0 0 0 transparent; } }
 @keyframes surface-enter { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
 @keyframes backdrop-enter { from { opacity:0; } to { opacity:1; } }
-@media (prefers-reduced-motion:reduce) {
-  button:hover:not(:disabled), button:active:not(:disabled) { transform:none; }
-  #check-updates::after { display:none; }
-  dialog::backdrop { animation:none !important; }
-}
 
 :root[data-theme="dark"], body.dark { color-scheme:dark; }
 :root[data-theme="light"] { color-scheme:light; }
@@ -1075,7 +1061,6 @@ select option, select optgroup { background-color:var(--input); color:var(--text
 #status { transition:color 180ms ease, background-color 180ms ease; }
 .item:hover { transform:translateX(2px); }
 .item { transition:transform 160ms ease, background-color 160ms ease, border-color 160ms ease; }
-@media (prefers-reduced-motion:reduce) { .item:hover { transform:none; } }
 
 #review-section:not([hidden]), #progress-section:not([hidden]), #scan-section:not([hidden]) { animation:surface-enter 220ms ease-out; }
 progress::-webkit-progress-value { background:var(--info); transition:width 300ms ease; }
