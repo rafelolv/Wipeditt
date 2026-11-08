@@ -107,3 +107,74 @@ test('legacy checkpoint migration remembers only independently verified real del
   data.simulation = true;
   assert.equal(new Checkpoints(storage, () => 1000).wasDeleted('t1_confirmed', false), false);
 });
+
+test('unavailable originals are deferred separately, expire and never renew from old progress', () => {
+  const memory = new Map();
+  const storage = { getItem: key => memory.get(key), setItem: (key, value) => memory.set(key, value), removeItem: key => memory.delete(key) };
+  let clock = 1000;
+  const checkpoints = new Checkpoints(storage, () => clock);
+  const unavailable = { id: 't1_missing', state: 'skipped', code: 'ORIGINAL_UNAVAILABLE', text: 'private body' };
+  checkpoints.save([unavailable], true);
+  assert.equal(checkpoints.wasUnavailable(unavailable.id, false), false);
+  checkpoints.save([unavailable,
+    { id: 't1_deleted', state: 'skipped', code: 'ALREADY_DELETED' },
+    { id: 't1_uncertain', state: 'uncertain', code: 'ORIGINAL_UNAVAILABLE' },
+    { id: 't1_denied', state: 'skipped', code: 'INELIGIBLE' }
+  ], false);
+  const restored = new Checkpoints(storage, () => clock);
+  assert.equal(restored.wasUnavailable(unavailable.id, false), true);
+  assert.equal(restored.wasDeleted(unavailable.id, false), false);
+  assert.equal(restored.wasUnavailable(unavailable.id, true), false);
+  assert.equal(restored.wasDeleted('t1_deleted', false), true);
+  for (const id of ['t1_uncertain', 't1_denied']) assert.equal(restored.wasUnavailable(id, false), false);
+  assert.ok(![...memory.values()].join('').includes('private'));
+  clock += 21600001;
+  checkpoints.save([unavailable], false);
+  assert.equal(new Checkpoints(storage, () => clock).wasUnavailable(unavailable.id, false), false);
+  checkpoints.save([{ ...unavailable }], false);
+  assert.equal(checkpoints.wasUnavailable(unavailable.id, false), true, 'a genuinely new check may defer again');
+  checkpoints.forgetUnavailable(unavailable.id);
+  assert.equal(new Checkpoints(storage, () => clock).wasUnavailable(unavailable.id, false), false);
+  checkpoints.clear();
+  assert.equal(memory.size, 0);
+});
+
+test('reimport omits checked originals locally; deferred review is unselected and requires fresh confirmation', async () => {
+  const memory = new Map();
+  const storage = { getItem: key => memory.get(key), setItem: (key, value) => memory.set(key, value), removeItem: key => memory.delete(key) };
+  const rows = [item({ id: 't1_absent' }), item({ id: 't1_gone' }), item({ id: 't1_live' })];
+  const { engine, adapter, now } = setup(rows);
+  const checkpoints = new Checkpoints(storage, now);
+  engine.checkpoints = checkpoints;
+  adapter.simulation = false;
+  const { AppError } = await import('../src/errors.js');
+  const get = adapter.get.bind(adapter), seen = [];
+  let missing = true;
+  adapter.get = async id => {
+    seen.push(id);
+    if (id === 't1_absent' && missing) throw new AppError('CONTENT_UNAVAILABLE', 'Not shown');
+    if (id === 't1_gone') return item({ id, deleted: true, author: '', authorId: '' });
+    return get(id);
+  };
+  const options = { mode: 'delete' };
+  await engine.import(rows, options);
+  engine.confirmationFor(options);
+  const result = await engine.execute(options, { confirmed: true });
+  assert.deepEqual(result.records.map(record => record.state), ['skipped', 'skipped', 'deleted']);
+  engine.checkpoints = new Checkpoints(storage, now);
+  const count = seen.length;
+  let preview = await engine.import(rows, options);
+  assert.equal(preview.items.length, 0);
+  assert.equal(preview.deferred.length, 1);
+  assert.equal(seen.length, count, 'reimport does not reopen excluded originals');
+  assert.throws(() => engine.confirmationFor(options), { code: 'EMPTY' });
+  assert.equal(engine.includeUnavailable(), 1);
+  assert.equal(preview.items[0].selected, false);
+  assert.equal(seen.length, count, 'restoring review is local and submits nothing');
+  engine.select('t1_absent', true);
+  engine.confirmationFor(options);
+  missing = false;
+  await engine.execute(options, { confirmed: true });
+  assert.equal(engine.checkpoints.wasUnavailable('t1_absent', false), false);
+  assert.equal(engine.checkpoints.wasDeleted('t1_absent', false), true);
+});

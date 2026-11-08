@@ -58,7 +58,7 @@ export class DesktopController {
       deletionValidated: this.deletionValidated, deletionTesting: this.deletionTesting,
       deletionEnabled: this.browser.adapter.deletionEnabled === true,
       statusError: this.statusError, finished: this.finished, updates: this.updates?.snapshot() || null,
-      preview: preview ? { items: preview.items, stats: preview.stats, reason: preview.reason, selected: preview.items.filter(item => item.selected && !item.skip).length, options: preview.options, source: preview.source || 'live', created: preview.created, expiresAt: preview.created + 300000 } : null
+      preview: preview ? { items: preview.items, stats: preview.stats, reason: preview.reason, deferredUnavailable: preview.deferred?.length || 0, selected: preview.items.filter(item => item.selected && !item.skip).length, options: preview.options, source: preview.source || 'live', created: preview.created, expiresAt: preview.created + 300000 } : null
     };
   }
   emit() { this.onState(this.snapshot()); }
@@ -162,6 +162,10 @@ export class DesktopController {
       this.options = next;
       this.confirmation = null;
       this.engine.updateOperation(next);
+    } else if (name === 'include-unavailable') {
+      const count = this.engine.includeUnavailable();
+      this.confirmation = null;
+      this.status = `${count} previously unavailable item${count === 1 ? '' : 's'} restored, unselected. Review and select before retrying.`;
     } else if (name === 'select') {
       if (!Array.isArray(data.ids) || data.ids.length > 100000 || typeof data.selected !== 'boolean') fail('SELECTION', 'Invalid content selection.');
       if (data.replace !== undefined && typeof data.replace !== 'boolean') fail('SELECTION', 'Invalid content selection.');

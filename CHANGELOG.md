@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.3 — 2026-11-08
+
+- Defer originals unavailable before submission for six hours, avoiding repeated CSV lookups across restarts.
+- Remember originals positively observed as already deleted for 24 hours without counting them as new deletions.
+- Add Review unavailable items to restore deferred rows unselected, preserve existing selection and require fresh confirmation.
+- Keep absence separate from deletion evidence; never defer or replay submitted uncertain actions.
+- Clear unavailable history when owned live content reappears and prevent progress updates from extending old observations.
+
 ## 1.1.2 — 2026-11-08
 
 - Select only the chosen community, replacing the previous selection; batch selection uses one pass.

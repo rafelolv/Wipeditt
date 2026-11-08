@@ -193,6 +193,8 @@ function renderPreview(preview) {
     : preview.reason || 'Reddit listings may stop before your oldest history. Import your official export to include older comments.';
   $('coverage-note').textContent = detail;
   $('coverage-actions').hidden = preview.source === 'import';
+  $('include-unavailable').hidden = preview.source !== 'import' || !preview.deferredUnavailable;
+  $('include-unavailable').textContent = `Review ${preview.deferredUnavailable || 0} unavailable item${preview.deferredUnavailable === 1 ? '' : 's'}`;
   $('review').textContent = preview.selected ? `Review ${preview.selected} selected` : 'Review changes';
   $('review').disabled = !!state.busy || !preview.selected;
   $('select-all').disabled = !!state.busy || !preview.stats.eligible;
@@ -492,6 +494,7 @@ $('refresh-results').addEventListener('click', async () => {
   } catch (failure) { error(failure); }
 });
 action('clear-checkpoint', 'clear-checkpoint');
+action('include-unavailable', 'include-unavailable');
 action('stop', 'stop');
 action('cancel-connect', 'stop');
 action('check-updates', 'check-updates');

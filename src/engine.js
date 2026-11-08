@@ -41,7 +41,7 @@ export class Engine {
           if (typeof item.text !== 'string' || typeof item.subreddit !== 'string' || typeof item.author !== 'string' || !Number.isFinite(item.created)) continue;
           if (!matches(item)) continue;
           const skip = eligibility(item, account, options.mode);
-          if (!skip) this.checkpoints?.forgetDeleted?.(item.id);
+          if (!skip) { this.checkpoints?.forgetDeleted?.(item.id); this.checkpoints?.forgetUnavailable?.(item.id); }
           items.push({ ...item, skip, selected: !skip });
           if (options.limit && items.length >= options.limit) { reason = 'Item limit reached; scan is partial'; break outer; }
         }
@@ -68,15 +68,16 @@ export class Engine {
     try {
       const account = await this.account(null, signal);
       const seen = new Set();
-      const matched = [];
+      const matched = [], deferred = [];
       let inspected = 0, knownDeleted = 0;
       for (const item of Array.isArray(items) ? items : []) {
         inspected++;
         if (!item || !/^t[13]_[a-z0-9]+$/.test(item.id) || seen.has(item.id)) continue;
         seen.add(item.id);
-        if (this.checkpoints?.wasDeleted?.(item.id, this.adapter.simulation)) { knownDeleted++; continue; }
         if (typeof item.text !== 'string' || typeof item.subreddit !== 'string' || typeof item.author !== 'string' || !Number.isFinite(item.created)) continue;
         if (!matches(item)) continue;
+        if (this.checkpoints?.wasDeleted?.(item.id, this.adapter.simulation)) { knownDeleted++; continue; }
+        if (this.checkpoints?.wasUnavailable?.(item.id, this.adapter.simulation)) { deferred.push(item); continue; }
         const skip = eligibility(item, account, options.mode);
         matched.push({ ...item, skip, selected: !skip });
         if (options.limit && matched.length >= options.limit) break;
@@ -85,13 +86,28 @@ export class Engine {
       if (this.revision !== revision) fail('STALE', 'Settings changed during import. Import again.');
       const partial = options.limit && matched.length >= options.limit;
       this.preview = {
-        account, options, key: fingerprint(options), created: this.now(), revision, items: matched, source: 'import',
-        reason: partial ? 'Import limit reached; preview is partial' : `Imported ${inspected} rows from comments.csv locally; ${knownDeleted} previously verified deletions excluded. Only selected originals will be opened`,
+        account, options, key: fingerprint(options), created: this.now(), revision, items: matched, source: 'import', deferred,
+        reason: partial ? 'Import limit reached; preview is partial' : `Imported ${inspected} rows from comments.csv locally; ${knownDeleted} already deleted; ${deferred.length} unavailable (hidden for up to 6 hours). Only selected originals will be opened`,
         completeHistory: false,
         stats: { inspected, unique: seen.size, matched: matched.length, eligible: matched.filter(item => !item.skip).length }
       };
       return this.preview;
     } finally { this.running = false; }
+  }
+  includeUnavailable() {
+    if (this.running) fail('BUSY', 'Another operation is running.');
+    const preview = this.preview;
+    if (!preview || preview.source !== 'import' || preview.revision !== this.revision || this.now() - preview.created > 300000) fail('STALE', 'Import your CSV again before reviewing unavailable items.');
+    const count = preview.deferred?.length || 0;
+    if (!count) return 0;
+    this.confirmation = null;
+    preview.revision = ++this.revision;
+    for (const item of preview.deferred) preview.items.push({ ...item, skip: eligibility(item, preview.account, preview.options.mode), selected: false });
+    preview.deferred = [];
+    preview.stats.matched = preview.items.length;
+    preview.stats.eligible = preview.items.filter(item => !item.skip).length;
+    preview.reason = `${count} previously unavailable item${count === 1 ? '' : 's'} restored, unselected. Select items and review before retrying; absence was not proof of deletion`;
+    return count;
   }
   updateOperation(raw) {
     if (this.running) fail('BUSY', 'Operation is running.');
@@ -167,8 +183,9 @@ export class Engine {
           if (!current || skip) {
             for (const step of ['anonymize', 'delete']) if (record.steps[step] === 'pending') record.steps[step] = 'skipped';
             record.reason = !current ? 'Original is unavailable; no change submitted.' : current.deleted ? 'Already deleted.' : skip;
-            state('skipped', current?.deleted ? 'ALREADY_DELETED' : 'INELIGIBLE'); continue;
+            state('skipped', !current ? 'ORIGINAL_UNAVAILABLE' : current.deleted ? 'ALREADY_DELETED' : 'INELIGIBLE'); continue;
           }
+          this.checkpoints?.forgetUnavailable?.(item.id);
           // Identity and ownership reads are scheduled separately; no adapter networking in UI.
           const write = async task => {
             writeSubmitted = false;

@@ -87,6 +87,40 @@ try {
   console.log('Native fixture login and automatic account verification passed.');
   await verifyAuthorLayouts(application);
 
+  const chooseSyntheticCSV = () => application.evaluate(async ({ app, dialog }) => {
+    const fs = process.getBuiltinModule('node:fs/promises');
+    const path = process.getBuiltinModule('node:path');
+    const file = path.join(app.getPath('userData'), 'synthetic-comments.csv');
+    await fs.writeFile(file, 'id,permalink,date,subreddit,body\ncsvmissing,/r/privacy/comments/post/fixture/csvmissing/,2024-06-01T12:00:00Z,privacy,Unavailable synthetic comment\nabc,/r/privacy/comments/post/fixture/abc/,2024-06-01T12:00:00Z,privacy,Available synthetic comment\n');
+    const original = dialog.showOpenDialog;
+    dialog.showOpenDialog = async () => { dialog.showOpenDialog = original; return { canceled: false, filePaths: [file] }; };
+  });
+  await chooseSyntheticCSV();
+  await page.locator('#import-export').click();
+  await page.locator('.item[data-id="t1_csvmissing"]').waitFor();
+  await page.locator('#select-none').click();
+  await selected(page, 0);
+  await page.locator('.item[data-id="t1_csvmissing"] input').check();
+  await page.locator('#review').click();
+  await page.locator('#accept').click();
+  await page.locator('#finished-summary').filter({ hasText: '1 skipped' }).waitFor({ timeout: 15000 });
+  const beforeReimport = await application.evaluate(() => globalThis.fixture.navigations.length);
+  await chooseSyntheticCSV();
+  await page.locator('#refresh-results').click();
+  await page.locator('#include-unavailable').waitFor();
+  await selected(page, 1);
+  assert.equal(await page.locator('.item[data-id="t1_csvmissing"]').count(), 0);
+  assert.match(await page.locator('#coverage-note').textContent(), /1 unavailable \(hidden/);
+  await page.locator('#include-unavailable').click();
+  await page.locator('.item[data-id="t1_csvmissing"]').waitFor();
+  assert.equal(await page.locator('.item[data-id="t1_csvmissing"] input').isChecked(), false);
+  await selected(page, 1);
+  assert.equal(await application.evaluate(() => globalThis.fixture.navigations.length), beforeReimport);
+  assert.equal(await application.evaluate(() => globalThis.fixture.writes.length), 0);
+  assert.equal(await page.locator('#confirmation').evaluate(node => node.open), false);
+  await page.locator('#change-search').click();
+  console.log('CSV deferral passed: native unavailable read, local reimport exclusion, explicit unselected review and no repeated navigation or writes.');
+
   // A targeted scan by text keeps the test deterministic without an item cap.
   await openFilters(page);
   await page.locator('#contains').fill('Wipeditt should change only');

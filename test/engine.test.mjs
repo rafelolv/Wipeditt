@@ -286,3 +286,22 @@ test('unavailable originals before submission are skipped with a reason and do n
   assert.deepEqual(result.records[0].steps, { anonymize: 'skipped', delete: 'skipped' });
   assert.equal(result.stopped, false);
 });
+
+test('restoring unavailable rows preserves selection, recalculates mode and invalidates prior confirmation', async () => {
+  const { engine, advance } = setup();
+  engine.checkpoints = { wasUnavailable: id => id === 't1_deferred' };
+  const options = { mode: 'delete' };
+  const preview = await engine.import([item(), item({ id: 't1_deferred', editable: false })], {});
+  engine.updateOperation(options);
+  engine.confirmationFor(options);
+  const created = preview.created;
+  assert.equal(engine.includeUnavailable(), 1);
+  assert.equal(preview.items[0].selected, true);
+  assert.equal(preview.items[1].selected, false);
+  assert.equal(preview.items[1].skip, '');
+  assert.equal(preview.created, created);
+  assert.equal(preview.stats.eligible, 2);
+  await assert.rejects(engine.execute(options, { confirmed: true }), { code: 'CONFIRM' });
+  advance(300001);
+  assert.throws(() => engine.includeUnavailable(), { code: 'STALE' });
+});
