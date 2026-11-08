@@ -10,9 +10,3 @@ export function el(tag, attributes = {}, ...children) {
   for (const child of children.flat()) if (child !== null && child !== undefined) node.append(child);
   return node;
 }
-export function safeLink(value) {
-  try {
-    const url = new URL(value, 'https://www.reddit.com');
-    return url.protocol === 'https:' && ['www.reddit.com', 'old.reddit.com', 'reddit.com'].includes(url.hostname) && !url.username && !url.password ? url.href : null;
-  } catch { return null; }
-}

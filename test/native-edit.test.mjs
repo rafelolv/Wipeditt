@@ -39,3 +39,26 @@ test('an unconfirmed native edit request stops before verification or another wr
   await assert.rejects(fixture.browser.edit(item().id, fixture.text, {}), { code: 'UNCERTAIN' });
   assert.equal(fixture.writes(), 1); assert.equal(fixture.reads(), 1);
 });
+
+
+test('completed transport failure can reconcile saved source without another edit', async () => {
+  const fixture = nativeEdit();
+  fixture.browser.writeTracker.begin = () => ({ seen: true, pending: new Set() });
+  fixture.browser.writeTracker.wait = async () => { throw new AppError('UNCERTAIN', 'Transport failed', { fatal: true }); };
+  await fixture.browser.edit(item().id, fixture.text, {});
+  assert.equal(fixture.writes(), 1); assert.equal(fixture.reads(), 2);
+});
+
+test('failed navigation is retried even if Chromium keeps the target URL', async () => {
+  const { scheduler } = setup();
+  let calls = 0;
+  const target = 'https://old.reddit.com/user/fixture/comments/';
+  const browser = new RedditBrowser({ scheduler, contents: {
+    getURL: () => target, isLoadingMainFrame: () => false, stop() {},
+    loadURL: async () => { if (++calls < 2) throw Object.assign(new Error('Offline'), { code: 'ERR_INTERNET_DISCONNECTED' }); }
+  } });
+  await scheduler.request(() => browser.navigate(target, undefined, { force: true }));
+  assert.equal(calls, 2);
+  await browser.navigate(target);
+  assert.equal(calls, 2);
+});

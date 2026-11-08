@@ -101,10 +101,18 @@ test('combined edit failures skip deletion explicitly in stage reports',async()=
   assert.deepEqual(result.records[0].steps,{anonymize:'failed',delete:'skipped'});
 });
 
-test('an uncertain edit halts the combined batch before any later item or deletion',async()=>{
+test('an isolated uncertain edit skips its deletion and continues the confirmed batch',async()=>{
   const {engine,adapter}=setup([item(),item({id:'t1_later'})]);let deletions=0;
-  adapter.edit=async()=>{};adapter.delete=async()=>{deletions++;};
+  const edit=adapter.edit.bind(adapter), remove=adapter.delete.bind(adapter);
+  adapter.edit=async(id,...rest)=>{if(id==='t1_later')return edit(id,...rest);};adapter.delete=async(...args)=>{deletions++;return remove(...args);};
   const result=await run(engine,{mode:'combined'});
-  assert.equal(result.stopped,true);assert.equal(result.records.length,1);assert.equal(result.records[0].state,'uncertain');assert.equal(deletions,0);
+  assert.equal(result.stopped,false);assert.equal(result.records.length,2);assert.equal(result.records[0].state,'uncertain');assert.equal(result.records[1].state,'deleted');assert.equal(deletions,1);
   assert.deepEqual(result.records[0].steps,{anonymize:'uncertain',delete:'skipped'});
+});
+
+ test('stale deletion UI still reaches fresh original verification', async () => {
+  const fixture = native();
+  fixture.browser.dom = async () => ({ settled: false });
+  await fixture.browser.delete(item().id, {});
+  assert.equal(fixture.reads(), 2);
 });

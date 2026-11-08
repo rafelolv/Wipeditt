@@ -16,7 +16,7 @@ A local desktop app for reviewing and processing your own Reddit comments and po
 
 All three modes are enabled in official builds after maintainer-confirmed live anonymization/deletion and release approval. The detailed live post/interruption matrix remains incomplete; see [the evidence and remaining checks](docs/DELETION-VALIDATION.md). Automated fixtures are kept for development; production has no sample-data mode.
 
-A failed delete after verified anonymization is reported as partial. An ambiguous submitted action is uncertain and is never replayed automatically. Stop prevents new actions; submitted actions may finish. Neither operation can erase external copies, caches, archives or quotations.
+A failed delete after verified anonymization is reported as partial. An ambiguous submitted action is uncertain and is never replayed automatically. Isolated verification failures are left for review while the confirmed batch continues; account/permission changes, an outstanding native request and exhausted connection recovery still stop the batch. Stop prevents new actions; submitted actions may finish. Neither operation can erase external copies, caches, archives or quotations.
 
 ## Install and use
 

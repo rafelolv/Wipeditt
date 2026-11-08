@@ -33,3 +33,7 @@ On November 7, 2026, the maintainer confirmed both anonymization and deletion ve
 ## 1.0.3 regression coverage
 
 The edit regression is reproduced with Markdown whose rendered link label differs from its raw textarea source. Unit cases cover completed native requests, delayed fresh reads, stale editor UI and unchanged source without replay. Electron cases use the default Markdown replacement for combined comment/text-post operations and reject non-persisted edits without deleting. UI coverage adds five-minute expiry/refresh without writes, last-report retention, account-bound inspection after preview disposal, dark/light dropdown options and result-card alignment. All automatic mutations remain confined to isolated synthetic HTTPS fixtures.
+
+## Version 1.0.4 recovery and batch isolation
+
+Synthetic coverage includes a 300-item confirmed combined batch with one uncertain edit, 299 verified deletions, no deletion of the uncertain item and no repeated edit. Additional cases cover fatal uncertainty stopping later writes, offline read recovery and exhaustion, failed navigation retaining its URL, completed transport failure reconciled by fresh source, and stale deletion UI followed by original verification. Native request observation allows 30 seconds; local account checks stay serial without consuming network pacing. Existing live evidence remains unchanged; no real account was accessed for this change.

@@ -10,12 +10,11 @@ export class RedditBrowser {
     Object.assign(this, { contents, scheduler, writeTracker, deletionEnabled, onBrowser, now, sleeper });
     this.links = new Map();
     this.emptyDeletionProofs = new Map();
-    this.lastURL = '';
   }
   async navigate(value, signal, { force = false } = {}) {
     checkAbort(signal);
     const url = redditURL(value).href;
-    if (!force && this.contents.getURL() === url && !this.contents.isLoadingMainFrame()) return;
+    if (!force && !this.needsReload && this.contents.getURL() === url && !this.contents.isLoadingMainFrame()) return;
     let timer;
     const stop = () => this.contents.stop();
     signal?.addEventListener('abort', stop, { once: true });
@@ -26,10 +25,12 @@ export class RedditBrowser {
       ]);
       checkAbort(signal);
       redditURL(this.contents.getURL());
-      this.lastURL = url;
+      this.needsReload = false;
     } catch (error) {
+      this.needsReload = true;
       checkAbort(signal);
       if (error instanceof AppError) throw error;
+      if (['ERR_INTERNET_DISCONNECTED', 'ERR_NETWORK_CHANGED', 'ERR_CONNECTION_RESET', 'ERR_CONNECTION_CLOSED', 'ERR_CONNECTION_TIMED_OUT', 'ERR_NAME_NOT_RESOLVED'].includes(error.code)) throw new AppError('NETWORK', 'Connection interrupted. Waiting to retry a safe read.');
       throw new AppError('NAVIGATION', 'Reddit page could not be loaded. Open the browser to review the connection.');
     } finally { clearTimeout(timer); signal?.removeEventListener('abort', stop); }
   }
@@ -59,7 +60,7 @@ export class RedditBrowser {
       return this.identity;
     }, { signal });
   }
-  account({ signal } = {}) { return this.scheduler.request(() => this.dom('account'), { signal }); }
+  account({ signal } = {}) { return this.scheduler.request(() => this.dom('account'), { signal, local: true }); }
   async page({ account, after, type, mode = 'anonymize', signal }) {
     const listing = type === 'comment' ? 'comments' : type === 'post' ? 'submitted' : 'overview';
     const url = after ? historyURL(after, account) : `${REDDIT_CLASSIC}/user/${encodeURIComponent(account.name)}/${listing}/?sort=new`;
@@ -116,14 +117,17 @@ export class RedditBrowser {
     if (!this.writeTracker) fail('EDIT_UNVERIFIED', 'Native request observation is unavailable.');
     // Each retry starts with a fresh server-rendered page and verifies current account/author.
     await this.scheduler.request(async () => {
-      await this.getRaw(id, signal, { fresh: true });
       await this.dom('prepare-edit', { id, expected });
       await this.sleeper(150, signal);
       const receipt = this.writeTracker.begin();
       try {
         beforeDispatch?.();
         await this.dom('submit-edit', { id, text, expected });
-        await this.writeTracker.wait(receipt, { signal });
+        try { await this.writeTracker.wait(receipt, { signal }); }
+        catch (error) {
+          if (error.code !== 'UNCERTAIN' || !receipt.seen || receipt.pending?.size !== 0) throw error;
+          // A failed transport can still have saved remotely. Read, never resubmit.
+        }
       } finally { this.writeTracker.end(receipt); }
       const deadline = this.now() + 5000;
       while (this.now() < deadline) {
@@ -140,7 +144,7 @@ export class RedditBrowser {
       // Some layouts leave stale editor UI after a completed native request.
       // Only the fresh source below decides whether the edit actually saved.
       return { acknowledged: true };
-    }, { signal, write: true });
+    }, { signal, write: true, before: [() => this.getRaw(id, signal, { fresh: true, focused: true })] });
     // A fresh navigation is mandatory: hiding an editor is not proof of persisted success.
     let verified, reason = 'EDIT_SOURCE_MISMATCH';
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -148,20 +152,19 @@ export class RedditBrowser {
       try { verified = await this.scheduler.request(() => this.getRaw(id, signal, { fresh: true, focused: true }), { signal }); }
       catch (error) {
         reason = 'EDIT_ORIGINAL_UNAVAILABLE';
-        if (!['CONTENT_UNAVAILABLE', 'NAVIGATION', 'TIMEOUT'].includes(error.code)) throw new AppError('UNCERTAIN', 'The submitted edit could not be verified. Inspect its original.', { fatal: true, reason });
+        if (!['CONTENT_UNAVAILABLE', 'NAVIGATION', 'TIMEOUT'].includes(error.code)) throw new AppError('UNCERTAIN', 'The submitted edit could not be verified. Inspect its original.', { fatal: error.fatal || ['AUTH', 'ACCOUNT_CHANGED', 'OWNERSHIP', 'PERMISSION'].includes(error.code), reason });
       }
       if (verified?.text === text) return { acknowledged: true };
       if (attempt < 2) await this.sleeper(500 * (attempt + 1), signal);
     }
-    throw new AppError('UNCERTAIN', 'The saved source could not be verified. No edit will be repeated automatically.', { fatal: true, reason: verified ? 'EDIT_SOURCE_MISMATCH' : reason });
+    throw new AppError('UNCERTAIN', 'The saved source could not be verified. No edit will be repeated automatically.', { reason: verified ? 'EDIT_SOURCE_MISMATCH' : reason });
   }
   async delete(id, expected, replacement, { signal, beforeDispatch } = {}) {
     if (!this.deletionEnabled) fail('DELETION_UNVERIFIED', 'Deletion requires independently validated support or the explicit development testing gate.');
     if (!this.writeTracker) fail('DELETION_UNVERIFIED', 'Native request observation is unavailable.');
     this.emptyDeletionProofs.delete(id);
+    let nativeDeleteReceipt = false;
     await this.scheduler.request(async () => {
-      const current = await this.getRaw(id, signal, { fresh: true });
-      if (replacement !== undefined && current.text !== replacement) throw new AppError('EDIT_CHANGED', 'Verified replacement changed. No deletion was sent.', { status: 400 });
       await this.dom('prepare-delete', { id, expected });
       await this.sleeper(150, signal);
       await this.scheduler.gate(signal);
@@ -169,9 +172,13 @@ export class RedditBrowser {
       try {
         beforeDispatch?.();
         await this.dom('submit-delete', { id, expected, replacement });
-        await this.writeTracker.wait(receipt, { signal });
+        try { await this.writeTracker.wait(receipt, { signal }); nativeDeleteReceipt = true; }
+        catch (error) {
+          if (error.code !== 'UNCERTAIN' || !receipt.seen || receipt.pending?.size !== 0) throw error;
+          // A failed transport can still have saved remotely. Read, never resubmit.
+        }
       } finally { this.writeTracker.end(receipt); }
-      const deadline = this.now() + 30000;
+      const deadline = this.now() + 5000;
       while (this.now() < deadline) {
         checkAbort(signal);
         let status;
@@ -183,15 +190,19 @@ export class RedditBrowser {
         if (status.settled) return;
         await this.sleeper(250, signal);
       }
-      throw new AppError('UNCERTAIN', 'Reddit did not confirm the deletion.', { fatal: true });
-    }, { signal, write: true });
+      // A stale widget cannot replace independent verification of the original.
+      return;
+    }, { signal, write: true, before: [async () => {
+      const current = await this.getRaw(id, signal, { fresh: true, focused: true });
+      if (replacement !== undefined && current.text !== replacement) throw new AppError('EDIT_CHANGED', 'Verified replacement changed. No deletion was sent.', { status: 400 });
+    }] });
     let verified, proofReason, emptyReads = 0;
     for (let attempt = 0; attempt < 3; attempt++) {
       verified = undefined;
-      try { verified = await this.scheduler.request(() => this.getRaw(id, signal, { fresh: true, focused: true, nativeDeleteReceipt: true }), { signal }); }
+      try { verified = await this.scheduler.request(() => this.getRaw(id, signal, { fresh: true, focused: true, nativeDeleteReceipt }), { signal }); }
       catch (error) {
         proofReason = error.reason || 'DELETE_ORIGINAL_UNAVAILABLE';
-        if (!['CONTENT_UNAVAILABLE', 'NAVIGATION', 'TIMEOUT'].includes(error.code)) throw new AppError('UNCERTAIN', 'The submitted deletion could not be verified on its original.', { fatal: true, reason: 'DELETE_ORIGINAL_UNAVAILABLE' });
+        if (!['CONTENT_UNAVAILABLE', 'NAVIGATION', 'TIMEOUT'].includes(error.code)) throw new AppError('UNCERTAIN', 'The submitted deletion could not be verified on its original.', { fatal: error.fatal || ['AUTH', 'ACCOUNT_CHANGED', 'OWNERSHIP', 'PERMISSION'].includes(error.code), reason: 'DELETE_ORIGINAL_UNAVAILABLE' });
       }
       if (verified?.deleted) {
         if (verified.evidence !== 'native-delete-focused-empty-thread') break;
@@ -205,7 +216,7 @@ export class RedditBrowser {
       proofReason ||= 'DELETE_EMPTY_THREAD_UNPROVEN';
       if (attempt < 2) await this.sleeper(500 * (attempt + 1), signal);
     }
-    if (!verified?.deleted) throw new AppError('UNCERTAIN', 'The original did not provide enough evidence to verify deletion. No deletion will be repeated automatically.', { fatal: true, reason: proofReason || 'DELETE_ORIGINAL_UNAVAILABLE' });
+    if (!verified?.deleted) throw new AppError('UNCERTAIN', 'The original did not provide enough evidence to verify deletion. No deletion will be repeated automatically.', { reason: proofReason || 'DELETE_ORIGINAL_UNAVAILABLE' });
     return { acknowledged: true };
   }
 }

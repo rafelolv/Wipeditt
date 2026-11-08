@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.4 — 2026-11-08
+
+- Isolate uncertain items while continuing confirmed batches; retain fatal stops for account changes, pending requests and prolonged network failure.
+- Recover safe reads after temporary connection errors without replaying submitted writes.
+- Verify stale deletion widgets against fresh originals; focus preflight pages and remove network delays from local identity checks.
+- Hide short routine countdowns and classic verification pages; add violet progress feedback and reduced-motion-aware transitions.
+- Remove retired sample branches, unused helpers and the obsolete ZIP builder.
+- See [release notes](docs/releases/v1.0.4.md) for validation and limits. Earlier stable release notes remain in docs/releases/.
+
 ## 1.0.0-rc.2 — 2026-11-07
 
 - Fix verification of classic Reddit deleted roots that omit identity attributes and use an em deleted-author marker.

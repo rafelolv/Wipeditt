@@ -53,9 +53,9 @@ function startLoginWatch() {
   loginSettledAt = Date.now();
   loginRetryAt = 0;
   loginWatch = setInterval(async () => {
-    if (!controller?.awaitingLogin || controller.busy || controller.account || controller.simulation || !browserVisible) return;
+    if (!controller?.awaitingLogin || controller.busy || controller.account) return;
     if (loginProbe || Date.now() < loginRetryAt) return;
-    if (!redditView || redditView.webContents.isDestroyed()) return;
+    if (!redditView || redditView.webContents.isDestroyed() || redditView.webContents.isLoadingMainFrame()) return;
     let url;
     try { url = redditURL(redditView.webContents.getURL()); } catch { return; }
     // Stay quiet while Reddit is still asking for credentials or a second factor.
@@ -66,13 +66,16 @@ function startLoginWatch() {
     try {
       if (url.hostname === 'old.reddit.com') {
         const account = await browser.adapter.account().catch(() => null);
-        if (!account) { loginSettledAt = Date.now(); return; }
+        if (!account) { browserVisible = true; controller.browserVisible = true; layout(); controller.emit(); loginSettledAt = Date.now(); return; }
         if (controller.busy || !controller.awaitingLogin) return;
         controller.status = `Signed in as u/${account.name}. Verifying…`; controller.emit();
       }
+      browser.hide(); controller.browserVisible = false;
+      controller.status = 'Verifying your Reddit account…'; controller.emit();
       await controller.command('verify-account');
       stopLoginWatch();
     } catch {
+      browserVisible = true; controller.browserVisible = true; layout(); controller.emit();
       loginRetryAt = Date.now() + 15000;
       loginSettledAt = Date.now();
     } finally { loginProbe = false; }
@@ -99,6 +102,14 @@ const browser = {
     });
     redditView = new WebContentsView({ webPreferences: { ...REMOTE_PREFERENCES, session: activeSession } });
     safeRemote(redditView.webContents);
+    redditView.webContents.on('did-navigate', (_event, value) => {
+      if (!controller?.awaitingLogin) return;
+      let target;
+      try { target = redditURL(value); } catch { return; }
+      if (target.hostname !== 'old.reddit.com' || loginPage(target)) return;
+      browser.hide(); controller.browserVisible = false;
+      controller.status = 'Verifying your Reddit account…'; controller.emit();
+    });
     const writeTracker = new NativeWriteTracker({ contentsId: redditView.webContents.id });
     const nativeRequests = { urls: ['https://*.reddit.com/*'] };
     activeSession.webRequest.onBeforeRequest(nativeRequests, (details, callback) => { writeTracker.before(details); callback({}); });

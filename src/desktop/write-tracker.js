@@ -26,7 +26,7 @@ export class NativeWriteTracker {
     active.completed++; active.failures.push(null); active.changedAt = this.now();
   }
   async wait(ticket, { signal } = {}) {
-    const deadline = this.now() + 15000;
+    const deadline = this.now() + 30000;
     while (this.active === ticket && this.now() < deadline) {
       checkAbort(signal);
       if (ticket.seen && !ticket.pending.size && this.now() - ticket.changedAt >= 750) {

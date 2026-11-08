@@ -149,7 +149,7 @@ export function redditPage(operation, input = {}) {
     return { data: { submitted: true } };
   }
   if (operation === 'delete-status') {
-    const errors = [...node.querySelectorAll('.error')].filter(child => child.closest('.thing') === node && !child.matches('.option.error') && !child.matches('.option.error') && visible(child) && child.textContent.trim());
+    const errors = [...node.querySelectorAll('.error')].filter(child => child.closest('.thing') === node && !child.matches('.option.error') && visible(child) && child.textContent.trim());
     const message = errors.map(child => child.textContent).join(' ').toLowerCase();
     if (/sign in|logged in|session expired/.test(message)) return result('AUTH', 'Reddit authorization is no longer available.', { status: 401, fatal: true });
     if (/permission|forbidden|not authorized/.test(message)) return result('PERMISSION', 'Reddit denied permission for this operation.', { status: 403, fatal: true });

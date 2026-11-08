@@ -60,7 +60,7 @@ try{
   assert.equal(await application.evaluate(()=>globalThis.fixture.writes.length),1);assert.equal(await application.evaluate(()=>globalThis.fixture.deletions.length),0);
   await configure({mode:'combined',delay:60000});await confirm();await page.locator('#progress-counts').filter({hasText:'waiting'}).waitFor({timeout:30000});await page.locator('#stop').click();await finished();assert.match(await page.locator('#finished-summary').textContent(),/partial/);assert.equal(await application.evaluate(()=>globalThis.fixture.deletions.length),0);
   await configure({outcome:'missing'});await confirm();await finished();assert.match(await page.locator('#finished-summary').textContent(),/uncertain/);assert.equal(await application.evaluate(()=>globalThis.fixture.deletions.length),1);
-  assert.match(await page.locator('#finished-title').textContent(),/Verification incomplete/);assert.equal(await page.locator('#finished-help').isVisible(),true);assert.equal(await page.locator('#finished-mark').textContent(),'!');
+  assert.match(await page.locator('#finished-title').textContent(),/Some items need review/);assert.equal(await page.locator('#finished-help').isVisible(),true);assert.equal(await page.locator('#finished-mark').textContent(),'!');
   await configure({mode:'combined',editPersists:false});await confirm();await finished();
   assert.match(await page.locator('#finished-summary').textContent(),/uncertain/);
   assert.equal(await application.evaluate(()=>globalThis.fixture.writes.length),1);

@@ -76,7 +76,7 @@ test('desktop respects adapter capabilities and exposes no demo command', async 
   const { desktop } = controller();
   await desktop.command('connect'); await desktop.command('verify-account');
   await assert.rejects(desktop.command('scan', { options: { mode: 'delete' } }), { code: 'DELETION_UNVERIFIED' });
-  await assert.rejects(desktop.command('demo'), { code: 'COMMAND' }); assert.equal(desktop.simulation, false);
+  await assert.rejects(desktop.command('demo'), { code: 'COMMAND' }); assert.equal(Object.hasOwn(desktop.snapshot(), 'simulation'), false);
   await desktop.command('disconnect'); assert.equal(desktop.account, null);
   assert.equal(desktop.snapshot().preview, null);
 });

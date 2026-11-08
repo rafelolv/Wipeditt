@@ -220,7 +220,8 @@ function render(next) {
   $('update-status').dataset.tone = outcomeTone(update?.status);
   $('check-updates').classList.toggle('update-available', !!update?.available);
   const preview = state.preview;
-  const busy = !!state.busy;
+  const busy = !!state.busy || !!state.verifyingLogin;
+  document.body.dataset.working = String(busy && !state.paused);
   const connected = !!state.account;
   const finished = !!state.finished;
   if (!connected) { needsRefresh = false; lastSearchSource = 'live'; lastPreviewCreated = null; }
@@ -255,7 +256,6 @@ function render(next) {
   $('progress-section').hidden = !busy || !!state.browserVisible;
   $('finished').hidden = !finished || busy || !!state.browserVisible;
   $('review-section').hidden = !preview || busy || !!state.browserVisible;
-  $('import-card').hidden = !!state.simulation;
 
   const heading = state.browserVisible ? 'Your Reddit browser'
     : preview ? 'Review before you replace.'
@@ -284,8 +284,8 @@ function render(next) {
 
   for (const node of document.querySelectorAll('button,input,textarea,select')) node.disabled = busy;
   $('check-updates').disabled = busy || update?.status === 'checking';
-  $('stop').disabled = !busy;
-  $('pause').disabled = !busy;
+  $('stop').disabled = !state.busy;
+  $('pause').disabled = !state.busy;
   $('pause').textContent = state.paused ? 'Resume' : 'Pause';
   $('privacy').disabled = false;
   $('theme').disabled = false;
@@ -296,7 +296,7 @@ function render(next) {
 
   if (busy) {
     const progress = state.progress;
-    $('progress-title').textContent = progress ? 'Applying your changes' : 'Finding your history';
+    $('progress-title').textContent = !connected ? 'Verifying your Reddit account' : progress ? 'Applying your changes' : 'Finding your history';
     $('progress-help').textContent = progress
       ? 'Pause waits between actions. Stop prevents new actions; edits already sent may finish.'
       : 'Searching is read only. You will review the results next.';
@@ -324,7 +324,7 @@ function render(next) {
     $('finished-mark').textContent = tone === 'success' ? '✓' : tone === 'neutral' ? '—' : '!';
     $('finished-label').textContent = tone === 'warning' || tone === 'danger' ? 'REVIEW NEEDED' : 'FINISHED';
     $('finished-help').hidden = !counts.uncertain;
-    $('finished-title').textContent = counts.uncertain ? 'Verification incomplete. Operation stopped.' : state.finished.stopped ? 'Operation stopped.' : counts.failed ? 'Finished with errors.' : counts.partial ? 'Partially completed.' : 'Operation finished.';
+    $('finished-title').textContent = counts.uncertain ? state.finished.stopped ? 'Verification incomplete. Operation stopped.' : 'Finished. Some items need review.' : state.finished.stopped ? 'Operation stopped.' : counts.failed ? 'Finished with errors.' : counts.partial ? 'Partially completed.' : 'Operation finished.';
     $('finished-summary').replaceChildren(Object.keys(counts).length ? '' : 'No changes', ...Object.entries(counts).flatMap(([outcome, count], index) => [index ? ' · ' : '', el('span', { 'data-tone': outcomeTone(outcome), text: `${count} ${outcome}` })]), ` · ${Math.max(1, Math.round((state.finished.elapsedMs || 0) / 1000))}s`);
     for (const [id, count, requested] of [['finished-anonymized', state.finished.anonymized, state.finished.mode !== 'delete'], ['finished-deleted', state.finished.deleted, state.finished.mode !== 'anonymize']]) {
       $(id).textContent = requested ? `${count || 0} verified` : 'Not requested';

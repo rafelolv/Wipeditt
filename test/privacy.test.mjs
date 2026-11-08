@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Checkpoints } from '../src/checkpoint.js';
 import { makeReport } from '../src/report.js';
-import { safeLink } from '../src/ui/dom.js';
+import { redditURL } from '../src/desktop/policy.js';
 import { setup, item, run } from './helpers.mjs';
 
 test('checkpoint recovery minimizes data, expires and never resumes pending writes', () => {
@@ -28,8 +28,8 @@ test('reports never contain original, replacement, account, subreddit or sensiti
   assert.equal(report.counts.anonymized, 1);
 });
 test('external or script links cannot be rendered as original content links', () => {
-  for (const bad of ['javascript:alert(1)', 'https://evil.com/x', 'https://www.reddit.com.evil.com/', 'https://evil@www.reddit.com/', 'http://www.reddit.com/x']) assert.equal(safeLink(bad), null);
-  assert.equal(safeLink('/r/privacy/comments/example'), 'https://www.reddit.com/r/privacy/comments/example');
+  for (const bad of ['javascript:alert(1)', 'https://evil.com/x', 'https://www.reddit.com.evil.com/', 'https://evil@www.reddit.com/', 'http://www.reddit.com/x']) assert.throws(() => redditURL(bad));
+  assert.equal(redditURL('https://www.reddit.com/r/privacy/comments/example').hostname, 'www.reddit.com');
 });
 
 test('checkpoint retains only stage statuses and makes interrupted deletion uncertain', () => {

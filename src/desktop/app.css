@@ -15,7 +15,7 @@
   --success:#4ade80;
   --warning:#fbbf24;
   --danger:#ff6b7a;
-  --info:#7db5ff;
+  --info:#d4c5f9;
   --sidebar:218px;
   font:
     14px/1.55 Inter,
@@ -43,7 +43,7 @@ body:not(.dark) {
   --success:#13783a;
   --warning:#895408;
   --danger:#b42334;
-  --info:#245db3;
+  --info:#654494;
 }
 * {
   box-sizing: border-box;
@@ -1071,3 +1071,12 @@ select option, select optgroup { background-color:var(--input); color:var(--text
   .sidebar-bottom { padding-top:16px; gap:8px; }
   .updates-panel { margin-top:4px; padding:10px; }
 }
+
+#status { transition:color 180ms ease, background-color 180ms ease; }
+.item:hover { transform:translateX(2px); }
+.item { transition:transform 160ms ease, background-color 160ms ease, border-color 160ms ease; }
+@media (prefers-reduced-motion:reduce) { .item:hover { transform:none; } }
+
+#review-section:not([hidden]), #progress-section:not([hidden]), #scan-section:not([hidden]) { animation:surface-enter 220ms ease-out; }
+progress::-webkit-progress-value { background:var(--info); transition:width 300ms ease; }
+body[data-working="true"] #progress-title::after { content:""; display:inline-block; width:12px; height:12px; margin-left:12px; border:2px solid var(--info); border-right-color:transparent; border-radius:50%; animation:update-spin 900ms linear infinite; }

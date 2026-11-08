@@ -1,6 +1,6 @@
 import { AppError, checkAbort, sleep } from './errors.js';
 
-// Every adapter operation is serialized, including identity checks and verification reads.
+// Serialize all operations; only network work consumes the request interval.
 export class Scheduler {
   constructor({ interval = 1500, now = Date.now, sleeper = sleep, onWait = () => {} } = {}) {
     this.interval = interval;
@@ -8,6 +8,7 @@ export class Scheduler {
     this.sleeper = sleeper;
     this.onWait = onWait;
     this.next = 0;
+    this.waitReason = null;
     this.paused = false;
     this.tail = Promise.resolve();
     this.stats = { requests: 0, retries: 0, throttles: 0, waitedMs: 0 };
@@ -28,26 +29,27 @@ export class Scheduler {
       if (Number.isFinite(until)) this.next = Math.max(this.next, until);
     }
   }
-  async gate(signal) {
+  async gate(signal, { local = false } = {}) {
     for (;;) {
       checkAbort(signal);
-      const remaining = this.next - this.now();
-      if (!this.paused && remaining <= 0) return;
+      const remaining = local ? 0 : this.next - this.now();
+      if (!this.paused && remaining <= 0) { this.onWait(null); return; }
       const ms = this.paused ? 100 : Math.min(remaining, 250);
-      this.onWait({ reason: this.paused ? 'Paused' : 'Request interval or server cooldown', remaining: Math.max(0, remaining) });
+      this.onWait({ reason: this.paused ? 'Paused' : (this.waitReason || 'Waiting for Reddit'), remaining: Math.max(0, remaining) });
       await this.sleeper(ms, signal);
       this.stats.waitedMs += ms;
     }
   }
-  async perform(task, { signal, write = false, before = [] } = {}) {
+  async perform(task, { signal, write = false, local = false, before = [] } = {}) {
     for (let attempt = 0; ; attempt++) {
       for (const guard of before) await this.perform(guard, { signal });
-      await this.gate(signal);
+      await this.gate(signal, { local });
       checkAbort(signal);
-      this.stats.requests++;
+      if (!local) this.stats.requests++;
       try {
         const result = await task();
         this.observe(result?.headers);
+        this.waitReason = null;
         return result && typeof result === 'object' && Object.hasOwn(result, 'data') ? result.data : result;
       } catch (error) {
         this.observe(error.headers);
@@ -60,11 +62,16 @@ export class Scheduler {
         const transient = !status || status >= 500;
         // Retrying a submitted write after transport failure could duplicate an operation.
         if (write && !throttle && transient) throw new AppError('UNCERTAIN', 'Write outcome unknown. Verify current state before trying again.');
-        if (attempt >= 3 || (!throttle && !transient)) throw error;
+        const network = error.code === 'NETWORK';
+        if (attempt >= (network && !write ? 6 : 3) || (!throttle && !transient)) {
+          if (network) error.fatal = true;
+          throw error;
+        }
         this.stats.retries++;
-        this.next = Math.max(this.next, this.now() + (throttle ? 60000 : 1000 * 2 ** attempt));
+        this.waitReason = network ? 'Connection interrupted. Retrying safe read' : throttle ? 'Reddit requested a cooldown' : 'Retrying safe read';
+        this.next = Math.max(this.next, this.now() + (throttle ? 60000 : Math.min(network ? 30000 : 8000, (network ? 5000 : 1000) * 2 ** attempt)));
       } finally {
-        this.next = Math.max(this.next, this.now() + this.interval);
+        if (!local) this.next = Math.max(this.next, this.now() + this.interval);
       }
     }
   }

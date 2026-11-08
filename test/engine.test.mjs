@@ -198,3 +198,31 @@ test('imported comments use the same filters, ownership checks and confirmation 
   assert.equal(result.source, 'import');
   assert.equal(adapter.items[0].text, 'This comment was anonymized using Wipeditt, a free and open-source tool.\n\n[Wipeditt](https://github.com/rafelolv/Wipeditt)');
 });
+
+
+test('fatal uncertainty stops the batch while isolated uncertainty does not replay', async () => {
+  for (const fatal of [false, true]) {
+    const { engine, adapter } = setup([item(), item({ id: 't1_next' })]);
+    const edit = adapter.edit.bind(adapter); const calls = [];
+    adapter.edit = async (id, ...rest) => { calls.push(id); if (id === item().id) throw new AppError('UNCERTAIN', 'Unknown', { fatal }); return edit(id, ...rest); };
+    const result = await run(engine);
+    assert.equal(result.stopped, fatal);
+    assert.deepEqual(calls, fatal ? [item().id] : [item().id, 't1_next']);
+    assert.equal(result.records[0].state, 'uncertain');
+  }
+});
+
+
+test('a 300-item confirmed batch isolates one uncertain item and finishes the rest', async () => {
+  const { engine, adapter } = setup(Array.from({ length: 300 }, (_, index) => item({ id: `t1_batch${index}` })));
+  const edit = adapter.edit.bind(adapter); const remove = adapter.delete.bind(adapter);
+  const edits = [], deletes = [];
+  adapter.edit = async (id, ...rest) => { edits.push(id); if (id === 't1_batch47') throw new AppError('UNCERTAIN', 'Isolated verification failure'); return edit(id, ...rest); };
+  adapter.delete = async (id, ...rest) => { deletes.push(id); return remove(id, ...rest); };
+  const result = await run(engine, { limit: 0, mode: 'combined' });
+  assert.equal(result.stopped, false); assert.equal(result.records.length, 300);
+  assert.equal(result.records.filter(record => record.state === 'deleted').length, 299);
+  assert.equal(result.records[47].state, 'uncertain');
+  assert.equal(edits.length, 300); assert.equal(new Set(edits).size, 300);
+  assert.equal(deletes.length, 299); assert.ok(!deletes.includes('t1_batch47'));
+});

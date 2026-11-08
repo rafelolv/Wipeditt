@@ -76,3 +76,26 @@ test('API body cooldown can exceed generic throttling wait', async () => {
   await scheduler.request(async () => { if (!calls++) throw new AppError('RATELIMIT', 'Cooldown', { retryAfterMs: 180000 }); return true; });
   assert.equal(now(), 180000);
 });
+
+
+test('local checks stay serial without spending or extending network cooldown', async () => {
+  const { scheduler, now } = setup();
+  const order = [];
+  scheduler.observe(new Headers({ 'retry-after': '20' }));
+  await Promise.all([
+    scheduler.request(async () => { order.push('local'); assert.equal(now(), 0); }, { local: true }),
+    scheduler.request(async () => { order.push('network'); assert.equal(now(), 20000); })
+  ]);
+  assert.deepEqual(order, ['local', 'network']);
+  assert.equal(scheduler.stats.requests, 1);
+});
+
+test('temporary offline reads recover with bounded backoff; prolonged outage is fatal', async () => {
+  const { scheduler, now } = setup();
+  let attempts = 0;
+  await scheduler.request(async () => { if (++attempts < 4) throw new AppError('NETWORK', 'Offline'); return true; });
+  assert.equal(attempts, 4); assert.ok(now() >= 35000);
+  attempts = 0;
+  await assert.rejects(scheduler.request(async () => { attempts++; throw new AppError('NETWORK', 'Offline'); }), { code: 'NETWORK', fatal: true });
+  assert.equal(attempts, 7);
+});
