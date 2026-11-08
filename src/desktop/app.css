@@ -77,14 +77,21 @@ button {
   font-weight: 550;
   cursor: pointer;
   white-space: nowrap;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 120ms ease, opacity 160ms ease;
 }
 button:hover:not(:disabled) {
   background: var(--panel-soft);
   border-color: var(--border-strong);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px #0002;
 }
+button:active:not(:disabled) { transform: translateY(0) scale(.98); box-shadow:none; }
+button:focus-visible { box-shadow:0 0 0 4px color-mix(in srgb,var(--text) 12%,transparent); }
 button:disabled {
   opacity: .4;
   cursor: default;
+  transform:none;
+  box-shadow:none;
 }
 button.primary {
   background: var(--text);
@@ -1024,3 +1031,28 @@ body.browser-visible header {
 .update-notice { border-left-color:var(--success); }
 .update-notice strong { color:var(--success); }
 #status[data-tone]:not([data-tone="neutral"]), #update-status[data-tone] { color:var(--result-color,var(--muted)); }
+
+/* Interaction feedback stays local and never changes request timing. */
+input, textarea, select, summary, .item { transition:background-color 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease; }
+input:focus-visible, textarea:focus-visible, select:focus-visible { box-shadow:0 0 0 3px color-mix(in srgb,var(--text) 9%,transparent); }
+#check-updates { position:relative; overflow:hidden; isolation:isolate; }
+#check-updates::before { content:"↻"; display:inline-flex; align-items:center; justify-content:center; width:14px; height:14px; flex:none; font-size:17px; line-height:1; }
+#check-updates::after { content:""; position:absolute; inset:0; pointer-events:none; background:linear-gradient(110deg,transparent 25%,color-mix(in srgb,var(--text) 13%,transparent) 50%,transparent 75%); transform:translateX(-130%); }
+#check-updates:hover:not(:disabled)::after { transform:translateX(130%); transition:transform 550ms ease; }
+#check-updates[data-state="checking"] { opacity:1; cursor:progress; border-color:var(--info); color:var(--info); background:color-mix(in srgb,var(--info) 7%,var(--panel)); }
+#check-updates[data-state="checking"]::before { content:""; width:12px; height:12px; border:2px solid currentColor; border-right-color:transparent; border-radius:50%; animation:update-spin 800ms linear infinite; }
+#check-updates[data-state="current"]::before, #check-updates[data-state="available"]::before { content:"✓"; font-size:14px; color:var(--success); }
+#check-updates[data-state="current"], #check-updates[data-state="available"] { animation:update-confirm 450ms ease-out; }
+#check-updates[data-state="error"]::before { content:"!"; color:var(--danger); }
+#check-updates[data-state="error"] { border-color:var(--danger); }
+dialog[open], .finished-card:not([hidden]), .update-notice:not([hidden]) { animation:surface-enter 180ms ease-out; }
+dialog[open]::backdrop { animation:backdrop-enter 160ms ease-out; }
+@keyframes update-spin { to { transform:rotate(360deg); } }
+@keyframes update-confirm { from { box-shadow:0 0 0 3px color-mix(in srgb,var(--success) 28%,transparent); } to { box-shadow:0 0 0 0 transparent; } }
+@keyframes surface-enter { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
+@keyframes backdrop-enter { from { opacity:0; } to { opacity:1; } }
+@media (prefers-reduced-motion:reduce) {
+  button:hover:not(:disabled), button:active:not(:disabled) { transform:none; }
+  #check-updates::after { display:none; }
+  dialog::backdrop { animation:none !important; }
+}

@@ -190,6 +190,8 @@ function render(next) {
   $('automatic-updates').checked = update?.enabled ?? true;
   $('update-status').textContent = ({ checking: 'Checking releases…', current: 'You are up to date.', available: `Version ${update?.available?.version || ''} is available.`, error: 'Could not check. Try again later.' })[update?.status] || 'Checks public GitHub releases only.';
   $('check-updates').textContent = update?.status === 'checking' ? 'Checking…' : 'Check for updates';
+  $('check-updates').dataset.state = update?.status || 'idle';
+  $('check-updates').setAttribute('aria-busy', String(update?.status === 'checking'));
   $('update-status').dataset.tone = outcomeTone(update?.status);
   $('check-updates').classList.toggle('update-available', !!update?.available);
   const preview = state.preview;
