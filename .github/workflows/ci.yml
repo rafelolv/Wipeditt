@@ -36,3 +36,5 @@ jobs:
         run: npm run test:ui
       - name: Build native installer
         run: npm run package -- --${{ matrix.platform }} --${{ matrix.arch }}
+      - name: Validate packaged updater
+        run: node build/check-updater-package.mjs
