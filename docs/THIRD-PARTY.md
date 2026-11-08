@@ -7,3 +7,5 @@ The desktop runtime includes Electron (MIT), Chromium and its independently lice
 Build/test tools are not part of Wipeditt's original material: esbuild (MIT), Playwright (Apache-2.0), electron-builder (MIT), @resvg/resvg-js (MPL-2.0), and their dependencies retain their own licenses. The locked npm packages contain their notices. The resvg library is used only to generate original Wipeditt PNG icons and is not bundled into application code.
 
 Reddit websites loaded in the isolated browser are remote services governed by their respective terms and copyrights. Their executable code is not copied into Wipeditt's privileged application runtime. No Redact or Reddit implementation code has been copied into Wipeditt.
+
+The integrated updater uses electron-updater (MIT) and its independently licensed runtime dependencies. Their complete packaged license texts are also collected in UPDATER-NOTICES.txt and available through License & source. Updates use the official repository's public release metadata and SHA256 asset digests; no independent publisher signing certificate is currently configured.

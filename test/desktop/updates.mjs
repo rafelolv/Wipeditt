@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { verifyNativeUpdater, verifyInstallerUI } from './updater.mjs';
 export async function verifyUpdateNotice(application, page) {
   await page.emulateMedia({reducedMotion:'no-preference'});
   await application.evaluate(({ shell }) => {
@@ -43,7 +44,18 @@ export async function verifyUpdateNotice(application, page) {
   assert.deepEqual(await application.evaluate(()=>globalThis.updateFixture.opened),['https://github.com/rafelolv/Wipeditt/releases/tag/v9.0.0']);
   await page.locator('#check-updates').click();
   assert.equal(await application.evaluate(()=>globalThis.updateFixture.requests),1);
+  assert.doesNotMatch(await page.locator('#author-link').textContent(), /warranty/i);
+  await page.locator('#author-link').click();
+  assert.equal(await application.evaluate(()=>globalThis.updateFixture.opened.at(-1)), 'https://github.com/rafelolv/Wipeditt');
+  await page.locator('.tools').evaluate(node=>{node.open=true;});
+  await page.locator('#show-license').click();
+  assert.equal(await page.locator('#legal-dialog').evaluate(node=>node.open), true);
+  assert.match(await page.locator('#legal-dialog').textContent(), /no warranty/i);
+  await page.waitForFunction(() => document.getElementById('legal-dialog').getAnimations().every(animation => animation.playState !== 'running'));
+  await page.locator('#close-legal').click();
   await page.locator('.tools').evaluate(node=>{node.open=false;});
   await page.emulateMedia({reducedMotion:null});
+  await verifyNativeUpdater(application);
+  await verifyInstallerUI(application, page);
   console.log('Update notice passed: fixed GitHub metadata, no credentials, published version label, manual check with automatic checks disabled, throttling and official release link.');
 }

@@ -1,6 +1,6 @@
 {
   "name": "wipeditt",
-  "version": "1.0.6",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "description": "Local desktop app for reviewing, anonymizing and deleting your own Reddit history",
@@ -60,6 +60,10 @@
       {
         "from": "NOTICE",
         "to": "NOTICE"
+      },
+      {
+        "from": "app/UPDATER-NOTICES.txt",
+        "to": "UPDATER-NOTICES.txt"
       }
     ],
     "asar": true,
@@ -100,7 +104,15 @@
       "perMachine": false,
       "allowToChangeInstallationDirectory": true
     },
-    "electronDist": "node_modules/electron/dist"
+    "electronDist": "node_modules/electron/dist",
+    "publish": {
+      "provider": "github",
+      "owner": "rafelolv",
+      "repo": "Wipeditt"
+    }
   },
-  "desktopName": "Wipeditt"
+  "desktopName": "Wipeditt",
+  "dependencies": {
+    "electron-updater": "6.8.11"
+  }
 }

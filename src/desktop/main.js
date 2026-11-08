@@ -10,6 +10,7 @@ import { REDDIT_CLASSIC, REMOTE_PREFERENCES, redditURL, trustedSender, loginNavi
 import { NativeWriteTracker } from './write-tracker.js';
 import { deletionCapability, DELETION_VALIDATED } from './capabilities.js';
 import { UpdateChecker } from './updates.js';
+import { UpdateInstaller, createNativeUpdater, supportsIntegratedUpdates } from './update-installer.js';
 import { parseCommentsCSV } from './import.js';
 import { fail } from '../errors.js';
 
@@ -175,6 +176,14 @@ if (acquired) app.whenReady().then(async () => {
     openOriginal: async value => { const url = redditURL(value); if (!['www.reddit.com', 'old.reddit.com', 'reddit.com'].includes(url.hostname)) throw new Error('Invalid original link.'); await shell.openExternal(url.href); }
   });
   const updates = new UpdateChecker({ version: app.getVersion(), settingsPath: join(app.getPath('userData'), 'updates-v1.json'), onChange: () => controller.emit() });
+  const installer = new UpdateInstaller({
+    version: app.getVersion(),
+    supported: supportsIntegratedUpdates({ packaged: app.isPackaged, platform: process.platform, arch: process.arch, appImage: process.env.APPIMAGE, appDir: process.env.APPDIR, executable: process.execPath }),
+    canInstall: () => !controller.busy && !controller.awaitingLogin && !controller.browserVisible,
+    createUpdater: target => createNativeUpdater(require('electron-updater'), target, process.platform),
+    onChange: () => controller.emit()
+  });
+  updates.installer = installer;
   controller.updates = updates;
   controller.deletionValidated = DELETION_VALIDATED;
   controller.deletionTesting = !DELETION_VALIDATED && deletionCapability({ packaged: app.isPackaged, developmentFlag: process.env.WIPEDITT_ENABLE_DELETION });
@@ -182,7 +191,10 @@ if (acquired) app.whenReady().then(async () => {
     if (!trustedSender(event, window, appURL)) return { error: { code: 'IPC', message: 'Request origin refused.' } };
     try {
       if (!request || typeof request.name !== 'string' || !request.data || typeof request.data !== 'object') throw new Error('Invalid command.');
-      if (request.name === 'read-license') return { data: { license: await readFile(join(__dirname, 'LICENSE'), 'utf8'), notice: await readFile(join(__dirname, 'NOTICE'), 'utf8') } };
+      if (installer.snapshot().status === 'installing') throw new Error('Update installation is in progress.');
+      if (request.name === 'download-update') { await installer.download(updates.snapshot().available); return { data: null }; }
+      if (request.name === 'install-update') { await installer.install(); return { data: null }; }
+      if (request.name === 'read-license') return { data: { license: await readFile(join(__dirname, 'LICENSE'), 'utf8'), notice: await readFile(join(__dirname, 'NOTICE'), 'utf8') + '\n\n' + await readFile(join(__dirname, 'UPDATER-NOTICES.txt'), 'utf8') } };
       if (request.name === 'open-source') { await shell.openExternal('https://github.com/rafelolv/Wipeditt'); return { data: null }; }
       if (request.name === 'check-updates') return { data: await updates.check({ manual: true }) };
       if (request.name === 'update-settings') { updates.setEnabled(request.data.enabled); return { data: updates.snapshot() }; }
@@ -199,7 +211,7 @@ if (acquired) app.whenReady().then(async () => {
   // Development and fixture runs never contact GitHub automatically.
   if (app.isPackaged) {
     void updates.check();
-    const timer = setInterval(() => { if (!controller.busy) void updates.check(); }, 3600000);
+    const timer = setInterval(() => { if (!controller.busy && installer.snapshot().status !== 'installing') void updates.check(); }, 3600000);
     timer.unref(); app.on('before-quit', () => clearInterval(timer));
   }
 });

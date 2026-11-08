@@ -39,6 +39,14 @@ jobs:
         run: node build/check-release.mjs
       - name: Build native installer
         run: npm run package -- --${{ matrix.platform }} --${{ matrix.arch }}
+      - name: Validate packaged updater
+        run: node build/check-updater-package.mjs
+      - name: Packaged updater fixture (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node test/desktop/packaged-updater.mjs
+      - name: Packaged updater fixture (Windows)
+        if: runner.os != 'Linux'
+        run: node test/desktop/packaged-updater.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: desktop-${{ matrix.platform }}-${{ matrix.arch }}

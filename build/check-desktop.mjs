@@ -23,4 +23,7 @@ assert.ok(!(await readFile('app/index.html', 'utf8')).includes('Try sample data'
 assert.ok(!main.includes('api/v1/access_token'));
 assert.deepEqual(await readFile('app/NOTICE'), await readFile('NOTICE'));
 await readFile('app/icon.png');
+assert.match(await readFile('app/UPDATER-NOTICES.txt', 'utf8'), /electron-updater 6\.8\.11/);
+assert.ok(pkg.dependencies['electron-updater']);
+assert.deepEqual(pkg.build.publish, { provider: 'github', owner: 'rafelolv', repo: 'Wipeditt' });
 console.log('Desktop versions, license, syntax, CSP, isolated browser preferences and retired OAuth path checks passed.');

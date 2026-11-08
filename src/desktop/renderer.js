@@ -99,13 +99,13 @@ function previewExpired() {
   return !!state?.preview && Date.now() > state.preview.expiresAt;
 }
 function updateRefreshControl() {
-  const available = !!state?.account && !state.busy && !state.browserVisible;
+  const available = !!state?.account && !state.busy && !state.browserVisible && state.updates?.installer?.status !== 'installing';
   $('refresh-results').hidden = !available || !(state.preview || state.finished || needsRefresh);
   $('refresh-results').disabled = !available;
   $('refresh-results').textContent = lastSearchSource === 'import' ? 'Re-import export' : 'Refresh results';
 }
 function showPreviewExpiry() {
-  if (state?.busy || state?.finished || state?.statusError || !previewExpired()) return;
+  if (state?.updates?.installer?.status === 'installing' || state?.busy || state?.finished || state?.statusError || !previewExpired()) return;
   needsRefresh = true;
   setStatus('Results expired. Refresh them before confirming changes.');
   $('status').dataset.tone = 'warning';
@@ -211,7 +211,15 @@ function renderPreview(preview) {
 function render(next) {
   state = next;
   const update = state.updates;
+  const installation = update?.installer;
+  const updating = ['downloading', 'verifying', 'installing'].includes(installation?.status);
+  const canUpdate = !!installation?.supported && !!update?.available?.install;
   $('update-notice').hidden = !update?.available || !!state.browserVisible;
+  $('update-progress').hidden = !['downloading', 'verifying'].includes(installation?.status);
+  $('update-progress').value = installation?.percent || 0;
+  $('download-update').hidden = !canUpdate || ['downloading', 'verifying', 'ready', 'installing'].includes(installation?.status);
+  $('install-update').hidden = installation?.status !== 'ready';
+  $('update-description').textContent = ({ downloading: `Downloading from GitHub · ${installation?.percent || 0}%`, verifying: 'Verifying update integrity…', ready: `Version ${installation?.version || ''} is verified. Install when your Reddit work is finished.`, installing: 'Installing update. Wipeditt will restart…', error: 'Update could not be prepared. Retry or open the official release.' })[installation?.status] || (canUpdate ? 'Download here, then choose Install and restart. Your Reddit work will not be interrupted.' : 'Open the official release to update this package.');
   $('update-title').textContent = update?.available ? `Wipeditt ${update.available.version} is available${update.available.preview ? ' · Preview' : ''}` : 'New version available';
   $('automatic-updates').checked = update?.enabled ?? true;
   $('update-status').textContent = ({ checking: 'Checking releases…', current: 'You are up to date.', available: `Version ${update?.available?.version || ''} is available.`, error: 'Could not check. Try again later.' })[update?.status] || 'Checks public GitHub releases only.';
@@ -284,7 +292,10 @@ function render(next) {
   $('disconnect').hidden = !connected && !state.browserVisible;
 
   for (const node of document.querySelectorAll('button,input,textarea,select')) node.disabled = busy;
-  $('check-updates').disabled = busy || update?.status === 'checking';
+  $('check-updates').disabled = busy || updating || update?.status === 'checking';
+  $('download-update').disabled = busy || updating || !!state.browserVisible;
+  $('install-update').disabled = busy || !!state.browserVisible;
+  $('download-update').setAttribute('aria-busy', String(updating));
   $('stop').disabled = !state.busy;
   $('pause').disabled = !state.busy;
   $('pause').textContent = state.paused ? 'Resume' : 'Pause';
@@ -359,6 +370,7 @@ function render(next) {
   $('activity').replaceChildren(...state.activity.map(item => el('li', { 'data-tone': outcomeTone(item.outcome), text: item.message })));
   updateRefreshControl();
   showPreviewExpiry();
+  if (installation?.status === 'installing') for (const node of document.querySelectorAll('button,input,textarea,select')) node.disabled = true;
 }
 
 setInterval(() => {
@@ -481,6 +493,8 @@ action('clear-checkpoint', 'clear-checkpoint');
 action('stop', 'stop');
 action('check-updates', 'check-updates');
 action('open-update', 'open-update');
+action('download-update', 'download-update');
+action('install-update', 'install-update');
 $('automatic-updates').addEventListener('change', () => command('update-settings', { enabled: $('automatic-updates').checked }).catch(error));
 $('pause').addEventListener('click', () => command(state?.paused ? 'resume' : 'pause').catch(error));
 
@@ -489,5 +503,6 @@ $('show-license').addEventListener('click', async () => {
 });
 $('close-legal').addEventListener('click', () => $('legal-dialog').close());
 action('open-source', 'open-source');
+action('author-link', 'open-source');
 bridge.onState(render);
 command('state').then(render).catch(error);

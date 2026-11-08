@@ -1065,3 +1065,11 @@ select option, select optgroup { background-color:var(--input); color:var(--text
 #review-section:not([hidden]), #progress-section:not([hidden]), #scan-section:not([hidden]) { animation:surface-enter 220ms ease-out; }
 progress::-webkit-progress-value { background:var(--info); transition:width 300ms ease; }
 body[data-working="true"] #progress-title::after { content:""; display:inline-block; width:12px; height:12px; margin-left:12px; border:2px solid var(--info); border-right-color:transparent; border-radius:50%; animation:update-spin 900ms linear infinite; }
+
+#author-link { padding:0; border:0; border-radius:0; font-size:10px; font-weight:400; line-height:1.8; color:var(--muted); justify-content:flex-start; text-align:left; }
+#author-link:hover { color:var(--text); }
+
+.update-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex-shrink:0; }
+#download-update, #install-update { border-color:var(--success); }
+#download-update:disabled[aria-busy="true"] { cursor:progress; }
+@media (max-width:1100px) { .update-notice { flex-wrap:wrap; } }

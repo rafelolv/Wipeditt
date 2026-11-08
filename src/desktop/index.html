@@ -44,7 +44,7 @@
       </details>
       <section class="updates-panel" aria-label="App updates"><strong>App updates</strong><button id="check-updates" class="block">Check for updates</button><small id="update-status" role="status" aria-live="polite"></small></section>
       <small id="version"></small>
-      <small class="credit">By Rafael (rafaelolv)<br>GPLv3 · No warranty</small>
+      <button id="author-link" class="credit quiet">Made by Rafael · GitHub ↗</button>
     </div>
   </aside>
 
@@ -56,7 +56,7 @@
 
     <section id="browser-help" class="notice" hidden><strong>Sign in on Reddit below.</strong> Wipeditt verifies the account automatically. Use <b>Verify account</b> only if verification does not finish.</section>
 
-    <div id="update-notice" class="update-notice" hidden role="status"><div><strong id="update-title">New version available</strong><p>Download the installer from the official release. Nothing is installed automatically.</p></div><button id="open-update">View release</button></div>
+    <div id="update-notice" class="update-notice" hidden role="status"><div><strong id="update-title">New version available</strong><p id="update-description">Download the installer from the official release.</p><progress id="update-progress" max="100" value="0" aria-label="Update download progress" hidden></progress></div><div class="update-actions"><button id="download-update" hidden>Download update</button><button id="install-update" hidden>Install and restart</button><button id="open-update" class="quiet">View release</button></div></div>
     <div id="workspace">
       <div id="statusbar"><p id="status" role="status" aria-live="polite">Connect Reddit to get started.</p><button id="refresh-results" class="quiet" hidden>Refresh results</button></div>
 

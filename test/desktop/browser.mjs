@@ -49,6 +49,7 @@ try {
   await page.locator('#show-license').click();
   await page.waitForFunction(() => document.getElementById('legal-text').textContent.includes('GNU GENERAL PUBLIC LICENSE'));
   assert.match(await page.locator('#legal-text').textContent(), /Rafael/);
+  await page.waitForFunction(() => document.getElementById('legal-dialog').getAnimations().every(animation => animation.playState !== 'running'));
   await page.locator('#close-legal').click();
   await page.locator('.tools').evaluate(node => { node.open = false; });
   await page.locator('#connect').click();

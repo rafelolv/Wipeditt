@@ -47,7 +47,12 @@ export function availableRelease(releases, current, platform, arch) {
         : [];
     const uploaded = new Set((Array.isArray(release.assets) ? release.assets : []).filter(asset => asset?.state === 'uploaded' && asset.size > 0).map(asset => asset.name));
     if (!uploaded.has('SHA256SUMS') || !packageNames.some(name => uploaded.has(name))) continue;
-    if (!newest || compareVersions(tag, newest.version) > 0) newest = { version, preview, url: RELEASE_ROOT + encodeURIComponent(tag) };
+    if (!newest || compareVersions(tag, newest.version) > 0) {
+      newest = { version, preview, url: RELEASE_ROOT + encodeURIComponent(tag) };
+      const name = platform === 'win32' ? packageNames[0] : packageNames.find(name => name.endsWith('.AppImage'));
+      const asset = release.assets.find(asset => asset?.name === name && asset.state === 'uploaded');
+      if (release.prerelease === false && !preview && uploaded.has(`wipeditt-source-v${version}.zip`) && /^sha256:[a-f0-9]{64}$/.test(asset?.digest) && Number.isSafeInteger(asset.size) && asset.size > 0 && asset.size <= 1024 ** 3) newest.install = { name, size: asset.size, digest: asset.digest };
+    }
   }
   return newest;
 }
@@ -81,7 +86,7 @@ export class UpdateChecker {
     this.lastAttempt = null;
     try { const saved = JSON.parse(readFileSync(settingsPath, 'utf8')); if (typeof saved.enabled === 'boolean') this.state.enabled = saved.enabled; } catch { /* First launch or unavailable preference. */ }
   }
-  snapshot() { return structuredClone(this.state); }
+  snapshot() { return { ...structuredClone(this.state), ...(this.installer ? { installer: this.installer.snapshot() } : {}) }; }
   setEnabled(enabled) {
     if (typeof enabled !== 'boolean') throw new Error('Invalid update preference.');
     if (this.settingsPath) {

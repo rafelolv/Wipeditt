@@ -26,7 +26,7 @@ Neither mode removes external archives, backups, screenshots, quotes or caches.
 
 ## Settings
 
-Black-first appearance and optional light mode, privacy masking, reports and checkpoints live in the sidebar. License & source shows GPLv3, copyright, the warranty disclaimer and the source link. New-release checks use fixed public GitHub metadata without Reddit data, can be disabled, and never install updates automatically.
+Black-first appearance and optional light mode, privacy masking, reports and checkpoints live in the sidebar. License & source shows GPLv3, copyright, the warranty disclaimer and the source link. New-release checks use fixed public GitHub metadata without Reddit data, can be disabled, and never install updates on ordinary app quit. On Windows and AppImage, use Download update followed by Install and restart after Reddit work is finished; Debian packages use View release. Install the first updater-enabled version manually once.
 
 Results use green for verified success, red for failures, amber for uncertain/partial/stopped outcomes and violet for actions in progress. Labels and stage counts remain visible alongside the colors. App updates has a visible sidebar button; automatic release checks remain optional in Settings. The default replacement credits Wipeditt with a Reddit Markdown link; you can edit it before confirmation.
 
