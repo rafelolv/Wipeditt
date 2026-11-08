@@ -1,11 +1,12 @@
 # Changelog
 
-## 1.1.0 — 2026-11-08
+## 1.1.1 — 2026-11-08
 
 - Add GitHub-hosted in-app update downloads and explicit install/restart for Windows x64 and Linux AppImage; keep Debian/manual fallback.
 - Verify published artifact digests, constrain download origins and block installation during Reddit operations.
 - Keep automatic checks optional and disable install-on-quit; include updater runtime licenses.
 - Link the author credit to GitHub and keep GPL/warranty information in License & source.
+- Validate nested ASAR entries with native paths on both Windows and Linux.
 
 ## 1.0.6 — 2026-11-08
 
