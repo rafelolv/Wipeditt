@@ -157,3 +157,14 @@ test('failed or canceled login verification restores controls instead of permane
   await desktop.command('verify-account');
   assert.ok(desktop.account);
 });
+
+test('elapsed operation time keeps advancing while the scheduler emits cooldown updates', () => {
+  const { desktop } = controller();
+  desktop.progress = { total: 2, elapsed: 1000, counts: { skipped: 1 } };
+  desktop.progressUpdatedAt = Date.now() - 10000;
+  desktop.busy = true;
+  assert.ok(desktop.snapshot().progress.elapsed >= 11000);
+  assert.equal(desktop.progress.elapsed, 1000, 'snapshot interpolation does not mutate recorded progress');
+  desktop.busy = false;
+  assert.equal(desktop.snapshot().progress.elapsed, 1000);
+});

@@ -8,6 +8,7 @@ import { DesktopController } from './controller.js';
 import { CheckpointStorage } from './storage.js';
 import { REDDIT_CLASSIC, REMOTE_PREFERENCES, redditURL, trustedSender, loginNavigation } from './policy.js';
 import { NativeWriteTracker } from './write-tracker.js';
+import { observeRedditResponse } from './rate-limits.js';
 import { deletionCapability, DELETION_VALIDATED } from './capabilities.js';
 import { UpdateChecker } from './updates.js';
 import { UpdateInstaller, createNativeUpdater, supportsIntegratedUpdates } from './update-installer.js';
@@ -94,13 +95,6 @@ const browser = {
     activeSession.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
     activeSession.setPermissionCheckHandler(() => false);
     const scheduler = new Scheduler();
-    activeSession.webRequest.onHeadersReceived({ urls: ['https://*.reddit.com/*'] }, (details, callback) => {
-      const headers = new Headers();
-      for (const [key, values] of Object.entries(details.responseHeaders || {})) if (['retry-after', 'x-ratelimit-remaining', 'x-ratelimit-reset'].includes(key.toLowerCase())) headers.set(key, values.join(','));
-      scheduler.observe(headers);
-      if (details.statusCode === 429) { scheduler.stats.throttles++; scheduler.next = Math.max(scheduler.next, Date.now() + 60000); }
-      callback({});
-    });
     redditView = new WebContentsView({ webPreferences: { ...REMOTE_PREFERENCES, session: activeSession } });
     safeRemote(redditView.webContents);
     redditView.webContents.on('did-navigate', (_event, value) => {
@@ -112,6 +106,9 @@ const browser = {
     });
     const writeTracker = new NativeWriteTracker({ contentsId: redditView.webContents.id });
     const nativeRequests = { urls: ['https://*.reddit.com/*'] };
+    const observeResponse = details => observeRedditResponse(details, { contentsId: writeTracker.contentsId, writeTracker, scheduler });
+    activeSession.webRequest.onResponseStarted(nativeRequests, observeResponse);
+    activeSession.webRequest.onBeforeRedirect(nativeRequests, observeResponse);
     activeSession.webRequest.onBeforeRequest(nativeRequests, (details, callback) => { writeTracker.before(details); callback({}); });
     activeSession.webRequest.onCompleted(nativeRequests, details => writeTracker.complete(details));
     activeSession.webRequest.onErrorOccurred(nativeRequests, details => writeTracker.error(details));

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.2 — 2026-11-08
+
+- Prevent repeated quota metadata from continually restarting the same server reset window.
+- Observe fresh responses from owned navigations/native writes instead of background resources or cached responses.
+- Identify server cooldowns with automatic-resumption feedback and keep elapsed time advancing during wait updates.
+- Preserve stricter Retry-After/body cooldowns, responsive Stop and protection against ambiguous write replay.
+
 ## 1.2.1 — 2026-11-08
 
 - Restore the v1.1.3 CSV workflow: import, review selected rows and confirm the operation.

@@ -31,6 +31,7 @@ export async function installFixture(application) {
     session.fromPartition('wipeditt-reddit').protocol.handle('https',async request=>{
       const url=new URL(request.url);globalThis.fixture.navigations.push(url.pathname);if(url.pathname.startsWith('/user/'))globalThis.fixture.historyPages.push(url.href);
       if(!['www.reddit.com','old.reddit.com'].includes(url.hostname))return new Response('Unexpected host',{status:403});
+      if(url.pathname==='/fixture-background-limit')return new Response('Throttled background fixture',{status:429,headers:{'retry-after':'600','x-ratelimit-remaining':'0','x-ratelimit-reset':'600',date:new Date(Date.now()).toUTCString()}});
       if(url.pathname==='/fixture-login'){globalThis.fixture.signedIn=true;return new Response('ok');}
       if(url.pathname==='/fixture-save'||url.pathname==='/fixture-delete'){
         const body=new URLSearchParams(await request.text()),item=globalThis.fixture.items[body.get('id')];
@@ -53,7 +54,9 @@ export async function installFixture(application) {
       const commentPage=content&&id?.startsWith('t1_');
       const parent=commentPage?`<div class="sitetable linklisting">${itemHTML(globalThis.fixture.items.t3_post)}</div>`:'';
       const empty=commentPage&&!items.length&&globalThis.fixture.deletionOutcome==='empty'?'<p id="noresults" class="error">there does not seem to be anything here</p>':'';
-      return new Response(page(`<div class="content">${parent}${commentPage?'<div class="commentarea">':''}<div id="siteTable" class="sitetable ${commentPage?'nestedlisting':'linklisting'}">${items.map(item=>itemHTML(item,!content)).join('')}${empty}</div>${commentPage?'</div>':''}${next}</div>`),{headers:{'content-type':'text/html'}});
+      const responseHeaders={'content-type':'text/html'};
+      if(globalThis.fixture.cooldownNextProfile&&url.pathname.includes('/user/')&&url.pathname.includes('/comments/')){globalThis.fixture.cooldownNextProfile=false;Object.assign(responseHeaders,{'x-ratelimit-remaining':'0','x-ratelimit-reset':'600',date:new Date(Date.now()).toUTCString()});}
+      return new Response(page(`<div class="content">${parent}${commentPage?'<div class="commentarea">':''}<div id="siteTable" class="sitetable ${commentPage?'nestedlisting':'linklisting'}">${items.map(item=>itemHTML(item,!content)).join('')}${empty}</div>${commentPage?'</div>':''}${next}</div>`),{headers:responseHeaders});
     });
   });
 }

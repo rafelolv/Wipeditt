@@ -8,6 +8,8 @@ export class Scheduler {
     this.sleeper = sleeper;
     this.onWait = onWait;
     this.next = 0;
+    this.serverUntil = 0;
+    this.quotaWindow = null;
     this.waitReason = null;
     this.paused = false;
     this.tail = Promise.resolve();
@@ -15,18 +17,33 @@ export class Scheduler {
   }
   pause() { this.paused = true; }
   resume() { this.paused = false; }
+  cooldown(until) {
+    if (!Number.isFinite(until) || until <= this.now()) return;
+    this.serverUntil = Math.max(this.serverUntil, until);
+    this.next = Math.max(this.next, until);
+  }
   observe(headers) {
     if (!headers?.get) return;
     const remaining = headers.get('x-ratelimit-remaining');
     const reset = Number(headers.get('x-ratelimit-reset'));
-    if (remaining !== null && Number(remaining) <= 1 && Number.isFinite(reset) && reset > 0) {
-      this.next = Math.max(this.next, this.now() + reset * 1000);
+    if (remaining !== null && remaining.trim() && Number.isFinite(Number(remaining)) && Number(remaining) <= 1 && Number.isFinite(reset) && reset > 0 && Number.isFinite(reset * 1000)) {
+      const age = Number(headers.get('age'));
+      let until = this.now() + Math.max(0, reset - (Number.isFinite(age) && age > 0 ? age : 0)) * 1000;
+      const date = Date.parse(headers.get('date'));
+      if (Number.isFinite(date)) {
+        const deadline = date + reset * 1000;
+        // Translate each server window once. Repeated/delayed copies must not
+        // turn its relative reset duration into a perpetually moving deadline.
+        if (this.quotaWindow && deadline <= this.quotaWindow.deadline) until = this.quotaWindow.until;
+        else this.quotaWindow = { deadline, until };
+      }
+      this.cooldown(until);
     }
     const retry = headers.get('retry-after');
     if (retry) {
       const seconds = Number(retry);
       const until = Number.isFinite(seconds) ? this.now() + seconds * 1000 : Date.parse(retry);
-      if (Number.isFinite(until)) this.next = Math.max(this.next, until);
+      this.cooldown(until);
     }
   }
   async gate(signal, { local = false } = {}) {
@@ -35,7 +52,7 @@ export class Scheduler {
       const remaining = local ? 0 : this.next - this.now();
       if (!this.paused && remaining <= 0) { this.onWait(null); return; }
       const ms = this.paused ? 100 : Math.min(remaining, 250);
-      this.onWait({ reason: this.paused ? 'Paused' : (this.waitReason || 'Waiting for Reddit'), remaining: Math.max(0, remaining) });
+      this.onWait({ reason: this.paused ? 'Paused' : (this.serverUntil > this.now() ? 'Reddit cooldown. Resuming automatically' : this.waitReason || 'Request interval'), remaining: Math.max(0, remaining) });
       await this.sleeper(ms, signal);
       this.stats.waitedMs += ms;
     }
@@ -53,7 +70,7 @@ export class Scheduler {
         return result && typeof result === 'object' && Object.hasOwn(result, 'data') ? result.data : result;
       } catch (error) {
         this.observe(error.headers);
-        if (Number.isFinite(error.retryAfterMs) && error.retryAfterMs > 0) this.next = Math.max(this.next, this.now() + error.retryAfterMs);
+        if (Number.isFinite(error.retryAfterMs) && error.retryAfterMs > 0) this.cooldown(this.now() + error.retryAfterMs);
         const status = error.status;
         if (error.code && !['NETWORK', 'TIMEOUT', 'RATELIMIT'].includes(error.code) && !status) throw error;
         if (status === 401 || status === 403) throw new AppError(status === 401 ? 'AUTH' : 'PERMISSION', status === 401 ? 'Reddit authorization expired or was refused. Reconnect your account.' : 'Reddit denied permission. Check your app access and account permissions.', { fatal: true, status });
@@ -69,7 +86,9 @@ export class Scheduler {
         }
         this.stats.retries++;
         this.waitReason = network ? 'Connection interrupted. Retrying safe read' : throttle ? 'Reddit requested a cooldown' : 'Retrying safe read';
-        this.next = Math.max(this.next, this.now() + (throttle ? 60000 : Math.min(network ? 30000 : 8000, (network ? 5000 : 1000) * 2 ** attempt)));
+        const until = this.now() + (throttle ? 60000 : Math.min(network ? 30000 : 8000, (network ? 5000 : 1000) * 2 ** attempt));
+        if (throttle) this.cooldown(until);
+        else this.next = Math.max(this.next, until);
       } finally {
         if (!local) this.next = Math.max(this.next, this.now() + this.interval);
       }

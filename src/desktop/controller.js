@@ -39,6 +39,7 @@ export class DesktopController {
     this.engine = new Engine({ adapter, scheduler: this.scheduler, checkpoints: this.checkpoints, onEvent: event => {
       if (event.type === 'scan') this.status = `Scanning · ${event.inspected} inspected · ${event.matched} matching`;
       if (event.type === 'progress') {
+        this.progressUpdatedAt = Date.now();
         this.progress = { total: event.total, elapsed: event.elapsed, counts: {} };
         for (const record of event.records) this.progress.counts[record.state] = (this.progress.counts[record.state] || 0) + 1;
         const record = event.records.at(-1);
@@ -53,7 +54,7 @@ export class DesktopController {
     return {
       version: this.version, account: this.account, busy: this.busy,
       browserVisible: this.browserVisible, verifyingLogin: !!this.verifyingAccount, connecting: !!this.connecting, paused: this.scheduler.paused, options: this.options,
-      status: this.status, wait: this.busy ? this.wait : null, progress: this.progress,
+      status: this.status, wait: this.busy ? this.wait : null, progress: this.progress ? { ...this.progress, elapsed: this.progress.elapsed + (this.busy ? Math.max(0, Date.now() - (this.progressUpdatedAt ?? Date.now())) : 0) } : null,
       activity: this.activity, hasReport: !!this.report,
       deletionValidated: this.deletionValidated, deletionTesting: this.deletionTesting,
       deletionEnabled: this.browser.adapter.deletionEnabled === true,

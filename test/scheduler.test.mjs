@@ -99,3 +99,52 @@ test('temporary offline reads recover with bounded backoff; prolonged outage is 
   await assert.rejects(scheduler.request(async () => { attempts++; throw new AppError('NETWORK', 'Offline'); }), { code: 'NETWORK', fatal: true });
   assert.equal(attempts, 7);
 });
+
+test('repeated stale quota headers cannot keep resetting a 600-second countdown', async () => {
+  let time = 0;
+  const headers = new Headers({ date: new Date(0).toUTCString(), 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': '600' });
+  const scheduler = new Scheduler({ now: () => time, sleeper: async ms => {
+    time += ms;
+    assert.ok(time <= 600000, 'replayed headers must not extend the original window');
+    scheduler.observe(headers);
+  } });
+  scheduler.observe(headers);
+  let calls = 0;
+  await scheduler.request(async () => { calls++; });
+  assert.equal(time, 600000);
+  assert.equal(calls, 1);
+});
+
+test('server-window anchoring tolerates client clock skew and honors genuine longer limits', () => {
+  let time = 1000000000000;
+  const scheduler = new Scheduler({ now: () => time });
+  scheduler.observe(new Headers({ date: new Date(0).toUTCString(), 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': '600' }));
+  const until = scheduler.next;
+  time += 20000;
+  scheduler.observe(new Headers({ date: new Date(20000).toUTCString(), 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': '580' }));
+  assert.equal(scheduler.next, until);
+  scheduler.observe(new Headers({ date: new Date(21000).toUTCString(), 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': '700' }));
+  assert.equal(scheduler.next, time + 700000);
+  scheduler.observe(new Headers({ 'retry-after': '1200' }));
+  assert.equal(scheduler.next, time + 1200000, 'explicit long cooldowns are never shortened');
+});
+
+test('cached response age and malformed remaining do not invent fresh quota windows', () => {
+  const scheduler = new Scheduler({ now: () => 1000 });
+  scheduler.observe(new Headers({ 'x-ratelimit-remaining': '', 'x-ratelimit-reset': '600' }));
+  assert.equal(scheduler.next, 0);
+  scheduler.observe(new Headers({ date: new Date(0).toUTCString(), 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': '1e308' }));
+  assert.equal(scheduler.next, 0, 'overflowing reset metadata must not poison future windows');
+  scheduler.observe(new Headers({ date: new Date(0).toUTCString(), age: '500', 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': '600' }));
+  assert.equal(scheduler.next, 101000);
+});
+
+test('Stop interrupts a long server cooldown without dispatching another request', async () => {
+  const abort = new AbortController();
+  let time = 0, calls = 0;
+  const scheduler = new Scheduler({ now: () => time, sleeper: async ms => { time += ms; abort.abort(); } });
+  scheduler.observe(new Headers({ 'retry-after': '600' }));
+  await assert.rejects(scheduler.request(async () => { calls++; }, { signal: abort.signal }), { code: 'STOPPED' });
+  assert.equal(calls, 0);
+  assert.ok(time < 600000);
+});
