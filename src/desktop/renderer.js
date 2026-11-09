@@ -157,7 +157,7 @@ function renderItems(preview) {
       selected,
       el('div', { class: 'item-heading' }, el('strong', { class: 'community sensitive', text: communityLabel(item.subreddit) }), el('span', { class: 'item-meta', text: meta }), open),
       el('p', { class: 'sensitive', text: body }),
-      item.skip ? el('small', { class: 'warning', text: item.skip }) : item.importStatus ? el('small', { text: item.importStatus === 'previously-found' ? 'Previously found · rechecked before changes' : 'Found on Reddit · rechecked before changes' }) : null
+      item.skip ? el('small', { class: 'warning', text: item.skip }) : null
     );
     article.addEventListener('click', event => {
       if (event.target.closest('button,a,input,select,textarea,label')) return;
@@ -180,14 +180,8 @@ function renderItems(preview) {
   $('next-page').disabled = !!state.busy || page >= pages - 1;
 }
 function renderPreview(preview) {
-  $('check-import').hidden = preview.source !== 'import' || !preview.unchecked;
-  $('check-import').textContent = `Check next ${Math.min(100, preview.unchecked || 0)} · read only`;
-  $('import-check-help').hidden = preview.source !== 'import';
-  $('import-check-help').textContent = `${preview.unchecked || 0} not checked on Reddit. Check a batch first, then select found items. Previously found items are rechecked before changes.`;
-  $('matched-label').textContent = preview.source === 'import' ? 'CSV entries' : 'found';
-  $('eligible-label').textContent = preview.source === 'import' ? 'found candidates' : 'ready';
-  $('counts').textContent = `${preview.stats.matched} ${preview.source === 'import' ? 'CSV entries' : 'found'} · ${preview.selected} selected`;
-  $('scan-details').textContent = `${preview.stats.inspected} inspected · ${preview.stats.unique} unique · ${preview.stats.matched} matching · ${preview.stats.eligible} ${preview.source === 'import' ? 'found candidates' : 'eligible'}. ${preview.reason}.`;
+  $('counts').textContent = `${preview.stats.matched} found · ${preview.selected} selected`;
+  $('scan-details').textContent = `${preview.stats.inspected} inspected · ${preview.stats.unique} unique · ${preview.stats.matched} matching · ${preview.stats.eligible} eligible. ${preview.reason}.`;
   $('matched-count').textContent = preview.stats.matched;
   $('eligible-count').textContent = preview.stats.eligible;
   $('selected-count').textContent = preview.selected;
@@ -275,7 +269,7 @@ function render(next) {
   $('review-section').hidden = !preview || busy || !!state.browserVisible;
 
   const heading = state.browserVisible ? 'Your Reddit browser'
-    : preview ? (preview.source === 'import' && preview.unchecked ? 'Check your imported history.' : 'Review before you replace.')
+    : preview ? 'Review before you replace.'
       : finished ? 'Operation results.'
         : busy ? (state.progress ? 'Working through your selection.' : 'Finding your history.')
           : connected ? 'Find the history you want to change.'
@@ -318,13 +312,13 @@ function render(next) {
 
   if (busy) {
     const progress = state.progress;
-    $('progress-title').textContent = progress?.kind === 'check-import' ? 'Checking CSV originals (read only)' : !connected ? 'Verifying your Reddit account' : progress ? 'Applying your changes' : 'Finding your history';
-    $('progress-help').textContent = progress?.kind === 'check-import' ? 'This batch only reads originals. Stop keeps completed checks; use Check next to continue. No changes are submitted.' : progress
+    $('progress-title').textContent = !connected ? 'Verifying your Reddit account' : progress ? 'Applying your changes' : 'Finding your history';
+    $('progress-help').textContent = progress
       ? 'Pause waits between actions. Stop prevents new actions; edits already sent may finish.'
       : 'Searching is read only. You will review the results next.';
     if (progress) {
       const counts = progress.counts || {};
-      const completed = ['checked', 'anonymized', 'deleted', 'skipped', 'failed', 'uncertain', 'partial'].reduce((sum, key) => sum + (counts[key] || 0), 0);
+      const completed = ['anonymized', 'deleted', 'skipped', 'failed', 'uncertain', 'partial'].reduce((sum, key) => sum + (counts[key] || 0), 0);
       const total = progress.total || 0;
       $('progress').max = Math.max(total, 1);
       $('progress').value = total ? completed : 0;
@@ -399,7 +393,7 @@ $('review').addEventListener('click', async () => {
     await command('options', { options: rawOptions() });
     confirmation = await command('confirm');
     $('confirmation-summary').textContent = `${confirmation.count} ${confirmation.count === 1 ? 'item' : 'items'} · ${modeLabel(confirmation.mode)} · u/${confirmation.account}`;
-    $('confirmation-summary').textContent += ` · ${confirmation.eligible} ${confirmation.source === 'import' ? 'found candidates' : 'eligible'} · ${confirmation.ineligible} ${confirmation.source === 'import' ? 'unchecked or unavailable' : 'ineligible'}`;
+    $('confirmation-summary').textContent += ` · ${confirmation.eligible} eligible · ${confirmation.ineligible} ineligible`;
     $('confirmation-title').textContent = confirmation.mode === 'delete' ? 'Permanently delete these items?' : confirmation.mode === 'combined' ? 'Anonymize, then permanently delete?' : 'Replace this text?';
     $('confirmation-replacement').hidden = confirmation.mode === 'delete';
     $('confirmation-warning').textContent = confirmation.mode === 'anonymize' ? 'Your selected body text will be replaced. External copies may remain.' : 'Deletion is irreversible. Only independently verified replacements proceed to deletion in combined mode. Stop prevents new actions; submitted actions may finish. External copies may remain.';
@@ -501,11 +495,6 @@ $('refresh-results').addEventListener('click', async () => {
 });
 action('clear-checkpoint', 'clear-checkpoint');
 action('include-unavailable', 'include-unavailable');
-$('check-import').addEventListener('click', async () => {
-  clearTimeout(operationTimer);
-  try { await command('options', { options: rawOptions() }); await command('check-import'); }
-  catch (failure) { error(failure); }
-});
 action('stop', 'stop');
 action('cancel-connect', 'stop');
 action('check-updates', 'check-updates');

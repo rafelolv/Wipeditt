@@ -88,11 +88,8 @@ test('desktop imports a local comments.csv through the main-process hook', async
   await desktop.command('import-export', { options: { type: 'comment' } });
   assert.equal(asked, 1);
   assert.equal(desktop.engine.preview.source, 'import');
-  assert.equal(desktop.snapshot().preview.selected, 0);
-  await desktop.command('check-import');
-  await desktop.command('select', { ids: [item().id], selected: true });
   assert.equal(desktop.snapshot().preview.stats.inspected, 1);
-  assert.match(desktop.snapshot().status, /Check finished/);
+  assert.match(desktop.snapshot().status, /imported comments match/);
   const confirmation = await desktop.command('confirm');
   await desktop.command('run', { token: confirmation.token, phrase: confirmation.phrase });
   assert.equal(desktop.report.source, 'import');

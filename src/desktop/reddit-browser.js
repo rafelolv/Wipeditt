@@ -63,7 +63,7 @@ export class RedditBrowser {
     }, { signal });
   }
   account({ signal } = {}) { return this.scheduler.request(() => this.dom('account'), { signal, local: true }); }
-  async page({ account, after, type, mode = 'anonymize', signal, hydrate = true }) {
+  async page({ account, after, type, mode = 'anonymize', signal }) {
     const listing = type === 'comment' ? 'comments' : type === 'post' ? 'submitted' : 'overview';
     const url = after ? historyURL(after, account) : `${REDDIT_CLASSIC}/user/${encodeURIComponent(account.name)}/${listing}/?sort=new&limit=100`;
     const page = await this.scheduler.request(async () => {
@@ -78,7 +78,6 @@ export class RedditBrowser {
       }
       return page;
     }, { signal });
-    if (!hydrate) return page;
     for (let index = 0; index < page.items.length; index++) {
       const item = page.items[index];
       const missingAuthor = !item.authorId;

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.1 — 2026-11-08
+
+- Restore the v1.1.3 CSV workflow: import, review selected rows and confirm the operation.
+- Remove manual read-only batches, unchecked-row gates and found-candidate history introduced in v1.2.0.
+- Keep expiring known-deletion/unavailability history and all native write verification safeguards.
+
 ## 1.2.0 — 2026-11-08
 
 - Start CSV imports unselected and keep unchecked rows out of write confirmations.
