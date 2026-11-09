@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.4 — 2026-11-09
+
+- Publish the native profile pagination fix from v1.2.3 after repeated GitHub internal errors prevented that release workflow from reaching publication.
+- Keep the validated runtime behavior: root-profile forward links, automatic overview continuation and deduplicated comment selection.
+
 ## 1.2.3 — 2026-11-09
 
 - Accept native pagination links on the verified account’s ordinary profile root.
