@@ -8,6 +8,7 @@ import { installFixture } from './fixture.mjs';
 import { verifyAuthorLayouts } from './ownership.mjs';
 import { verifyUpdateNotice } from './updates.mjs';
 import { verifyCooldownRecovery } from './cooldowns.mjs';
+import { verifyProfileHistory } from './history.mjs';
 
 process.on('uncaughtExceptionMonitor', error => {
   if (process.env.GITHUB_ACTIONS === 'true') console.error(`::error title=Desktop validation::${String(error.stack || error.message).replaceAll('%', '%25').replaceAll('\n', '%0A').replaceAll('\r', '%0D')}`);
@@ -87,6 +88,7 @@ try {
   assert.equal(await page.locator('#verify').isVisible(), false);
   console.log('Native fixture login and automatic account verification passed.');
   await verifyAuthorLayouts(application);
+  await verifyProfileHistory(application, page);
 
   const chooseSyntheticCSV = () => application.evaluate(async ({ app, dialog }) => {
     const fs = process.getBuiltinModule('node:fs/promises');

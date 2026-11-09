@@ -70,6 +70,12 @@ export class RedditBrowser {
       await this.navigate(url, signal);
       const page = await this.dom('listing', { expected: account });
       if (page.after) historyURL(page.after, account);
+      // The comments tab and the ordinary profile can expose different history.
+      // Follow each native next link unchanged, then supplement comments from
+      // the profile overview. Engine deduplication keeps selection/counts stable.
+      if (!page.after && type === 'comment' && /\/comments\/?$/.test(new URL(url).pathname)) {
+        page.after = `${REDDIT_CLASSIC}/user/${encodeURIComponent(account.name)}/`;
+      }
       for (const item of page.items) {
         if (item.permalink) {
           try { this.links.set(item.id, contentURL(item.permalink, item.id)); } catch { item.editable = false; }

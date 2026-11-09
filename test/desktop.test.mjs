@@ -27,6 +27,10 @@ test('desktop remote pages have no Node privileges and strict sender validation'
 test('desktop navigation refuses foreign origins, cross-account history and invalid content links', () => {
   for (const value of ['file:///etc/passwd', 'javascript:alert(1)', 'http://old.reddit.com/', 'https://old.reddit.com.evil.test/', 'https://user@old.reddit.com/']) assert.throws(() => redditURL(value));
   assert.throws(() => historyURL('https://old.reddit.com/user/other/comments/', { name: 'owner' }));
+  const profile = 'https://old.reddit.com/user/Owner/?count=25&after=t1_older';
+  assert.equal(historyURL(profile, { name: 'owner' }), profile);
+  for (const path of ['/user/other/', '/user/owner/saved/', '/user/owner/comments/extra/', '/user/owner/../other/']) assert.throws(() => historyURL(`https://old.reddit.com${path}`, { name: 'owner' }));
+  assert.throws(() => historyURL('https://www.reddit.com/user/owner/', { name: 'owner' }));
   assert.equal(contentURL('https://www.reddit.com/r/privacy/comments/abc/test/xyz/?context=3', 't1_xyz'), 'https://old.reddit.com/r/privacy/comments/abc/test/xyz/');
   assert.equal(contentURL('https://www.reddit.com/user/owner/comments/abc/test/xyz/', 't1_xyz'), 'https://old.reddit.com/user/owner/comments/abc/test/xyz/');
 });

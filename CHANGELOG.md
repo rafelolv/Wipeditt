@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.3 — 2026-11-09
+
+- Accept native pagination links on the verified account’s ordinary profile root.
+- Follow forward links with an after cursor even when classic pages omit rel=next; reject previous links and embedded comment controls.
+- Automatically supplement the Comments tab with the ordinary profile overview, deduplicating matches and preserving filters and item limits.
+- Keep automatic review/selection, server pacing, ownership checks and write confirmation unchanged.
+
 ## 1.2.2 — 2026-11-08
 
 - Prevent repeated quota metadata from continually restarting the same server reset window.

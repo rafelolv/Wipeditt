@@ -17,7 +17,7 @@ export function contentURL(value, id) {
 }
 export function historyURL(value, account) {
   const url = redditURL(value);
-  const match = /^\/user\/([A-Za-z0-9_-]+)\/(comments|submitted|overview)\/?$/.exec(url.pathname);
+  const match = /^\/user\/([A-Za-z0-9_-]+)(?:\/(comments|submitted|overview))?\/?$/.exec(url.pathname);
   if (url.hostname !== 'old.reddit.com' || !match || match[1].toLowerCase() !== account.name.toLowerCase()) fail('URL', 'History navigation must remain on the verified account.');
   return url.href;
 }
