@@ -78,8 +78,9 @@ export class Engine {
         if (!matches(item)) continue;
         if (this.checkpoints?.wasDeleted?.(item.id, this.adapter.simulation)) { knownDeleted++; continue; }
         if (this.checkpoints?.wasUnavailable?.(item.id, this.adapter.simulation)) { deferred.push(item); continue; }
-        const skip = eligibility(item, account, options.mode);
-        matched.push({ ...item, skip, selected: !skip });
+        const found = this.checkpoints?.wasFound?.(item.id, this.adapter.simulation);
+        const skip = eligibility(item, account, options.mode) || (found ? '' : 'Not checked on Reddit yet');
+        matched.push({ ...item, skip, selected: false, importStatus: found ? 'previously-found' : 'unchecked' });
         if (options.limit && matched.length >= options.limit) break;
       }
       await this.account(account, signal);
@@ -102,12 +103,89 @@ export class Engine {
     if (!count) return 0;
     this.confirmation = null;
     preview.revision = ++this.revision;
-    for (const item of preview.deferred) preview.items.push({ ...item, skip: eligibility(item, preview.account, preview.options.mode), selected: false });
+    for (const item of preview.deferred) preview.items.push({ ...item, skip: eligibility(item, preview.account, preview.options.mode) || 'Not checked on Reddit yet', selected: false, importStatus: 'unchecked' });
     preview.deferred = [];
     preview.stats.matched = preview.items.length;
     preview.stats.eligible = preview.items.filter(item => !item.skip).length;
     preview.reason = `${count} previously unavailable item${count === 1 ? '' : 's'} restored, unselected. Select items and review before retrying; absence was not proof of deletion`;
     return count;
+  }
+  async checkImported(raw, signal, limit = 100) {
+    if (this.running) fail('BUSY', 'Another operation is running.');
+    const preview = this.preview;
+    if (!preview || preview.source !== 'import' || fingerprint(normalizeOptions(raw)) !== preview.key) fail('STALE', 'Import your CSV before checking its originals.');
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100) fail('LIMIT', 'Check 1–100 originals at a time.');
+    const pending = preview.items.filter(item => item.importStatus === 'unchecked');
+    const total = Math.min(limit, pending.length);
+    if (!total) fail('EMPTY', 'All CSV originals are checked. Review found items or import again.');
+    const started = this.now();
+    this.running = true; this.confirmation = null;
+    preview.revision = ++this.revision;
+    let checked = 0, stopped = false;
+    const emit = () => this.onEvent({ type: 'check-import', checked, total, elapsed: this.now() - started, remaining: preview.items.filter(item => item.importStatus === 'unchecked').length });
+    emit();
+    try {
+      await this.account(preview.account, signal);
+      const remember = item => {
+        item.selected = false;
+        if (['found', 'deleted', 'unavailable'].includes(item.importStatus)) this.checkpoints?.rememberObservation?.(item.id, item.importStatus, this.adapter.simulation);
+        checked++; emit();
+      };
+      const apply = (item, current) => {
+        if (current && current.id !== item.id) fail('RESPONSE', 'Reddit returned a different original.');
+        if (!current || current.deleted) {
+          item.importStatus = current?.deleted ? 'deleted' : 'unavailable';
+          item.skip = current?.deleted ? 'Already deleted' : 'Original is unavailable; no change submitted';
+        } else {
+          const skip = eligibility(current, preview.account, preview.options.mode);
+          Object.assign(item, current, { imported: true, selected: false, importStatus: skip ? 'checked' : 'found', skip });
+        }
+        remember(item);
+      };
+      // A positive profile entry can verify many export IDs in one native page.
+      // Missing listing entries remain unknown and require a focused read.
+      const targets = new Map(pending.map(item => [item.id, item]));
+      for (let pages = 0; !preview.profileDone && checked < total && pages < 10; pages++) {
+        checkAbort(signal);
+        const page = await this.read(() => this.adapter.page({ account: preview.account, after: preview.checkAfter || null, type: 'comment', mode: preview.options.mode, signal, hydrate: false }), signal);
+        if (!Array.isArray(page?.items)) fail('RESPONSE', 'Invalid listing response.');
+        for (const current of page.items) {
+          const item = targets.get(current?.id);
+          if (item?.importStatus === 'unchecked' && checked < total && !eligibility(current, preview.account, preview.options.mode)) apply(item, current);
+        }
+        preview.checkCursors ||= new Set();
+        preview.checkedProfilePages = (preview.checkedProfilePages || 0) + 1;
+        preview.profileDone = !page.after || preview.checkCursors.has(page.after) || preview.checkedProfilePages >= 1000;
+        if (page.after) preview.checkCursors.add(page.after);
+        preview.checkAfter = page.after;
+      }
+      for (const item of pending) {
+        if (checked >= total) break;
+        if (item.importStatus !== 'unchecked') continue;
+        checkAbort(signal);
+        await this.account(preview.account, signal);
+        try {
+          const current = await this.read(() => this.adapter.get(item.id, { signal }), signal);
+          apply(item, current);
+        } catch (error) {
+          if (error.code !== 'CONTENT_UNAVAILABLE') throw error;
+          item.importStatus = 'unavailable'; item.skip = 'Original is unavailable; no change submitted';
+          remember(item);
+        }
+      }
+      await this.account(preview.account, signal);
+    } catch (error) {
+      if (error.code !== 'STOPPED') { this.invalidate(); throw error; }
+      stopped = true;
+    } finally {
+      this.running = false;
+      if (this.preview === preview) {
+        preview.created = this.now();
+        preview.stats.eligible = preview.items.filter(item => !item.skip).length;
+        preview.reason = `${checked} originals checked without changes; ${preview.stats.eligible} found candidates; ${preview.items.filter(item => item.importStatus === 'unchecked').length} not checked yet. Select found items and review before changing anything`;
+      }
+    }
+    return { checked, stopped };
   }
   updateOperation(raw) {
     if (this.running) fail('BUSY', 'Operation is running.');
@@ -123,7 +201,7 @@ export class Engine {
     preview.key = fingerprint(options);
     this.scheduler.interval = options.interval;
     for (const item of preview.items) {
-      item.skip = eligibility(item, preview.account, options.mode);
+      item.skip = eligibility(item, preview.account, options.mode) || (item.importStatus === 'unchecked' ? 'Not checked on Reddit yet' : item.importStatus === 'deleted' ? 'Already deleted' : item.importStatus === 'unavailable' ? 'Original is unavailable; no change submitted' : '');
       if (item.skip) item.selected = false;
     }
     preview.stats.eligible = preview.items.filter(item => !item.skip).length;

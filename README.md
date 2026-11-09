@@ -29,11 +29,13 @@ Download from [Releases](https://github.com/rafelolv/Wipeditt/releases) and veri
 3. Review eligibility and select items. Configure replacement text only for modes that use it.
 4. Confirm the account, operation, counts and exact behavior. More than 100 items require `ANONYMIZE` or `DELETE`.
 
+CSV imports start with zero selected items. Use Check next to read up to 100 originals without edits or deletions, then select found candidates for review. Compatible profile entries are checked by page; older or incomplete entries need focused reads. Missing profile entries are never assumed deleted. Found progress is remembered for six hours as IDs only; previously found candidates are rechecked before writes. Stop preserves completed checks and never resumes an operation automatically.
+
 The app has a black-first interface with optional light appearance, individual/community selection, pause/resume/stop, local JSON reports and minimized status checkpoints. Native website sessions are temporary by default, with opt-in session memory. No credentials are extracted or imported from another browser.
 
 Live history is not a complete archive. Import `comments.csv` from your official export to include older comments. Each item is rechecked on the original before any write. Filters include community, date, text/regex, score and edited status where available.
 
-New-version notices query public GitHub metadata without Reddit credentials or content. Settings & tools provides manual checks and an automatic-check opt-out. Windows x64 and Linux AppImage offer Download update and an explicit Install and restart action; Debian packages keep the release-page flow. No update is installed on ordinary app quit. Install v1.1.3 manually once to obtain the updater; see [update behavior and validation](docs/UPDATES.md). The same menu contains GPLv3 notices and the source link.
+New-version notices query public GitHub metadata without Reddit credentials or content. Settings & tools provides manual checks and an automatic-check opt-out. Windows x64 and Linux AppImage offer Download update and an explicit Install and restart action; Debian packages keep the release-page flow. No update is installed on ordinary app quit. Install v1.2.0 manually once to obtain the updater; see [update behavior and validation](docs/UPDATES.md). The same menu contains GPLv3 notices and the source link.
 
 ## Development
 

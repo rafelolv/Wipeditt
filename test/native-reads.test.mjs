@@ -48,3 +48,17 @@ test('local reads preserve account guards and route body expansion through netwo
   assert.equal((await f.browser.get(f.id)).text, 'Fresh navigation source');
   assert.equal(f.now(), 1700000001500);
 });
+
+test('lightweight profile checking avoids eager per-item hydration while ordinary scans keep it', async () => {
+  const { scheduler } = setup();
+  const browser = new RedditBrowser({ scheduler, contents: {} });
+  browser.navigate = async () => {};
+  browser.dom = async () => ({ items: [item({ id: 't1_abc', authorId: '', needsBody: true, permalink: 'https://old.reddit.com/r/privacy/comments/post/title/abc/' })], after: null });
+  let reads = 0;
+  browser.get = async () => { reads++; return item({ id: 't1_abc' }); };
+  const settings = { account: { id: 'reddit:fixture', name: 'fixture' }, type: 'comment' };
+  await browser.page({ ...settings, hydrate: false });
+  assert.equal(reads, 0);
+  await browser.page(settings);
+  assert.equal(reads, 1);
+});

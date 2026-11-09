@@ -38,6 +38,10 @@ export class DesktopController {
     };
     this.engine = new Engine({ adapter, scheduler: this.scheduler, checkpoints: this.checkpoints, onEvent: event => {
       if (event.type === 'scan') this.status = `Scanning · ${event.inspected} inspected · ${event.matched} matching`;
+      if (event.type === 'check-import') {
+        this.progress = { kind: 'check-import', total: event.total, elapsed: event.elapsed, counts: { checked: event.checked } };
+        this.status = `Read-only check · ${event.checked}/${event.total} checked · ${event.remaining} still unchecked`;
+      }
       if (event.type === 'progress') {
         this.progress = { total: event.total, elapsed: event.elapsed, counts: {} };
         for (const record of event.records) this.progress.counts[record.state] = (this.progress.counts[record.state] || 0) + 1;
@@ -58,12 +62,12 @@ export class DesktopController {
       deletionValidated: this.deletionValidated, deletionTesting: this.deletionTesting,
       deletionEnabled: this.browser.adapter.deletionEnabled === true,
       statusError: this.statusError, finished: this.finished, updates: this.updates?.snapshot() || null,
-      preview: preview ? { items: preview.items, stats: preview.stats, reason: preview.reason, deferredUnavailable: preview.deferred?.length || 0, selected: preview.items.filter(item => item.selected && !item.skip).length, options: preview.options, source: preview.source || 'live', created: preview.created, expiresAt: preview.created + 300000 } : null
+      preview: preview ? { items: preview.items, stats: preview.stats, reason: preview.reason, deferredUnavailable: preview.deferred?.length || 0, unchecked: preview.items.filter(item => item.importStatus === 'unchecked').length, selected: preview.items.filter(item => item.selected && !item.skip).length, options: preview.options, source: preview.source || 'live', created: preview.created, expiresAt: preview.created + 300000 } : null
     };
   }
   emit() { this.onState(this.snapshot()); }
   invalidate() { this.engine.invalidate(); this.confirmation = null; }
-  stop() { this.abort?.abort(); this.scheduler.resume(); this.engine.cancelConfirmation(); this.confirmation = null; this.statusError = false; this.status = 'Stopping. Submitted edits may still finish.'; this.emit(); }
+  stop() { this.abort?.abort(); this.scheduler.resume(); this.engine.cancelConfirmation(); this.confirmation = null; this.statusError = false; this.status = this.progress?.kind === 'check-import' ? 'Stopping read-only check. No changes submitted.' : 'Stopping. Submitted edits may still finish.'; this.emit(); }
   requireIdle() { if (this.busy) fail('BUSY', 'Wait for the current operation or stop it first.'); }
   async work(action) {
     this.requireIdle(); this.scheduler.resume(); this.busy = true; this.wait = null; this.statusError = false; this.abort = new AbortController();
@@ -104,6 +108,14 @@ export class DesktopController {
       const preview = await this.engine.scan(this.options, signal);
       this.status = `${preview.stats.matched} matching items. ${preview.reason}.`;
       this.log('Scan finished. Review selected items before editing.');
+    });
+    if (name === 'check-import') return this.work(async signal => {
+      if (!this.account) fail('AUTH', 'Connect and verify your Reddit account first.');
+      this.browser.hide(); this.browserVisible = false; this.finished = null; this.confirmation = null;
+      this.status = 'Checking up to 100 CSV originals. No edits or deletions will be submitted.';
+      const result = await this.engine.checkImported(this.options, signal);
+      this.progress = null;
+      this.status = `${result.stopped ? 'Check stopped' : 'Check finished'} · ${result.checked} checked without changes. ${this.engine.preview.reason}.`;
     });
     if (name === 'run') return this.work(async signal => {
       if (!this.confirmation || data.token !== this.confirmation) fail('CONFIRM', 'Open a new confirmation before running.');
@@ -174,7 +186,7 @@ export class DesktopController {
     } else if (name === 'confirm') {
       const confirmation = this.engine.confirmationFor(this.options);
       this.confirmation = randomUUID();
-      return { ...confirmation, token: this.confirmation, account: this.account?.name, replacement: this.options.replacement, mode: this.options.mode, eligible: this.engine.preview.stats.eligible, ineligible: this.engine.preview.stats.matched - this.engine.preview.stats.eligible };
+      return { ...confirmation, token: this.confirmation, account: this.account?.name, replacement: this.options.replacement, mode: this.options.mode, eligible: this.engine.preview.stats.eligible, ineligible: this.engine.preview.stats.matched - this.engine.preview.stats.eligible, source: this.engine.preview.source || 'live' };
     } else if (name === 'export-report') {
       if (!this.report) fail('REPORT', 'Run an operation before exporting its report.');
       await this.saveReport(this.report);

@@ -189,8 +189,11 @@ test('imported comments use the same filters, ownership checks and confirmation 
   ];
   const preview = await engine.import(imported, { type: 'comment', contains: 'imported' });
   assert.equal(preview.source, 'import');
-  assert.deepEqual(preview.stats, { inspected: 3, unique: 2, matched: 2, eligible: 1 });
-  assert.match(preview.reason, /Imported 3 rows/);
+  assert.deepEqual(preview.stats, { inspected: 3, unique: 2, matched: 2, eligible: 0 });
+  assert.equal(preview.items.some(item => item.selected), false);
+  await engine.checkImported({ type: 'comment', contains: 'imported' });
+  engine.select('t1_imported', true);
+  assert.match(preview.reason, /checked without changes/);
   const confirmation = engine.confirmationFor({ type: 'comment', contains: 'imported' });
   assert.equal(confirmation.count, 1);
   const result = await engine.execute({ type: 'comment', contains: 'imported' }, { confirmed: true, phrase: confirmation.phrase });
@@ -242,9 +245,12 @@ test('history scanning crosses 1000 comments and preserves decade-old items with
 });
 
 test('an imported ownership claim never authorizes changes to a foreign live comment', async () => {
-  const { engine, adapter } = setup([item({ authorId: 't2_other', author: 'other' })]);
+  const { engine, adapter } = setup([item()]);
   const options = { type: 'comment', mode: 'combined' };
   await engine.import([item({ imported: true })], options);
+  await engine.checkImported(options);
+  engine.select(item().id, true);
+  adapter.items[0].authorId = 't2_other'; adapter.items[0].author = 'other';
   engine.confirmationFor(options);
   let writes = 0;
   adapter.edit = async () => { writes++; };
@@ -259,6 +265,7 @@ test('a 3887-row import processes exactly the 47 explicitly selected community i
   const { engine, adapter } = setup(items);
   const options = { type: 'comment', mode: 'delete' };
   await engine.import(items, options);
+  while (engine.preview.items.some(item => item.importStatus === 'unchecked')) await engine.checkImported(options);
   const ids = items.slice(0, 47).map(item => item.id);
   engine.selectMany(ids, true, true);
   assert.equal(engine.confirmationFor(options).count, 47);
@@ -293,15 +300,57 @@ test('restoring unavailable rows preserves selection, recalculates mode and inva
   const options = { mode: 'delete' };
   const preview = await engine.import([item(), item({ id: 't1_deferred', editable: false })], {});
   engine.updateOperation(options);
+  await engine.checkImported(options);
+  engine.select(item().id, true);
   engine.confirmationFor(options);
   const created = preview.created;
   assert.equal(engine.includeUnavailable(), 1);
   assert.equal(preview.items[0].selected, true);
   assert.equal(preview.items[1].selected, false);
-  assert.equal(preview.items[1].skip, '');
+  assert.equal(preview.items[1].skip, 'Not checked on Reddit yet');
   assert.equal(preview.created, created);
-  assert.equal(preview.stats.eligible, 2);
+  assert.equal(preview.stats.eligible, 1);
   await assert.rejects(engine.execute(options, { confirmed: true }), { code: 'CONFIRM' });
   advance(300001);
   assert.throws(() => engine.includeUnavailable(), { code: 'STALE' });
+});
+
+test('CSV checking verifies 100 matching originals with one listing and no individual lookups or writes', async () => {
+  const rows = Array.from({ length: 100 }, (_, index) => item({ id: `t1_bulk${index}` }));
+  const { engine, adapter } = setup(rows);
+  let pages = 0;
+  adapter.page = async settings => { pages++; assert.equal(settings.hydrate, false); return { items: rows, after: null }; };
+  adapter.get = async () => { throw new Error('Matching listing entries must not need individual lookups'); };
+  adapter.edit = adapter.delete = async () => { throw new Error('Read-only checking must never write'); };
+  await engine.import(rows, {});
+  engine.selectMany(rows.map(row => row.id), true);
+  assert.throws(() => engine.confirmationFor({}), { code: 'EMPTY' });
+  assert.deepEqual(await engine.checkImported({}), { checked: 100, stopped: false });
+  assert.equal(pages, 1);
+  assert.equal(engine.preview.stats.eligible, 100);
+  assert.ok(engine.preview.items.every(item => item.importStatus === 'found' && !item.selected));
+});
+
+test('absence from profile remains unknown until focused read; checking is bounded and resumes after Stop', async () => {
+  const rows = [item({ id: 't1_first' }), item({ id: 't1_old' }), item({ id: 't1_missing' })];
+  const { engine, adapter } = setup(rows);
+  adapter.page = async () => ({ items: [], after: null });
+  const reads = [], get = adapter.get.bind(adapter);
+  adapter.get = async id => { reads.push(id); return id === 't1_missing' ? null : get(id); };
+  adapter.edit = adapter.delete = async () => { throw new Error('No write allowed'); };
+  const abort = new AbortController();
+  engine.onEvent = event => { if (event.type === 'check-import' && event.checked === 1) abort.abort(); };
+  await engine.import(rows, {});
+  assert.deepEqual(await engine.checkImported({}, abort.signal), { checked: 1, stopped: true });
+  assert.equal(engine.running, false);
+  assert.equal(engine.preview.items[0].importStatus, 'found');
+  assert.equal(engine.preview.items[1].importStatus, 'unchecked');
+  engine.onEvent = () => {};
+  assert.deepEqual(await engine.checkImported({}, undefined, 1), { checked: 1, stopped: false });
+  assert.equal(engine.preview.items[1].importStatus, 'found', 'an old item absent from the listing can still exist');
+  await engine.checkImported({});
+  assert.deepEqual(reads, rows.map(row => row.id));
+  assert.equal(engine.preview.items[2].importStatus, 'unavailable');
+  assert.equal(engine.preview.items.some(item => item.selected), false);
+  await assert.rejects(engine.checkImported({}, undefined, 101), { code: 'LIMIT' });
 });

@@ -119,7 +119,8 @@
         <div class="review-toolbar"><button id="change-search" class="quiet">← Back to search</button><p id="search-summary"></p></div>
         <div class="review-layout">
           <div class="surface review-card">
-            <div class="stats"><span><strong id="matched-count">0</strong>found</span><span><strong id="eligible-count">0</strong>ready to replace</span><span><strong id="selected-count">0</strong>selected</span></div>
+            <div class="stats"><span><strong id="matched-count">0</strong><span id="matched-label">found</span></span><span><strong id="eligible-count">0</strong><span id="eligible-label">ready</span></span><span><strong id="selected-count">0</strong>selected</span></div>
+            <p id="import-check-help" class="review-note" hidden></p><button id="check-import" class="primary" hidden>Check next 100 · read only</button>
             <div class="selection-actions"><button id="select-all">Select all ready</button><button id="select-none">Clear</button><select id="subreddit-select" class="sensitive" aria-label="Select only a community"><option value="">Select only a community…</option></select></div>
             <div id="items" aria-label="Content preview"></div>
             <div class="pagination"><button id="previous-page">Previous</button><span id="page-label"></span><button id="next-page">Next</button></div>

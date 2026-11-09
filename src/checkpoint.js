@@ -6,6 +6,7 @@ export class Checkpoints {
     this.storage = storage; this.now = now;
     this.deleted = new Map();
     this.unavailable = new Map();
+    this.found = new Map();
     // Progress snapshots must not extend an earlier observation indefinitely.
     this.remembered = new WeakSet();
     try {
@@ -17,6 +18,9 @@ export class Checkpoints {
       if (Array.isArray(data?.unavailable) && data.unavailable.length <= 100000) for (const entry of data.unavailable) {
         if (Array.isArray(entry) && /^t[13]_[a-z0-9]+$/.test(entry[0]) && Number.isFinite(entry[1]) && entry[1] > now() && entry[1] <= now() + UNAVAILABLE_TTL) this.unavailable.set(entry[0], entry[1]);
       }
+      if (Array.isArray(data?.found) && data.found.length <= 100000) for (const entry of data.found) {
+        if (Array.isArray(entry) && /^t[13]_[a-z0-9]+$/.test(entry[0]) && Number.isFinite(entry[1]) && entry[1] > now() && entry[1] <= now() + UNAVAILABLE_TTL) this.found.set(entry[0], entry[1]);
+      }
       // Carry forward positive evidence from older checkpoints, never inferred absence.
       if (data && !Object.hasOwn(data, 'deleted') && data.simulation === false && Number.isFinite(data.expires) && data.expires > now() && data.expires <= now() + 86400000 && Array.isArray(data.records) && data.records.length <= 100000) {
         for (const record of data.records) if (record?.state === 'deleted' && record.steps?.delete === 'verified' && /^t[13]_[a-z0-9]+$/.test(record.id)) this.deleted.set(record.id, data.expires);
@@ -25,6 +29,14 @@ export class Checkpoints {
   }
   wasDeleted(id, simulation) { return simulation === false && (this.deleted.get(id) || 0) > this.now(); }
   wasUnavailable(id, simulation) { return simulation === false && (this.unavailable.get(id) || 0) > this.now(); }
+  wasFound(id, simulation) { return simulation === false && (this.found.get(id) || 0) > this.now(); }
+  rememberObservation(id, status, simulation) {
+    if (simulation !== false || !/^t[13]_[a-z0-9]+$/.test(id) || !['found', 'deleted', 'unavailable'].includes(status)) return;
+    this.found.delete(id); this.deleted.delete(id); this.unavailable.delete(id);
+    const history = status === 'found' ? this.found : status === 'deleted' ? this.deleted : this.unavailable;
+    history.set(id, this.now() + (status === 'deleted' ? 86400000 : UNAVAILABLE_TTL));
+    this.persistHistory();
+  }
   forgetDeleted(id) {
     if (this.deleted.delete(id)) this.persistHistory();
   }
@@ -32,25 +44,30 @@ export class Checkpoints {
     if (this.unavailable.delete(id)) this.persistHistory();
   }
   persistHistory() {
+    this.found = new Map([...this.found].filter(([, expires]) => expires > this.now()).slice(-100000));
     this.deleted = new Map([...this.deleted].filter(([, expires]) => expires > this.now()).slice(-100000));
     this.unavailable = new Map([...this.unavailable].filter(([, expires]) => expires > this.now()).slice(-100000));
     try {
       const previous = JSON.parse(this.storage?.getItem(KEY) || 'null');
-      this.storage?.setItem(KEY, JSON.stringify({ expires: this.now() + 86400000, simulation: previous?.simulation === true, records: previous?.records || [], deleted: [...this.deleted], unavailable: [...this.unavailable] }));
+      this.storage?.setItem(KEY, JSON.stringify({ expires: this.now() + 86400000, simulation: previous?.simulation === true, records: previous?.records || [], deleted: [...this.deleted], unavailable: [...this.unavailable], found: [...this.found] }));
     } catch { /* A disabled store only loses this local optimization. */ }
   }
   save(records, simulation) {
+    this.found = new Map([...this.found].filter(([, expires]) => expires > this.now()).slice(-100000));
     this.deleted = new Map([...this.deleted].filter(([, expires]) => expires > this.now()));
     this.unavailable = new Map([...this.unavailable].filter(([, expires]) => expires > this.now()));
     if (simulation === false) {
       for (const record of records) {
+        if (record && ['editing', 'deleting', 'uncertain', 'partial', 'failed', 'skipped'].includes(record.state)) this.found.delete(record.id);
         if (!record || this.remembered.has(record) || !/^t[13]_[a-z0-9]+$/.test(record.id)) continue;
         if ((record.state === 'deleted' && record.steps?.delete === 'verified') || (record.state === 'skipped' && record.code === 'ALREADY_DELETED')) {
           this.deleted.set(record.id, this.now() + 86400000);
           this.unavailable.delete(record.id);
+          this.found.delete(record.id);
           this.remembered.add(record);
         } else if (record.state === 'skipped' && record.code === 'ORIGINAL_UNAVAILABLE') {
           this.unavailable.set(record.id, this.now() + UNAVAILABLE_TTL);
+          this.found.delete(record.id);
           this.remembered.add(record);
         }
       }
@@ -58,7 +75,7 @@ export class Checkpoints {
       this.unavailable = new Map([...this.unavailable].slice(-100000));
     }
     // No account, text, subreddit, replacement, filter or credential survives reload.
-    const data = { deleted: [...this.deleted], unavailable: [...this.unavailable], expires: this.now() + 86400000, simulation, records: records.slice(-100000).map(({ id, state, steps }) => ({ id, state, ...(steps ? { steps: Object.fromEntries(['anonymize', 'delete'].map(stage => [stage, ['pending', 'verified', 'failed', 'uncertain', 'skipped', 'not-requested'].includes(steps[stage]) ? steps[stage] : 'uncertain'])) } : {}) })) };
+    const data = { deleted: [...this.deleted], unavailable: [...this.unavailable], found: [...this.found], expires: this.now() + 86400000, simulation, records: records.slice(-100000).map(({ id, state, steps }) => ({ id, state, ...(steps ? { steps: Object.fromEntries(['anonymize', 'delete'].map(stage => [stage, ['pending', 'verified', 'failed', 'uncertain', 'skipped', 'not-requested'].includes(steps[stage]) ? steps[stage] : 'uncertain'])) } : {}) })) };
     try { this.storage?.setItem(KEY, JSON.stringify(data)); } catch { return false; }
     return true;
   }
@@ -70,5 +87,5 @@ export class Checkpoints {
       return data;
     } catch { this.clear(); return null; }
   }
-  clear() { this.deleted.clear(); this.unavailable.clear(); this.remembered = new WeakSet(); try { this.storage?.removeItem(KEY); } catch { /* Storage may be disabled. */ } }
+  clear() { this.deleted.clear(); this.unavailable.clear(); this.found.clear(); this.remembered = new WeakSet(); try { this.storage?.removeItem(KEY); } catch { /* Storage may be disabled. */ } }
 }

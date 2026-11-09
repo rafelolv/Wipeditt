@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.0 — 2026-11-08
+
+- Start CSV imports unselected and keep unchecked rows out of write confirmations.
+- Add bounded read-only checking with pause/Stop, resumable found progress and separate selection afterward.
+- Match compatible export IDs against lightweight native profile pages before opening individual originals.
+- Keep listing absence unknown; preserve focused reads for older entries and incomplete native metadata.
+- Label imported rows and confirmations as candidates, separating cached observations from fresh write verification.
+
 ## 1.1.3 — 2026-11-08
 
 - Defer originals unavailable before submission for six hours, avoiding repeated CSV lookups across restarts.
