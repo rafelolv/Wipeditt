@@ -81,3 +81,38 @@ test('native scans supplement the comments tab with profile pages, deduplicate a
   await engine.scan({ type: 'comment', limit: 1 });
   assert.equal(visited.length, 1, 'an explicit user item cap must still stop scanning');
 });
+
+test('a newest comment listing near Reddit\'s per-ordering cap adds top, controversial and hot orderings', async () => {
+  const { scheduler, now } = setup();
+  const account = { id: 'reddit:owner', name: 'owner' };
+  const root = 'https://old.reddit.com/user/owner';
+  const visited = [];
+  const owned = (id, created) => item({ id, created, type: 'comment', author: account.name, authorId: account.id, permalink: `https://old.reddit.com/r/privacy/comments/post/title/${id.slice(3)}/` });
+  const recent = Array.from({ length: 950 }, (_, index) => owned(`t1_recent${index}`, Date.parse('2025-01-01') + index));
+  const older = owned('t1_topolder', Date.parse('2018-01-01'));
+  const controversial = owned('t1_controversial', Date.parse('2017-01-01'));
+  const hot = owned('t1_hot', Date.parse('2016-01-01'));
+  let current;
+  const browser = new RedditBrowser({ scheduler, contents: {} });
+  browser.navigate = async url => { visited.push(url); current = url; };
+  browser.account = async () => account;
+  browser.dom = async () => {
+    if (current.includes('sort=new')) return { items: recent, after: null };
+    if (current.includes('sort=top')) return { items: [recent[0], older], after: null };
+    if (current.includes('sort=controversial')) return { items: [controversial], after: null };
+    if (current.includes('sort=hot')) return { items: [hot], after: null };
+    throw new Error(`Unexpected profile URL: ${current}`);
+  };
+  const engine = new Engine({ adapter: browser, scheduler, now });
+  const preview = await engine.scan({ type: 'comment', limit: 0 });
+  assert.deepEqual(visited, [
+    `${root}/comments/?sort=new&limit=100`,
+    `${root}/comments/?sort=top&t=all&limit=100`,
+    `${root}/comments/?sort=controversial&t=all&limit=100`,
+    `${root}/comments/?sort=hot&limit=100`
+  ]);
+  assert.equal(preview.stats.unique, 953);
+  assert.equal(preview.stats.matched, 953);
+  for (const id of ['t1_topolder', 't1_controversial', 't1_hot']) assert.ok(preview.items.some(row => row.id === id));
+  assert.equal(preview.items.filter(row => row.id === 't1_recent0').length, 1, 'duplicate entries from another ordering stay de-duplicated');
+});

@@ -28,7 +28,7 @@ export class Engine {
     try {
       const account = await this.account(null, signal);
       const items = [], ids = new Set(), cursors = new Set();
-      let after = null, inspected = 0, pages = 0, reason = 'Listing exhausted; older history may still be missing';
+      let after = null, inspected = 0, pages = 0, reason = 'Profile views exhausted; older history may still be missing';
       outer: do {
         checkAbort(signal);
         const page = await this.read(() => this.adapter.page({ account, after, type: options.type, mode: options.mode, signal }), signal);

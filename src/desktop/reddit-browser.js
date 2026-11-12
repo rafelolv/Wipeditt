@@ -2,6 +2,30 @@ import { AppError, checkAbort, fail, sleep } from '../errors.js';
 import { redditPage } from './page.js';
 import { REDDIT_CLASSIC, redditURL, contentURL, historyURL } from './policy.js';
 
+// Classic Reddit precomputes at most 1000 entries for each profile ordering.
+// A listing that ends near that boundary may hide older entries even when the
+// page has no forward link. In that case, read the other native orderings.
+// The margin tolerates a few hidden or repeated rows without treating every
+// medium-sized profile as capped.
+const PROFILE_LISTING_CAP = 1000;
+const PROFILE_LISTING_MARGIN = 100;
+const PROFILE_SORTS = [
+  { name: 'new', timed: false },
+  { name: 'top', timed: true },
+  { name: 'controversial', timed: true },
+  { name: 'hot', timed: false }
+];
+
+function historyPlan(account, type) {
+  const listing = type === 'comment' ? 'comments' : type === 'post' ? 'submitted' : 'overview';
+  const root = `${REDDIT_CLASSIC}/user/${encodeURIComponent(account.name)}`;
+  const path = type === 'all' ? `${root}/` : `${root}/${listing}/`;
+  return {
+    seeds: PROFILE_SORTS.map(({ name, timed }) => `${path}?sort=${name}${timed ? '&t=all' : ''}&limit=100`),
+    overview: type === 'comment' ? `${root}/` : null
+  };
+}
+
 export class RedditBrowser {
   simulation = false;
   handlesScheduling = true;
@@ -62,20 +86,45 @@ export class RedditBrowser {
       return this.identity;
     }, { signal });
   }
+  startHistory(account, type) {
+    const plan = historyPlan(account, type);
+    this.history = {
+      seeds: plan.overview ? [...plan.seeds, plan.overview] : plan.seeds,
+      overviewIndex: plan.overview ? plan.seeds.length : -1,
+      index: 0, passIds: new Set(), seen: new Set()
+    };
+  }
+  nextHistorySeed() {
+    const history = this.history;
+    if (!history) return null;
+    if (history.index === 0) {
+      if (history.passIds.size < PROFILE_LISTING_CAP - PROFILE_LISTING_MARGIN) {
+        // A shorter newest listing is already the complete profile view.
+        // Preserve the ordinary overview supplement for this case.
+        history.index = history.overviewIndex >= 0 ? history.overviewIndex : history.seeds.length;
+      } else {
+        // The newest listing reached Reddit's per-ordering limit. Top,
+        // controversial and hot expose different older entries. Those native
+        // orderings already cover the profile, so skip the overview fallback.
+        history.overviewIndex = -1;
+        history.seeds = history.seeds.slice(0, PROFILE_SORTS.length);
+        history.index++;
+      }
+    } else {
+      history.index++;
+    }
+    history.passIds = new Set();
+    return history.index < history.seeds.length ? history.seeds[history.index] : null;
+  }
   account({ signal } = {}) { return this.scheduler.request(() => this.dom('account'), { signal, local: true }); }
   async page({ account, after, type, mode = 'anonymize', signal }) {
-    const listing = type === 'comment' ? 'comments' : type === 'post' ? 'submitted' : 'overview';
-    const url = after ? historyURL(after, account) : `${REDDIT_CLASSIC}/user/${encodeURIComponent(account.name)}/${listing}/?sort=new&limit=100`;
+    if (!after) this.startHistory(account, type);
+    const history = this.history;
+    const url = after ? historyURL(after, account) : history.seeds[0];
     const page = await this.scheduler.request(async () => {
       await this.navigate(url, signal);
       const page = await this.dom('listing', { expected: account });
       if (page.after) historyURL(page.after, account);
-      // The comments tab and the ordinary profile can expose different history.
-      // Follow each native next link unchanged, then supplement comments from
-      // the profile overview. Engine deduplication keeps selection/counts stable.
-      if (!page.after && type === 'comment' && /\/comments\/?$/.test(new URL(url).pathname)) {
-        page.after = `${REDDIT_CLASSIC}/user/${encodeURIComponent(account.name)}/`;
-      }
       for (const item of page.items) {
         if (item.permalink) {
           try { this.links.set(item.id, contentURL(item.permalink, item.id)); } catch { item.editable = false; }
@@ -84,10 +133,17 @@ export class RedditBrowser {
       }
       return page;
     }, { signal });
+    for (const item of page.items) history.passIds.add(item.id);
+    // Follow each native next link unchanged. If the newest list ended at
+    // Reddit's per-ordering boundary, continue with a different native ordering
+    // so older top/controversial/hot entries are not skipped.
+    if (!page.after) page.after = this.nextHistorySeed();
     for (let index = 0; index < page.items.length; index++) {
       const item = page.items[index];
       const missingAuthor = !item.authorId;
-      if (this.links.has(item.id) && (missingAuthor || (item.authorId === account.id && (item.needsBody || mode !== 'anonymize' && !item.deletable)))) {
+      // Different orderings can repeat entries. Hydrate an original once per
+      // scan; the engine still de-duplicates and counts every inspected row.
+      if (!history.seen.has(item.id) && this.links.has(item.id) && (missingAuthor || (item.authorId === account.id && (item.needsBody || mode !== 'anonymize' && !item.deletable)))) {
         // Listing metadata is sometimes incomplete. Verify the actual item,
         // rather than infer authorship merely from the account profile URL.
         try { page.items[index] = await this.get(item.id, { signal }); }
@@ -97,6 +153,7 @@ export class RedditBrowser {
         }
       }
     }
+    for (const item of page.items) history.seen.add(item.id);
     return page;
   }
   async getRaw(id, signal, { fresh = false, focused = false, nativeDeleteReceipt = false } = {}) {

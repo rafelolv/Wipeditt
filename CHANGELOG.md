@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.5 — 2026-11-11
+
+- Read older profile history in the native top, controversial and hot orderings when the newest listing reaches classic Reddit's 1,000-entry per-ordering boundary.
+- Keep the ordinary overview supplement for shorter listings, de-duplicate repeated entries and hydrate each original at most once per scan.
+- Apply the same native-ordering coverage to comment, post and combined history scans without changing filtering, review or write safeguards.
+
 ## 1.2.4 — 2026-11-09
 
 - Publish the native profile pagination fix from v1.2.3 after repeated GitHub internal errors prevented that release workflow from reaching publication.
