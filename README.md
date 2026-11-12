@@ -33,7 +33,7 @@ The app has a black-first interface with optional light appearance, individual/c
 
 Live history is not a complete archive. Import `comments.csv` from your official export to include older comments. Each item is rechecked on the original before any write. Filters include community, date, text/regex, score and edited status where available.
 
-New-version notices query public GitHub metadata without Reddit credentials or content. Settings & tools provides manual checks and an automatic-check opt-out. Windows x64 and Linux AppImage offer Download update and an explicit Install and restart action; Debian packages keep the release-page flow. No update is installed on ordinary app quit. Install v1.2.5 manually once to obtain the updater; see [update behavior and validation](docs/UPDATES.md). The same menu contains GPLv3 notices and the source link.
+New-version notices query public GitHub metadata without Reddit credentials or content. Settings & tools provides manual checks and an automatic-check opt-out. Windows x64 and Linux AppImage offer Download update and an explicit Install and restart action; Debian packages keep the release-page flow. No update is installed on ordinary app quit. Install v1.2.5 or newer manually once to obtain the updater; see [update behavior and validation](docs/UPDATES.md). The same menu contains GPLv3 notices and the source link.
 
 ## Development
 

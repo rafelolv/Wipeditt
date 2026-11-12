@@ -50,7 +50,7 @@ test('local reads preserve account guards and route body expansion through netwo
   assert.equal(f.now(), 1700000001500);
 });
 
-test('native scans supplement the comments tab with profile pages, deduplicate and retain older matches', async () => {
+test('top and newest profile orderings expose older comments, deduplicate and follow native pagination', async () => {
   const { scheduler, now } = setup();
   const account = { id: 'reddit:owner', name: 'owner' };
   const root = 'https://old.reddit.com/user/owner/';
@@ -63,33 +63,38 @@ test('native scans supplement the comments tab with profile pages, deduplicate a
   browser.navigate = async url => { visited.push(url); current = url; };
   browser.account = async () => account;
   browser.dom = async () => {
-    if (current.includes('/comments/')) return { items: [recent], after: null };
-    if (current === root) return { items: [recent, owned('t3_post', recent.created)], after: `${root}?count=25&after=t1_recent` };
-    return { items: [older], after: null };
+    if (current.includes('after=t1_recent')) return { items: [older], after: null };
+    if (current.includes('sort=top')) return { items: [recent], after: `${root}comments/?count=25&after=t1_recent` };
+    if (current.includes('sort=new')) return { items: [recent], after: null };
+    throw new Error(`Unexpected profile URL: ${current}`);
   };
   const engine = new Engine({ adapter: browser, scheduler, now });
   const preview = await engine.scan({ type: 'comment', limit: 0 });
-  assert.deepEqual(visited, [`${root}comments/?sort=new&limit=100`, root, `${root}?count=25&after=t1_recent`]);
+  assert.deepEqual(visited, [
+    `${root}comments/?sort=top&t=all&limit=100`,
+    `${root}comments/?count=25&after=t1_recent`,
+    `${root}comments/?sort=new&limit=100`
+  ]);
   assert.deepEqual(preview.items.map(row => row.id), ['t1_recent', 't1_older']);
   assert.equal(preview.stats.eligible, 2);
   assert.equal(preview.completeHistory, false);
   visited.length = 0;
   const filtered = await engine.scan({ type: 'comment', before: '2020-01-01' });
   assert.deepEqual(filtered.items.map(row => row.id), ['t1_older']);
-  assert.equal(visited.length, 3, 'an unmatched first tab must still discover older overview matches');
+  assert.equal(visited.length, 3, 'an unmatched recent row must still reach the older top page and newest view');
   visited.length = 0;
   await engine.scan({ type: 'comment', limit: 1 });
   assert.equal(visited.length, 1, 'an explicit user item cap must still stop scanning');
 });
 
-test('a newest comment listing near Reddit\'s per-ordering cap adds top, controversial and hot orderings', async () => {
+test('a top listing near Reddit\'s per-ordering cap adds newest, controversial and hot orderings', async () => {
   const { scheduler, now } = setup();
   const account = { id: 'reddit:owner', name: 'owner' };
   const root = 'https://old.reddit.com/user/owner';
   const visited = [];
   const owned = (id, created) => item({ id, created, type: 'comment', author: account.name, authorId: account.id, permalink: `https://old.reddit.com/r/privacy/comments/post/title/${id.slice(3)}/` });
   const recent = Array.from({ length: 950 }, (_, index) => owned(`t1_recent${index}`, Date.parse('2025-01-01') + index));
-  const older = owned('t1_topolder', Date.parse('2018-01-01'));
+  const olderNewest = owned('t1_newestolder', Date.parse('2018-01-01'));
   const controversial = owned('t1_controversial', Date.parse('2017-01-01'));
   const hot = owned('t1_hot', Date.parse('2016-01-01'));
   let current;
@@ -97,8 +102,8 @@ test('a newest comment listing near Reddit\'s per-ordering cap adds top, controv
   browser.navigate = async url => { visited.push(url); current = url; };
   browser.account = async () => account;
   browser.dom = async () => {
-    if (current.includes('sort=new')) return { items: recent, after: null };
-    if (current.includes('sort=top')) return { items: [recent[0], older], after: null };
+    if (current.includes('sort=top')) return { items: recent, after: null };
+    if (current.includes('sort=new')) return { items: [recent[0], olderNewest], after: null };
     if (current.includes('sort=controversial')) return { items: [controversial], after: null };
     if (current.includes('sort=hot')) return { items: [hot], after: null };
     throw new Error(`Unexpected profile URL: ${current}`);
@@ -106,13 +111,95 @@ test('a newest comment listing near Reddit\'s per-ordering cap adds top, controv
   const engine = new Engine({ adapter: browser, scheduler, now });
   const preview = await engine.scan({ type: 'comment', limit: 0 });
   assert.deepEqual(visited, [
-    `${root}/comments/?sort=new&limit=100`,
     `${root}/comments/?sort=top&t=all&limit=100`,
+    `${root}/comments/?sort=new&limit=100`,
     `${root}/comments/?sort=controversial&t=all&limit=100`,
     `${root}/comments/?sort=hot&limit=100`
   ]);
   assert.equal(preview.stats.unique, 953);
   assert.equal(preview.stats.matched, 953);
-  for (const id of ['t1_topolder', 't1_controversial', 't1_hot']) assert.ok(preview.items.some(row => row.id === id));
+  for (const id of ['t1_newestolder', 't1_controversial', 't1_hot']) assert.ok(preview.items.some(row => row.id === id));
   assert.equal(preview.items.filter(row => row.id === 't1_recent0').length, 1, 'duplicate entries from another ordering stay de-duplicated');
+});
+
+test('a capped newest view adds controversial and hot even when the top view is short', async () => {
+  const { scheduler, now } = setup();
+  const account = { id: 'reddit:owner', name: 'owner' };
+  const root = 'https://old.reddit.com/user/owner';
+  const visited = [];
+  const owned = (id, created) => item({ id, created, type: 'comment', author: account.name, authorId: account.id, permalink: `https://old.reddit.com/r/privacy/comments/post/title/${id.slice(3)}/` });
+  const olderTop = owned('t1_topolder', Date.parse('2018-01-01'));
+  const recent = Array.from({ length: 950 }, (_, index) => owned(`t1_recent${index}`, Date.parse('2025-01-01') + index));
+  const controversial = owned('t1_controversial', Date.parse('2017-01-01'));
+  const hot = owned('t1_hot', Date.parse('2016-01-01'));
+  let current;
+  const browser = new RedditBrowser({ scheduler, contents: {} });
+  browser.navigate = async url => { visited.push(url); current = url; };
+  browser.account = async () => account;
+  browser.dom = async () => {
+    if (current.includes('sort=top')) return { items: [olderTop], after: null };
+    if (current.includes('sort=new')) return { items: recent, after: null };
+    if (current.includes('sort=controversial')) return { items: [controversial], after: null };
+    if (current.includes('sort=hot')) return { items: [hot], after: null };
+    throw new Error(`Unexpected profile URL: ${current}`);
+  };
+  const engine = new Engine({ adapter: browser, scheduler, now });
+  const preview = await engine.scan({ type: 'comment', limit: 0 });
+  assert.deepEqual(visited, [
+    `${root}/comments/?sort=top&t=all&limit=100`,
+    `${root}/comments/?sort=new&limit=100`,
+    `${root}/comments/?sort=controversial&t=all&limit=100`,
+    `${root}/comments/?sort=hot&limit=100`
+  ]);
+  assert.equal(preview.stats.unique, 953);
+  for (const id of ['t1_topolder', 't1_controversial', 't1_hot']) assert.ok(preview.items.some(row => row.id === id));
+});
+
+test('a repeated native cursor continues with the next profile ordering instead of ending the scan', async () => {
+  const { scheduler, now } = setup();
+  const account = { id: 'reddit:owner', name: 'owner' };
+  const root = 'https://old.reddit.com/user/owner';
+  const loop = `${root}/comments/?count=25&after=t1_loop`;
+  const visited = [];
+  const owned = (id, created) => item({ id, created, type: 'comment', author: account.name, authorId: account.id, permalink: `https://old.reddit.com/r/privacy/comments/post/title/${id.slice(3)}/` });
+  const recent = owned('t1_recent', Date.parse('2025-01-01'));
+  const older = owned('t1_older', Date.parse('2018-01-01'));
+  let current;
+  const browser = new RedditBrowser({ scheduler, contents: {} });
+  browser.navigate = async url => { visited.push(url); current = url; };
+  browser.account = async () => account;
+  browser.dom = async () => {
+    if (current === loop) return { items: [recent], after: loop };
+    if (current.includes('sort=top')) return { items: [recent], after: loop };
+    if (current.includes('sort=new')) return { items: [older], after: null };
+    if (current.includes('sort=controversial') || current.includes('sort=hot')) return { items: [], after: null };
+    throw new Error(`Unexpected profile URL: ${current}`);
+  };
+  const engine = new Engine({ adapter: browser, scheduler, now });
+  const preview = await engine.scan({ type: 'comment', limit: 0 });
+  assert.deepEqual(visited, [
+    `${root}/comments/?sort=top&t=all&limit=100`,
+    loop,
+    `${root}/comments/?sort=new&limit=100`,
+    `${root}/comments/?sort=controversial&t=all&limit=100`,
+    `${root}/comments/?sort=hot&limit=100`
+  ]);
+  assert.deepEqual(preview.items.map(row => row.id), ['t1_recent', 't1_older']);
+});
+
+test('post and combined scans start from the same top ordering on their native tabs', async () => {
+  for (const [type, path] of [['post', 'submitted'], ['all', '']]) {
+    const { scheduler, now } = setup();
+    const account = { id: 'reddit:owner', name: 'owner' };
+    const root = `https://old.reddit.com/user/owner/${path}${path ? '/' : ''}`;
+    const visited = [];
+    const browser = new RedditBrowser({ scheduler, contents: {} });
+    browser.navigate = async url => { visited.push(url); };
+    browser.account = async () => account;
+    browser.dom = async () => ({ items: [], after: null });
+    const engine = new Engine({ adapter: browser, scheduler, now });
+    await engine.scan({ type, limit: 0 });
+    assert.equal(visited[0], `${root}?sort=top&t=all&limit=100`);
+    assert.equal(visited[1], `${root}?sort=new&limit=100`);
+  }
 });

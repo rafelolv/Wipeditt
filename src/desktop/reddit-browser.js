@@ -3,15 +3,17 @@ import { redditPage } from './page.js';
 import { REDDIT_CLASSIC, redditURL, contentURL, historyURL } from './policy.js';
 
 // Classic Reddit precomputes at most 1000 entries for each profile ordering.
-// A listing that ends near that boundary may hide older entries even when the
-// page has no forward link. In that case, read the other native orderings.
-// The margin tolerates a few hidden or repeated rows without treating every
-// medium-sized profile as capped.
+// The top all-time view is the one that exposes older popular entries; the
+// newest view is the chronological baseline. Read both before deciding that a
+// short profile is complete. If either reaches the per-ordering boundary, read
+// controversial and hot as well. The margin tolerates a few hidden or repeated
+// rows without treating every medium-sized profile as capped.
 const PROFILE_LISTING_CAP = 1000;
 const PROFILE_LISTING_MARGIN = 100;
+const PROFILE_REQUIRED_SORTS = 2;
 const PROFILE_SORTS = [
-  { name: 'new', timed: false },
   { name: 'top', timed: true },
+  { name: 'new', timed: false },
   { name: 'controversial', timed: true },
   { name: 'hot', timed: false }
 ];
@@ -21,8 +23,7 @@ function historyPlan(account, type) {
   const root = `${REDDIT_CLASSIC}/user/${encodeURIComponent(account.name)}`;
   const path = type === 'all' ? `${root}/` : `${root}/${listing}/`;
   return {
-    seeds: PROFILE_SORTS.map(({ name, timed }) => `${path}?sort=${name}${timed ? '&t=all' : ''}&limit=100`),
-    overview: type === 'comment' ? `${root}/` : null
+    seeds: PROFILE_SORTS.map(({ name, timed }) => `${path}?sort=${name}${timed ? '&t=all' : ''}&limit=100`)
   };
 }
 
@@ -89,32 +90,24 @@ export class RedditBrowser {
   startHistory(account, type) {
     const plan = historyPlan(account, type);
     this.history = {
-      seeds: plan.overview ? [...plan.seeds, plan.overview] : plan.seeds,
-      overviewIndex: plan.overview ? plan.seeds.length : -1,
-      index: 0, passIds: new Set(), seen: new Set()
+      seeds: plan.seeds, index: 0, passRows: 0, seen: new Set(),
+      expanded: false, passCursors: new Set()
     };
   }
   nextHistorySeed() {
     const history = this.history;
     if (!history) return null;
-    if (history.index === 0) {
-      if (history.passIds.size < PROFILE_LISTING_CAP - PROFILE_LISTING_MARGIN) {
-        // A shorter newest listing is already the complete profile view.
-        // Preserve the ordinary overview supplement for this case.
-        history.index = history.overviewIndex >= 0 ? history.overviewIndex : history.seeds.length;
-      } else {
-        // The newest listing reached Reddit's per-ordering limit. Top,
-        // controversial and hot expose different older entries. Those native
-        // orderings already cover the profile, so skip the overview fallback.
-        history.overviewIndex = -1;
-        history.seeds = history.seeds.slice(0, PROFILE_SORTS.length);
-        history.index++;
-      }
-    } else {
-      history.index++;
-    }
-    history.passIds = new Set();
-    return history.index < history.seeds.length ? history.seeds[history.index] : null;
+    if (history.passRows >= PROFILE_LISTING_CAP - PROFILE_LISTING_MARGIN) history.expanded = true;
+    const next = history.index + 1;
+    if (next >= history.seeds.length) return null;
+    // Top and newest are always read. The remaining orderings are useful when
+    // one of those views reached Reddit's per-ordering boundary or a cursor
+    // loop prevented a complete pass.
+    if (next >= PROFILE_REQUIRED_SORTS && !history.expanded) return null;
+    history.index = next;
+    history.passRows = 0;
+    history.passCursors = new Set();
+    return history.seeds[history.index];
   }
   account({ signal } = {}) { return this.scheduler.request(() => this.dom('account'), { signal, local: true }); }
   async page({ account, after, type, mode = 'anonymize', signal }) {
@@ -133,11 +126,17 @@ export class RedditBrowser {
       }
       return page;
     }, { signal });
-    for (const item of page.items) history.passIds.add(item.id);
-    // Follow each native next link unchanged. If the newest list ended at
-    // Reddit's per-ordering boundary, continue with a different native ordering
-    // so older top/controversial/hot entries are not skipped.
+    history.passRows += page.items.length;
+    // Follow each native next link unchanged. An ordering that stops, or that
+    // repeats a forward cursor without progress, continues with the next native
+    // view so older top/new/controversial/hot entries are not skipped.
     if (!page.after) page.after = this.nextHistorySeed();
+    else if (history.passCursors.has(page.after)) {
+      // A looping cursor cannot finish this ordering; read the remaining
+      // native views instead of ending the scan with a partial pass.
+      history.expanded = true;
+      page.after = this.nextHistorySeed();
+    } else history.passCursors.add(page.after);
     for (let index = 0; index < page.items.length; index++) {
       const item = page.items[index];
       const missingAuthor = !item.authorId;

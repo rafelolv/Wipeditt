@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.6 — 2026-11-12
+
+- Read the native all-time top profile ordering before the newest ordering, so older comments visible on the classic `comments/?sort=top` page are included even when the newest view ends below the 1,000-entry boundary.
+- Always read both top and newest; add controversial and hot when either reaches the per-ordering boundary.
+- Continue with the next native ordering when a forward cursor repeats instead of ending the scan.
+- Remove the redundant ordinary-overview supplement now that the top and newest native views are both scanned.
+
 ## 1.2.5 — 2026-11-11
 
 - Read older profile history in the native top, controversial and hot orderings when the newest listing reaches classic Reddit's 1,000-entry per-ordering boundary.

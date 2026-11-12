@@ -52,7 +52,12 @@ export async function installFixture(application) {
       if(original?.deleted&&['missing','empty'].includes(globalThis.fixture.deletionOutcome))items=[];
       let next=!content&&!url.searchParams.has('after')&&!url.pathname.includes('/submitted')?'<span class="nextprev"><a rel="nofollow" href="https://old.reddit.com/user/fixture_user/?before=t1_abc">prev</a><a rel="nofollow" href="https://old.reddit.com/user/fixture_user/?count=25&amp;after=t1_other">next</a></span>':'';
       if(!content&&globalThis.fixture.profileHistory){
-        if(url.pathname.includes('/comments/')){items=[globalThis.fixture.items.t1_abc];next='';}
+        if(url.pathname.includes('/comments/')){
+          if(url.searchParams.get('sort')==='new'){items=[globalThis.fixture.items.t1_abc];next='';}
+          else if(!url.searchParams.has('after')){items=[globalThis.fixture.items.t1_abc];next='<span class="nextprev"><a rel="nofollow" href="?count=25&amp;after=t1_abc">next</a></span>';}
+          else if(url.searchParams.get('after')==='t1_abc'){items=[globalThis.fixture.items.t1_archive];next='<span class="nextprev"><a href="?count=25&amp;before=t1_abc">prev</a><a href="?count=50&amp;after=t1_archive">next</a></span>';}
+          else {items=[globalThis.fixture.items.t1_oldest];next='';}
+        }
         else if(!url.searchParams.has('after')){items=[globalThis.fixture.items.t1_abc,globalThis.fixture.items.t3_post];next='<span class="nextprev"><a rel="nofollow" href="?count=25&amp;after=t1_abc">next</a></span>';}
         else if(url.searchParams.get('after')==='t1_abc'){items=[globalThis.fixture.items.t1_archive];next='<span class="nextprev"><a href="?count=25&amp;before=t1_abc">prev</a><a href="?count=50&amp;after=t1_archive">next</a></span>';}
         else {items=[globalThis.fixture.items.t1_oldest];next='';}

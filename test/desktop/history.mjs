@@ -15,14 +15,14 @@ export async function verifyProfileHistory(application, page) {
     for (const id of ['t1_abc', 't1_archive', 't1_oldest']) assert.equal(await page.locator(`.item[data-id="${id}"] input`).isChecked(), true);
     const observed = await application.evaluate(start => ({ pages: globalThis.fixture.historyPages.slice(start), writes: globalThis.fixture.writes.length }), before.pages);
     assert.deepEqual(observed.pages.map(value => { const url = new URL(value); return url.pathname + url.search; }).filter(value => value.startsWith('/user/fixture_user/')), [
-      '/user/fixture_user/comments/?sort=new&limit=100',
-      '/user/fixture_user/',
-      '/user/fixture_user/?count=25&after=t1_abc',
-      '/user/fixture_user/?count=50&after=t1_archive'
+      '/user/fixture_user/comments/?sort=top&t=all&limit=100',
+      '/user/fixture_user/comments/?count=25&after=t1_abc',
+      '/user/fixture_user/comments/?count=50&after=t1_archive',
+      '/user/fixture_user/comments/?sort=new&limit=100'
     ]);
     assert.equal(observed.writes, before.writes);
     await page.locator('#change-search').click();
-    console.log('Profile history passed: exhausted comments tab, automatic overview continuation, native root URLs, unlabelled next links, previous-link rejection, duplicate/post exclusion and selected 2018/2020 comments. No writes submitted.');
+    console.log('Profile history passed: top and newest orderings, native pagination, previous-link rejection, duplicate exclusion and selection of 2018/2020 comments. No writes submitted.');
   } finally {
     await application.evaluate(() => { const f = globalThis.fixture; f.profileHistory = false; delete f.items.t1_archive; delete f.items.t1_oldest; });
   }
